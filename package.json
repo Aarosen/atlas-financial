@@ -1,0 +1,12 @@
+{
+  "name": "atlas-financial",
+  "version": "1.0.0",
+  "description": "Atlas — Your Financial Intelligence Companion",
+  "private": true,
+  "engines": {
+    "node": ">=18"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  }
+}
