@@ -1,0 +1,852 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlas — Your Financial Companion</title>
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script crossorigin src="https://unpkg.com/react@18/umd/react.production.min.js"></script>
+  <script crossorigin src="https://unpkg.com/react-dom@18/umd/react-dom.production.min.js"></script>
+  <script src="https://unpkg.com/framer-motion@10.18.0/dist/framer-motion.js"></script>
+  <script src="https://unpkg.com/@babel/standalone/babel.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:ital,wght@0,400;0,500;0,600;0,700;1,400;1,500&family=Nunito:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <style>
+    *,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+    :root{
+      --bg:#FDFCF8;--bg2:#F7F5EF;--bg3:#EEEADE;--card:#FFFFFF;
+      --bdr:rgba(180,163,130,0.22);--bdr2:rgba(180,163,130,0.4);
+      --ink:#1C1814;--ink2:#4A4035;--ink3:#8A7A68;
+      --teal:#0A7C6E;--teal-lt:#D1EDE9;
+      --sky:#1D6FA4;--sky-lt:#D6EAF4;
+      --amber:#C2730A;--amber-lt:#FDE9C8;
+      --rose:#B84040;--rose-lt:#F7DCDC;
+      --green:#2E7D52;--green-lt:#D5EDDF;
+      --sh1:0 1px 3px rgba(28,24,20,0.06),0 1px 2px rgba(28,24,20,0.04);
+      --sh2:0 4px 12px rgba(28,24,20,0.08),0 2px 4px rgba(28,24,20,0.05);
+      --sh3:0 16px 40px rgba(28,24,20,0.10),0 4px 8px rgba(28,24,20,0.06);
+    }
+    [data-theme="dark"]{
+      --bg:#1A1714;--bg2:#211E1A;--bg3:#2A2620;--card:#252118;
+      --bdr:rgba(180,163,130,0.10);--bdr2:rgba(180,163,130,0.20);
+      --ink:#F5F0E8;--ink2:#C8BAA5;--ink3:#7A6E5F;
+      --teal-lt:rgba(10,124,110,0.16);--sky-lt:rgba(29,111,164,0.16);
+      --amber-lt:rgba(194,115,10,0.16);--rose-lt:rgba(184,64,64,0.16);--green-lt:rgba(46,125,82,0.16);
+      --sh1:0 1px 3px rgba(0,0,0,0.3);--sh2:0 4px 12px rgba(0,0,0,0.35);--sh3:0 16px 40px rgba(0,0,0,0.4);
+    }
+    html{scroll-behavior:smooth}
+    body{font-family:'Nunito',system-ui,sans-serif;background:var(--bg);color:var(--ink);-webkit-font-smoothing:antialiased;transition:background .3s,color .3s;min-height:100vh}
+    .serif{font-family:'Lora',Georgia,serif}
+    .card{background:var(--card);border:1px solid var(--bdr);border-radius:20px;box-shadow:var(--sh1)}
+    .card-md{background:var(--card);border:1px solid var(--bdr2);border-radius:22px;box-shadow:var(--sh2)}
+    .card-lg{background:var(--card);border:1px solid var(--bdr2);border-radius:28px;box-shadow:var(--sh3)}
+    .pill{display:inline-flex;align-items:center;gap:6px;padding:5px 13px;border-radius:100px;font-size:12px;font-weight:700}
+    .pill-teal{background:var(--teal-lt);color:var(--teal)}
+    .pill-sky{background:var(--sky-lt);color:var(--sky)}
+    .pill-amber{background:var(--amber-lt);color:var(--amber)}
+    .pill-rose{background:var(--rose-lt);color:var(--rose)}
+    .pill-green{background:var(--green-lt);color:var(--green)}
+    .btn{display:inline-flex;align-items:center;gap:8px;border-radius:16px;font-family:'Nunito',sans-serif;font-weight:700;font-size:15px;cursor:pointer;transition:all .18s;border:none;padding:13px 24px}
+    .btn-p{background:linear-gradient(135deg,var(--teal),var(--sky));color:#fff;box-shadow:0 2px 8px rgba(10,124,110,0.28)}
+    .btn-p:hover{transform:translateY(-1px);box-shadow:0 4px 16px rgba(10,124,110,0.35)}
+    .btn-p:disabled{opacity:.4;cursor:not-allowed;transform:none}
+    .btn-s{background:var(--bg2);border:1px solid var(--bdr2);color:var(--ink2)}
+    .btn-s:hover{background:var(--bg3)}
+    .btn-g{background:transparent;border:none;color:var(--teal);padding:8px 12px;border-radius:12px;font-family:'Nunito',sans-serif;font-weight:600;font-size:14px;cursor:pointer;display:inline-flex;align-items:center;gap:6px}
+    .btn-g:hover{background:var(--teal-lt)}
+    .input{width:100%;background:var(--bg2);border:1.5px solid var(--bdr2);border-radius:14px;padding:13px 16px;font-family:'Nunito',sans-serif;font-size:15px;color:var(--ink);outline:none;transition:border-color .2s,box-shadow .2s}
+    .input:focus{border-color:var(--teal);box-shadow:0 0 0 3px rgba(10,124,110,0.10)}
+    .input::placeholder{color:var(--ink3)}
+    .slider{-webkit-appearance:none;appearance:none;width:100%;height:6px;border-radius:3px;background:var(--bg3);outline:none}
+    .slider::-webkit-slider-thumb{-webkit-appearance:none;appearance:none;width:22px;height:22px;border-radius:50%;background:linear-gradient(135deg,var(--teal),var(--sky));cursor:pointer;box-shadow:0 2px 6px rgba(10,124,110,0.35)}
+    ::-webkit-scrollbar{width:5px}::-webkit-scrollbar-track{background:transparent}::-webkit-scrollbar-thumb{background:var(--bdr2);border-radius:3px}
+    input[type=number]::-webkit-inner-spin-button,input[type=number]::-webkit-outer-spin-button{-webkit-appearance:none}
+    input[type=number]{-moz-appearance:textfield}
+    @keyframes fadeUp{from{opacity:0;transform:translateY(14px)}to{opacity:1;transform:translateY(0)}}
+    @keyframes scaleIn{from{opacity:0;transform:scale(.93)}to{opacity:1;transform:scale(1)}}
+    @keyframes db{0%,80%,100%{transform:translateY(0)}40%{transform:translateY(-5px)}}
+    .fu{animation:fadeUp .5s ease both}.si{animation:scaleIn .4s ease both}
+    .d1{animation:db 1.1s ease infinite}.d2{animation:db 1.1s .18s ease infinite}.d3{animation:db 1.1s .36s ease infinite}
+    .tbrand{background:linear-gradient(135deg,var(--teal),var(--sky));-webkit-background-clip:text;-webkit-text-fill-color:transparent;background-clip:text}
+  </style>
+</head>
+<body>
+<div id="root"></div>
+<script type="text/babel">
+const{useState,useEffect,useRef,useCallback,createContext,useContext}=React;
+const FM=typeof Motion!=='undefined'?Motion:(window.Motion||{});
+const motion=FM.motion||{};
+const AP=FM.AnimatePresence||(({children})=>children);
+
+/* ── IndexedDB ── */
+class DB{
+  constructor(){this.n='AtlasDB_v2';this.db=null}
+  async open(){if(this.db)return;return new Promise((r,j)=>{const q=indexedDB.open(this.n,2);q.onerror=()=>j(q.error);q.onsuccess=()=>{this.db=q.result;r()};q.onupgradeneeded=e=>{const d=e.target.result;['fin','conv','strat','plan','prefs'].forEach(n=>{if(!d.objectStoreNames.contains(n))d.createObjectStore(n,n==='conv'||n==='plan'?{keyPath:'id',autoIncrement:true}:{keyPath:'k'})})}})}
+  async set(s,v){await this.open();return new Promise((r,j)=>{const tx=this.db.transaction([s],'readwrite');const st=tx.objectStore(s);const q=st.put(v);q.onsuccess=()=>r();q.onerror=()=>j(q.error)})}
+  async get(s,k){await this.open();return new Promise((r,j)=>{const tx=this.db.transaction([s],'readonly');const q=tx.objectStore(s).get(k);q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})}
+  async all(s){await this.open();return new Promise((r,j)=>{const tx=this.db.transaction([s],'readonly');const q=tx.objectStore(s).getAll();q.onsuccess=()=>r(q.result);q.onerror=()=>j(q.error)})}
+  async nuke(){await this.open();return Promise.all(['fin','conv','strat','plan'].map(s=>new Promise((r,j)=>{const tx=this.db.transaction([s],'readwrite');const q=tx.objectStore(s).clear();q.onsuccess=()=>r();q.onerror=()=>j(q.error)})))}
+}
+
+/* ── Claude API — calls /api/chat proxy (Vercel edge function) ── */
+class Claude{
+  constructor(){
+    // Calls our secure server-side proxy — API key never touches the browser
+    this.ep='/api/chat';
+    this._apiAvailable=null; // null=unknown, true=working, false=unavailable
+  }
+  async extract(msg,ctx={}){
+    try{
+      const r=await fetch(this.ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'extract',messages:[{role:'user',content:msg}]})});
+      if(!r.ok){this._apiAvailable=false;throw new Error('proxy_error')}
+      const d=await r.json();
+      if(d.error){this._apiAvailable=false;throw new Error(d.error)}
+      this._apiAvailable=true;
+      return{fields:d.fields||{},src:'claude'};
+    }catch(e){
+      if(this._apiAvailable===null)this._apiAvailable=false;
+      return this._fb(msg);
+    }
+  }
+  async chat(msgs,missing){
+    try{
+      const r=await fetch(this.ep,{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({type:'chat',messages:msgs,missing})});
+      if(!r.ok)throw new Error('proxy_error');
+      const d=await r.json();
+      if(d.error)throw new Error(d.error);
+      this._apiAvailable=true;
+      return d.text||this._fq(missing[0]);
+    }catch{
+      return this._fq(missing[0]);
+    }
+  }
+  isAvailable(){return this._apiAvailable!==false}
+  _fq(f){const q={monthlyIncome:"What's your monthly take-home income? A rough number is totally fine.",essentialExpenses:"About how much goes to essentials each month — rent, groceries, utilities?",totalSavings:"How much do you currently have saved? This helps me understand your safety net.",highInterestDebt:"Do you carry any high-interest debt, like credit cards? Zero is perfectly fine.",lowInterestDebt:"Any other loans — student debt, car loan?",primaryGoal:"What matters most right now: stability, growth, flexibility?",riskTolerance:"Do you prefer playing it safe, or are you comfortable with some risk for better long-term returns?"};return q[f]||"Tell me a bit more about your financial situation."}
+  _fb(t){
+    const x={};const n=s=>{const m=s.match(/(\d[\d,]*(?:\.\d+)?)\s*(?:k|thousand)?/i);if(!m)return null;let v=parseFloat(m[1].replace(/,/g,''));if(/k|thousand/i.test(m[0]))v*=1000;return v};
+    [/(?:make|earn|salary|income|take.home|bring.in)[^\d$]*(\$?[\d,]+(?:\.\d+)?\s*(?:k|thousand)?)/i,/(\$?[\d,]+(?:\.\d+)?\s*(?:k|thousand)?)\s*(?:per.month|\/mo|a.month|monthly)/i].some(p=>{const m=t.match(p);if(m){const v=n(m[1]);if(v&&v>500&&v<1e6){x.monthlyIncome=v;return true}}});
+    if(/rent|essentials|bills|expenses/i.test(t)){const m=t.match(/(?:spend|expense|rent|bill)[^\d$]*(\$?[\d,]+(?:\.\d+)?\s*(?:k|thousand)?)/i);if(m){const v=n(m[1]);if(v&&v>100&&v<1e6)x.essentialExpenses=v}}
+    [/(?:saved?|savings?|emergency)[^\d$]*(\$?[\d,]+(?:\.\d+)?\s*(?:k|thousand)?)/i,/(\$?[\d,]+(?:\.\d+)?\s*(?:k|thousand)?)\s*(?:saved?|in.savings)/i].some(p=>{const m=t.match(p);if(m){const v=n(m[1]);if(v>=0){x.totalSavings=v;return true}}});
+    const hd=t.match(/(?:credit.card|high.interest)[^\d$]*(\$?[\d,]+(?:\.\d+)?\s*(?:k|thousand)?)/i);if(hd){const v=n(hd[1]);if(v>=0)x.highInterestDebt=v}
+    const ld=t.match(/(?:student.loan|car.loan|mortgage)[^\d$]*(\$?[\d,]+(?:\.\d+)?\s*(?:k|thousand)?)/i);if(ld){const v=n(ld[1]);if(v>=0)x.lowInterestDebt=v}
+    if(/no\s+(?:debt|loan|credit)|(?:debt|loan).free|zero\s+debt/i.test(t)){if(!('highInterestDebt'in x))x.highInterestDebt=0;if(!('lowInterestDebt'in x))x.lowInterestDebt=0}
+    if(/no\s+savings?|zero\s+saved|nothing\s+saved/i.test(t))x.totalSavings=0;
+    if(/stable|stability|secure|peace.of.mind/i.test(t))x.primaryGoal='stability';
+    else if(/wealth|retire|financial.independence|FIRE|passive/i.test(t))x.primaryGoal='wealth_building';
+    else if(/grow|invest|returns|portfolio/i.test(t))x.primaryGoal='growth';
+    else if(/flexib|freedom|liquid/i.test(t))x.primaryGoal='flexibility';
+    if(/cautious|conservative|risk.averse/i.test(t))x.riskTolerance='cautious';
+    else if(/aggressive|bold|high.risk/i.test(t))x.riskTolerance='growth';
+    else if(/balanced|moderate/i.test(t))x.riskTolerance='balanced';
+    return{fields:x,src:'fallback'}
+  }
+}
+
+/* ── Strategy Engine ── */
+class Engine{
+  async run(d){return this._calc(d)}
+  _calc(d){
+    const inc=d.monthlyIncome||0,ess=d.essentialExpenses||0,dp=d.monthlyDebtPayments||0;
+    const hiD=d.highInterestDebt||0,loD=d.lowInterestDebt||0,sav=d.totalSavings||0;
+    const bufMo=ess>0?sav/ess:0;const net=inc-ess-dp;
+    const disc=d.discretionaryExpenses||Math.max(0,net*.28);
+    const futAmt=Math.max(0,net-disc);const futPct=inc>0?futAmt/inc:0;
+    const dti=inc>0?(hiD+loD)/(inc*12):0;
+    const dExp=hiD>inc*3?'Critical':hiD>inc?'High':hiD>inc*.5?'Moderate':'Low';
+    const tier=(net<0||bufMo<1)?'Foundation':(bufMo<3||hiD>inc*2)?'Stabilizing':(bufMo<6||dti>.3)?'Strategic':'GrowthReady';
+    const lever=net<0?'stabilize_cashflow':hiD>inc?'eliminate_high_interest_debt':bufMo<3?'build_emergency_buffer':futPct<.15?'increase_future_allocation':'optimize_discretionary_spend';
+    const urgency=(lever==='stabilize_cashflow'||dExp==='Critical')?'Protective':(lever==='eliminate_high_interest_debt'||dExp==='High'||bufMo<1)?'Advisory':'Calm';
+    const m={bufMo,bufTarget:6,futPct,futTarget:.15,net,disc,dExp,isNeg:net<0,dti};
+    const expl=this._expl(tier,lever,urgency,m,d);
+    const sug=this._sug(lever,d,m);
+    return{tier,lever,urgency,bufMo,futPct,dExp,metrics:m,expl,sug,ts:Date.now()};
+  }
+  _sug(l,d,m){
+    if(l==='build_emergency_buffer'){const gap=Math.max(0,(d.essentialExpenses||0)*6-(d.totalSavings||0));return Math.min(Math.max(0,m.net)*.25,gap/12)||100}
+    if(l==='eliminate_high_interest_debt')return Math.max(50,Math.min(Math.max(0,m.net)*.3,(d.highInterestDebt||0)*.05));
+    return Math.max(50,Math.max(0,m.net)*.1);
+  }
+  _expl(tier,lever,urgency,m,d){
+    const uk=urgency.toLowerCase();
+    const W={
+      stabilize_cashflow:{calm:"Your monthly outflow is higher than your inflow right now — this makes every other strategy unstable. We need to restore balance first.",protective:"This needs immediate attention: your outflow exceeds your inflow, and staying here compounds both financial stress and missed opportunities."},
+      eliminate_high_interest_debt:{calm:"High-interest debt silently compounds and can outpace most saving or investing moves you'd otherwise make.",advisory:"This is your highest-leverage move right now: high-interest debt erodes progress faster than almost anything else."},
+      build_emergency_buffer:{calm:`Your buffer is ${m.bufMo.toFixed(1)} months. Getting to ${m.bufTarget} months transforms your financial resilience and peace of mind.`,advisory:`You're making real progress — moving from ${m.bufMo.toFixed(1)} to ${m.bufTarget} months is the most reliable way to strengthen your position right now.`},
+      increase_future_allocation:{calm:`You're putting about ${(m.futPct*100).toFixed(0)}% toward your future. Moving to ${(m.futTarget*100).toFixed(0)}% is what unlocks meaningful long-term momentum.`,advisory:`A small reallocation compounds beautifully: moving toward ${(m.futTarget*100).toFixed(0)}% future allocation accelerates your trajectory from here.`},
+      optimize_discretionary_spend:{calm:"Your foundation is solid. The highest leverage now is redirecting any spending that doesn't genuinely match your priorities.",advisory:"This is optimisation, not sacrifice — a small thoughtful reduction here compounds into meaningful progress."}
+    };
+    const N={
+      stabilize_cashflow:{calm:"Let's identify one change that brings your outflow below your inflow this month.",protective:"Let's make one concrete change today — even small — to start restoring balance."},
+      eliminate_high_interest_debt:{calm:"Let's target the highest-interest balance first, while keeping your essentials comfortable.",advisory:"Let's focus extra payments on that highest-rate balance — it's the most effective move you can make right now."},
+      build_emergency_buffer:{calm:`Let's find a monthly amount that builds toward ${m.bufTarget} months without making life feel tight.`,advisory:`Let's pick one monthly contribution to keep building toward ${m.bufTarget} months.`},
+      increase_future_allocation:{calm:"We can do this with one small shift — even 2–3% more makes a real difference over time.",advisory:"Let's reallocate a small percentage this month and see how it feels."},
+      optimize_discretionary_spend:{calm:"Let's find one category to gently reduce — without touching anything you actually care about.",advisory:"Let's identify one recurring expense to redirect toward Future You."}
+    };
+    const why=(W[lever][uk]||W[lever].calm),next=(N[lever][uk]||N[lever].calm);
+    const TL={Foundation:{label:'Foundation',emoji:'🪨',reveal:"Based on what you've shared, you're in the Foundation phase.",bridge:"There's a clear path forward from here — and we're going to take it one step at a time.",color:'var(--rose)',bg:'var(--rose-lt)'},Stabilizing:{label:'Stabilizing',emoji:'⚖️',reveal:"Based on what you've shared, you're in the Stabilizing phase.",bridge:"You're building real momentum. One focused move can shift you into the Strategic phase.",color:'var(--amber)',bg:'var(--amber-lt)'},Strategic:{label:'Strategic',emoji:'🧭',reveal:"Based on what you've shared, you're in the Strategic phase.",bridge:"You're in a solid position. Now we refine — this is where smart optimisation starts to compound.",color:'var(--sky)',bg:'var(--sky-lt)'},GrowthReady:{label:'Growth-Ready',emoji:'🚀',reveal:"Based on what you've shared, you're in the Growth-Ready phase.",bridge:"You've built something real. Now we focus on intelligent acceleration — without adding unnecessary risk.",color:'var(--teal)',bg:'var(--teal-lt)'}};
+    const trace=[
+      {lbl:'Buffer',formula:'Savings ÷ Essentials',in:{savings:`$${(d.totalSavings||0).toLocaleString()}`,essentials:`$${(d.essentialExpenses||0).toLocaleString()}`},out:`${m.bufMo.toFixed(2)} months`,flag:m.bufMo<m.bufTarget?'warn':'ok'},
+      {lbl:'Cashflow',formula:'Income − Essentials − Debt payments',in:{income:`$${(d.monthlyIncome||0).toLocaleString()}`,essentials:`$${(d.essentialExpenses||0).toLocaleString()}`,debt:`$${(d.monthlyDebtPayments||0).toLocaleString()}`},out:`$${m.net.toFixed(0)}/mo`,flag:m.isNeg?'err':'ok'},
+      {lbl:'Future allocation',formula:'(Net − Discretionary) ÷ Income',in:{net:`$${m.net.toFixed(0)}`,disc:`$${m.disc.toFixed(0)}`},out:`${(m.futPct*100).toFixed(1)}%`,flag:m.futPct<m.futTarget?'warn':'ok'},
+      {lbl:'Tier',formula:'Waterfall: cashflow→buffer→debt→allocation',in:{buffer:`${m.bufMo.toFixed(1)}mo`,cashflow:m.isNeg?'negative':'positive',debt:m.dExp},out:tier,flag:'info'},
+      {lbl:'Lever selected',formula:'Priority order: cashflow>debt>buffer>allocation>optimize',in:{tier},out:lever.replace(/_/g,' '),flag:'info'}
+    ];
+    const obs=[];
+    if(m.isNeg)obs.push("Your monthly outflow exceeds your inflow — this is the most urgent thing to address.");
+    if(m.dExp==='High'||m.dExp==='Critical')obs.push("Your debt pressure is high enough to slow progress unless prioritised.");
+    else if(m.dExp==='Moderate')obs.push("Debt pressure is manageable, but still affects momentum.");
+    if(m.bufMo<m.bufTarget)obs.push(`Buffer (${m.bufMo.toFixed(1)} months) is below the ${m.bufTarget}-month target.`);
+    if(m.futPct<m.futTarget)obs.push(`Future allocation (${(m.futPct*100).toFixed(0)}%) is below the ${(m.futTarget*100).toFixed(0)}% target.`);
+    const reasons={stabilize_cashflow:"Stabilising cashflow restores control and stops compounding stress.",eliminate_high_interest_debt:"High-interest debt compounds quickly and quietly erases progress elsewhere.",build_emergency_buffer:"A stronger buffer increases resilience and makes every next decision safer.",increase_future_allocation:"Growing future allocation builds long-term momentum without requiring lifestyle disruption.",optimize_discretionary_spend:"Optimising spending frees up real leverage while keeping your lifestyle intact."};
+    return{tier,lever,urgency,why,next,tl:TL[tier],trace,obs,reason:reasons[lever],inputs:[`Income: $${(d.monthlyIncome||0).toLocaleString()}/mo`,`Essentials: $${(d.essentialExpenses||0).toLocaleString()}/mo`,`Savings: $${(d.totalSavings||0).toLocaleString()}`,`High-interest debt: $${(d.highInterestDebt||0).toLocaleString()}`],control:"Atlas recommends — you decide. You can always ask questions or adjust anything."};
+  }
+}
+
+/* ── Shared state ── */
+const Ctx=createContext();
+const useA=()=>useContext(Ctx);
+const fc=n=>n>=1000?`$${(n/1000).toFixed(n%1000===0?0:1)}k`:`$${Math.round(n).toLocaleString()}`;
+const fp=n=>`${(n*100).toFixed(0)}%`;
+const TIERS=[{id:'Foundation',lbl:'Foundation',em:'🪨',desc:'Building the base',c:'var(--rose)',b:'var(--rose-lt)'},{id:'Stabilizing',lbl:'Stabilizing',em:'⚖️',desc:'Finding balance',c:'var(--amber)',b:'var(--amber-lt)'},{id:'Strategic',lbl:'Strategic',em:'🧭',desc:'Optimising well',c:'var(--sky)',b:'var(--sky-lt)'},{id:'GrowthReady',lbl:'Growth-Ready',em:'🚀',desc:'Compounding forward',c:'var(--teal)',b:'var(--teal-lt)'}];
+const tc=id=>TIERS.find(t=>t.id===id)||TIERS[0];
+
+/* ── Logo ── */
+const Logo=({sz=36,txt=true})=>(
+  <div style={{display:'flex',alignItems:'center',gap:10}}>
+    <div style={{width:sz,height:sz,background:'linear-gradient(135deg,#0A7C6E,#1D6FA4)',borderRadius:Math.round(sz*.28),display:'flex',alignItems:'center',justifyContent:'center',flexShrink:0,boxShadow:'0 2px 8px rgba(10,124,110,0.28)'}}>
+      <span style={{color:'#fff',fontFamily:'Lora,serif',fontWeight:700,fontSize:Math.round(sz*.5),lineHeight:1}}>A</span>
+    </div>
+    {txt&&<span style={{fontFamily:'Lora,serif',fontWeight:700,fontSize:Math.round(sz*.58),color:'var(--ink)',letterSpacing:'-.02em'}}>Atlas</span>}
+  </div>
+);
+
+/* ── Tier Ladder ── */
+const Ladder=({cur,compact=false})=>{
+  const ci=TIERS.findIndex(t=>t.id===cur);
+  return(
+    <div style={{display:'flex',flexDirection:'column',gap:compact?6:10}}>
+      {[...TIERS].reverse().map((t,ri)=>{
+        const ri2=TIERS.length-1-ri;
+        const isCur=t.id===cur,isPast=ri2<ci;
+        return(
+          <div key={t.id} style={{display:'flex',alignItems:'center',gap:12,padding:compact?'10px 14px':'14px 18px',background:isCur?t.b:'var(--bg2)',border:`1.5px solid ${isCur?t.c:'var(--bdr)'}`,borderRadius:14,opacity:(!isCur&&!isPast)?.45:1,transition:'all .2s'}}>
+            <span style={{fontSize:compact?16:20}}>{t.em}</span>
+            <div style={{flex:1}}>
+              <div style={{fontSize:compact?13:15,fontWeight:700,color:isCur?t.c:'var(--ink2)',fontFamily:'Lora,serif'}}>{t.lbl}</div>
+              {!compact&&<div style={{fontSize:12,color:'var(--ink3)',marginTop:2}}>{t.desc}</div>}
+            </div>
+            {isCur&&<div style={{fontSize:11,fontWeight:700,color:t.c,background:t.b,padding:'4px 10px',borderRadius:100,border:`1px solid ${t.c}`}}>You're here</div>}
+            {isPast&&<svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{color:'var(--green)'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>}
+          </div>
+        );
+      })}
+    </div>
+  );
+};
+
+/* ── Explainability Panel ── */
+const Explain=({expl})=>{
+  const[open,setOpen]=useState(false);
+  const[tab,setTab]=useState('inputs');
+  const tabs=[['inputs','What you shared'],['obs','What Atlas noticed'],['reason','Why this'],['trace','Decision trace']];
+  return(
+    <div style={{marginTop:14}}>
+      <button onClick={()=>setOpen(o=>!o)} style={{width:'100%',display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 16px',background:'var(--bg2)',border:'1px solid var(--bdr)',borderRadius:14,cursor:'pointer',fontFamily:'Nunito,sans-serif',fontWeight:600,fontSize:13,color:'var(--ink2)'}}>
+        <span style={{display:'flex',alignItems:'center',gap:8}}>
+          <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><circle cx="12" cy="12" r="10" strokeWidth={2}/><path strokeLinecap="round" strokeWidth={2} d="M12 16v-4M12 8h.01"/></svg>
+          Why am I seeing this?
+        </span>
+        <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{transform:open?'rotate(180deg)':'none',transition:'transform .2s'}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 9l-7 7-7-7"/></svg>
+      </button>
+      {open&&(
+        <div className="card" style={{marginTop:8,overflow:'hidden'}}>
+          <div style={{display:'flex',borderBottom:'1px solid var(--bdr)',background:'var(--bg2)'}}>
+            {tabs.map(([id,lbl])=>(
+              <button key={id} onClick={()=>setTab(id)} style={{flex:1,padding:'11px 4px',fontSize:11,fontWeight:700,border:'none',background:'none',cursor:'pointer',color:tab===id?'var(--teal)':'var(--ink3)',borderBottom:tab===id?'2px solid var(--teal)':'2px solid transparent',transition:'all .15s',fontFamily:'Nunito,sans-serif'}}>{lbl}</button>
+            ))}
+          </div>
+          <div style={{padding:20}}>
+            {tab==='inputs'&&(
+              <div style={{display:'flex',flexDirection:'column',gap:8}}>
+                <p style={{fontSize:13,color:'var(--ink3)',marginBottom:8,lineHeight:1.6}}>You shared a snapshot of your finances. Atlas used this to estimate your position.</p>
+                {expl.inputs.map((inp,i)=><div key={i} style={{padding:'8px 12px',background:'var(--bg2)',borderRadius:10,fontSize:13,color:'var(--ink2)',border:'1px solid var(--bdr)'}}>{inp}</div>)}
+                <div style={{marginTop:4,padding:'10px 12px',background:'var(--teal-lt)',borderRadius:10,fontSize:12,color:'var(--teal)'}}>{expl.control}</div>
+              </div>
+            )}
+            {tab==='obs'&&(
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {expl.obs.length===0?<p style={{color:'var(--ink3)',fontSize:13}}>No flags — your position looks solid.</p>:expl.obs.map((o,i)=><div key={i} style={{padding:'11px 14px',background:'var(--amber-lt)',borderRadius:10,fontSize:13,color:'var(--amber)',border:'1px solid rgba(194,115,10,.18)',lineHeight:1.55}}>{o}</div>)}
+              </div>
+            )}
+            {tab==='reason'&&(
+              <div style={{padding:'14px 16px',background:'var(--teal-lt)',borderRadius:12,fontSize:14,color:'var(--teal)',lineHeight:1.65,border:'1px solid rgba(10,124,110,.18)'}}>{expl.reason}</div>
+            )}
+            {tab==='trace'&&(
+              <div style={{display:'flex',flexDirection:'column',gap:10}}>
+                {expl.trace.map((s,i)=>(
+                  <div key={i} style={{border:'1px solid var(--bdr)',borderRadius:12,overflow:'hidden'}}>
+                    <div style={{padding:'9px 13px',background:'var(--bg2)',display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+                      <span style={{fontSize:12,fontWeight:700,color:'var(--ink2)'}}>{s.lbl}</span>
+                      <span style={{fontSize:11,fontWeight:700,padding:'3px 9px',borderRadius:100,background:s.flag==='err'?'var(--rose-lt)':s.flag==='warn'?'var(--amber-lt)':s.flag==='info'?'var(--sky-lt)':'var(--green-lt)',color:s.flag==='err'?'var(--rose)':s.flag==='warn'?'var(--amber)':s.flag==='info'?'var(--sky)':'var(--green)'}}>{s.out}</span>
+                    </div>
+                    <div style={{padding:'9px 13px',fontSize:12,color:'var(--ink3)',lineHeight:1.5}}>
+                      <span style={{fontWeight:600}}>Formula: </span>{s.formula}
+                      {s.in&&Object.entries(s.in).map(([k,v])=><span key={k}> · <span style={{fontWeight:600}}>{k}:</span> {v}</span>)}
+                    </div>
+                  </div>
+                ))}
+              </div>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  );
+};
+
+/* ── Action Modal ── */
+const Modal=({fin,baseline,onClose,onSaved})=>{
+  const{db}=useA();
+  const[amt,setAmt]=useState(Math.max(50,Math.round(baseline.sug||100)));
+  const[done,setDone]=useState(false);
+  const t=tc(baseline.tier);
+  const max=Math.max(100,Math.round((baseline.metrics?.net||500)*.6));
+  const cfgs={stabilize_cashflow:{title:'Identify a spending reduction',lbl:'Monthly reduction target',prompt:"Even a small reduction starts restoring balance right away."},eliminate_high_interest_debt:{title:'Set an extra debt payment',lbl:'Extra monthly payment on highest-rate debt',prompt:"Extra payments compress your debt timeline dramatically."},build_emergency_buffer:{title:'Monthly buffer contribution',lbl:'Amount to add to savings each month',prompt:"This goes straight into your safety net. Every month counts."},increase_future_allocation:{title:'Shift more toward your future',lbl:'Additional monthly future allocation',prompt:"Even a small increase starts compounding immediately."},optimize_discretionary_spend:{title:'Trim one spending category',lbl:'Monthly discretionary reduction',prompt:"Redirecting from low-value to Future You, not sacrifice."}};
+  const cfg=cfgs[baseline.lever]||cfgs.build_emergency_buffer;
+  const save=async()=>{await db.set('plan',{k:`p${Date.now()}`,lever:baseline.lever,amt,ts:Date.now(),done:false});setDone(true);setTimeout(onSaved,1800)};
+  return(
+    <div onClick={e=>{if(e.target===e.currentTarget)onClose()}} style={{position:'fixed',inset:0,background:'rgba(28,24,20,.55)',display:'flex',alignItems:'center',justifyContent:'center',padding:24,zIndex:100,backdropFilter:'blur(4px)'}}>
+      <div className="card-lg" style={{width:'100%',maxWidth:440,padding:'36px 32px',background:'var(--card)'}}>
+        {done?(
+          <div style={{textAlign:'center',padding:'16px 0'}}>
+            <div style={{fontSize:48,marginBottom:16}}>🎉</div>
+            <h3 className="serif" style={{fontSize:22,fontWeight:700,color:'var(--ink)',marginBottom:10}}>Nice. This strengthens your position.</h3>
+            <p style={{color:'var(--ink3)',fontSize:14,lineHeight:1.65}}>Your commitment is saved. Atlas will track this with you.</p>
+          </div>
+        ):(
+          <>
+            <div style={{marginBottom:24}}>
+              <div className="pill pill-teal" style={{marginBottom:14,fontSize:12}}>Your commitment</div>
+              <h3 className="serif" style={{fontSize:20,fontWeight:700,color:'var(--ink)',marginBottom:8}}>{cfg.title}</h3>
+              <p style={{color:'var(--ink3)',fontSize:13,lineHeight:1.65}}>{cfg.prompt}</p>
+            </div>
+            <div style={{marginBottom:28}}>
+              <div style={{display:'flex',justifyContent:'space-between',alignItems:'baseline',marginBottom:12}}>
+                <label style={{fontSize:13,fontWeight:600,color:'var(--ink2)'}}>{cfg.lbl}</label>
+                <span className="serif" style={{fontSize:26,fontWeight:700,color:t.c}}>${amt.toLocaleString()}<span style={{fontSize:13,fontWeight:400,color:'var(--ink3)'}}>/mo</span></span>
+              </div>
+              <input type="range" className="slider" min={50} max={max} step={25} value={amt} onChange={e=>setAmt(+e.target.value)}/>
+              <div style={{display:'flex',justifyContent:'space-between',marginTop:6,fontSize:11,color:'var(--ink3)'}}>
+                <span>$50</span>
+                <span>Atlas suggests: {fc(baseline.sug||amt)}/mo</span>
+                <span>${max.toLocaleString()}</span>
+              </div>
+            </div>
+            <div style={{display:'flex',gap:10}}>
+              <button onClick={onClose} className="btn btn-s" style={{flex:1,justifyContent:'center'}}>Cancel</button>
+              <button onClick={save} className="btn btn-p" style={{flex:2,justifyContent:'center'}}>
+                <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M5 13l4 4L19 7"/></svg>
+                Commit to this
+              </button>
+            </div>
+          </>
+        )}
+      </div>
+    </div>
+  );
+};
+
+/* ── SCREEN 1: Landing ── */
+const S1=({onStart})=>{
+  const{theme,setTheme}=useA();
+  return(
+    <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',flexDirection:'column'}}>
+      <nav style={{padding:'18px 28px',display:'flex',alignItems:'center',justifyContent:'space-between',borderBottom:'1px solid var(--bdr)',background:'var(--card)'}}>
+        <Logo sz={36}/>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          <button onClick={()=>setTheme(t=>t==='dark'?'light':'dark')} className="btn-g">
+            {theme==='dark'?'☀️ Light':'🌙 Dark'}
+          </button>
+          <button onClick={onStart} className="btn btn-p" style={{fontSize:14,padding:'10px 20px'}}>
+            Start conversation →
+          </button>
+        </div>
+      </nav>
+      <div style={{flex:1,display:'flex',flexDirection:'column',alignItems:'center',justifyContent:'center',padding:'56px 24px',textAlign:'center'}}>
+        <div className="fu" style={{animationDelay:'.05s',maxWidth:720}}>
+          <div className="pill pill-teal" style={{marginBottom:26}}>✦ Financial Intelligence Companion</div>
+          <h1 className="serif" style={{fontSize:'clamp(38px,5.5vw,64px)',fontWeight:700,color:'var(--ink)',lineHeight:1.18,marginBottom:22,letterSpacing:'-.025em'}}>
+            The clarity you've always wanted<br/>
+            <span className="tbrand">about your money.</span>
+          </h1>
+          <p style={{fontSize:'clamp(15px,2vw,18px)',color:'var(--ink2)',lineHeight:1.72,maxWidth:520,margin:'0 auto 36px',fontWeight:400}}>
+            Atlas talks with you, understands your real situation, and gives you one clear step forward — like a brilliant friend who genuinely cares about your future.
+          </p>
+          <div style={{display:'flex',gap:14,justifyContent:'center',flexWrap:'wrap'}}>
+            <button onClick={onStart} className="btn btn-p" style={{fontSize:16,padding:'16px 32px'}}>
+              Let's talk with Atlas →
+            </button>
+            <button onClick={onStart} className="btn btn-s" style={{fontSize:15,padding:'15px 26px'}}>
+              Explore how it works
+            </button>
+          </div>
+          <div style={{marginTop:40,display:'flex',gap:24,flexWrap:'wrap',justifyContent:'center'}}>
+            {[['🔒','No bank sync'],['📱','Stays on your device'],['🎯','One step at a time'],['💬','Real conversation']].map(([e,t])=>(
+              <div key={t} style={{display:'flex',alignItems:'center',gap:7,color:'var(--ink3)',fontSize:13,fontWeight:600}}>
+                <span>{e}</span><span>{t}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+        <div className="fu" style={{animationDelay:'.18s',marginTop:68,display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(210px,1fr))',gap:18,width:'100%',maxWidth:680}}>
+          {[{em:'💬',t:'You talk, Atlas listens',b:"No forms or spreadsheets. Just tell Atlas what's on your mind."},{em:'🎯',t:'One clear next step',b:"Not a list of 12 things. Just the single highest-leverage move."},{em:'🔍',t:'Fully transparent',b:"Atlas shows its reasoning — so you understand why, not just what."}].map(f=>(
+            <div key={f.t} className="card" style={{padding:'26px 22px',textAlign:'left'}}>
+              <div style={{fontSize:30,marginBottom:12}}>{f.em}</div>
+              <div className="serif" style={{fontWeight:600,fontSize:15,color:'var(--ink)',marginBottom:7}}>{f.t}</div>
+              <div style={{color:'var(--ink3)',fontSize:13,lineHeight:1.65}}>{f.b}</div>
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  );
+};
+
+/* ── SCREEN 2: Conversation ── */
+const NEED=['monthlyIncome','essentialExpenses','totalSavings','highInterestDebt','lowInterestDebt'];
+const S2=({onDone})=>{
+  const{db,claude,engine,theme,setTheme}=useA();
+  const[msgs,setMsgs]=useState([{r:'a',t:"Hey, I'm glad you're here.\n\nI'm not going to ask you to connect your bank or fill out a form. I just want to understand your situation — in your own words.\n\nWhat's on your mind when it comes to money right now?"}]);
+  const[inp,setInp]=useState('');
+  const[fin,setFin]=useState({monthlyIncome:0,essentialExpenses:0,totalSavings:0,highInterestDebt:null,lowInterestDebt:null,monthlyDebtPayments:0,primaryGoal:'stability',riskTolerance:'balanced',timeHorizonYears:3});
+  const[busy,setBusy]=useState(false);
+  const[prog,setProg]=useState(0);
+  const bot=useRef();
+  useEffect(()=>{bot.current?.scrollIntoView({behavior:'smooth'})},[msgs]);
+  const missing=useCallback(f=>NEED.filter(k=>f[k]===null||f[k]===undefined),[]);
+  const calcP=useCallback(f=>Math.round(NEED.filter(k=>f[k]!==null&&f[k]!==undefined).length/NEED.length*100),[]);
+  const send=useCallback(async()=>{
+    if(!inp.trim()||busy)return;
+    const ut=inp.trim();setInp('');
+    const nm=[...msgs,{r:'u',t:ut}];setMsgs(nm);setBusy(true);
+    const{fields}=await claude.extract(ut,fin);
+    const uf={...fin};Object.entries(fields).forEach(([k,v])=>{if(v!==undefined&&v!==null)uf[k]=v});
+    setFin(uf);await db.set('fin',{k:'cur',...uf,ts:Date.now()});
+    setProg(calcP(uf));
+    const miss=missing(uf);
+    if(miss.length===0){
+      const b=await engine.run(uf);await db.set('strat',{k:'cur',...b});
+      const rm=[...nm,{r:'a',t:"Perfect — I have everything I need.\n\nLet me show you where you stand."}];setMsgs(rm);setBusy(false);
+      setTimeout(()=>onDone({fin:uf,baseline:b}),1600);
+    }else{
+      const am=nm.map(m=>({role:m.r==='u'?'user':'assistant',content:m.t}));
+      const q=await claude.chat(am,miss);
+      setMsgs([...nm,{r:'a',t:q}]);setBusy(false);
+    }
+  },[inp,busy,msgs,fin,claude,db,engine,missing,calcP,onDone]);
+  const onKey=e=>{if(e.key==='Enter'&&!e.shiftKey){e.preventDefault();send()}};
+  return(
+    <div style={{height:'100vh',display:'flex',flexDirection:'column',background:'var(--bg)'}}>
+      <div style={{padding:'14px 24px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--card)',flexShrink:0}}>
+        <Logo sz={30}/>
+        <div style={{display:'flex',alignItems:'center',gap:10}}>
+          {!claude.isAvailable()&&(
+            <div style={{display:'flex',alignItems:'center',gap:6,background:'var(--amber-lt)',borderRadius:100,padding:'5px 12px',border:'1px solid rgba(194,115,10,.2)'}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:'var(--amber)'}}/>
+              <span style={{fontSize:11,color:'var(--amber)',fontWeight:700}}>Offline mode — add API key in Vercel to enable AI</span>
+            </div>
+          )}
+          {claude.isAvailable()&&claude._apiAvailable===true&&(
+            <div style={{display:'flex',alignItems:'center',gap:6,background:'var(--green-lt)',borderRadius:100,padding:'5px 12px',border:'1px solid rgba(46,125,82,.2)'}}>
+              <div style={{width:6,height:6,borderRadius:'50%',background:'var(--green)'}}/>
+              <span style={{fontSize:11,color:'var(--green)',fontWeight:700}}>Claude AI active</span>
+            </div>
+          )}
+          <div style={{display:'flex',alignItems:'center',gap:8,background:'var(--bg2)',borderRadius:100,padding:'6px 14px',border:'1px solid var(--bdr)'}}>
+            <div style={{width:72,height:5,background:'var(--bg3)',borderRadius:3,overflow:'hidden'}}>
+              <div style={{width:`${prog}%`,height:'100%',background:'linear-gradient(90deg,var(--teal),var(--sky))',borderRadius:3,transition:'width .4s ease'}}/>
+            </div>
+            <span style={{fontSize:11,color:'var(--ink3)',fontWeight:600}}>Building strategy…</span>
+          </div>
+          <button onClick={()=>setTheme(t=>t==='dark'?'light':'dark')} className="btn-g" style={{fontSize:13}}>
+            {theme==='dark'?'☀️':'🌙'}
+          </button>
+        </div>
+      </div>
+      <div style={{flex:1,overflowY:'auto',padding:'28px 20px'}}>
+        <div style={{maxWidth:660,margin:'0 auto'}}>
+          {msgs.map((m,i)=>(
+            <div key={i} style={{display:'flex',justifyContent:m.r==='u'?'flex-end':'flex-start',marginBottom:18}}>
+              {m.r==='a'&&<div style={{width:30,height:30,background:'linear-gradient(135deg,var(--teal),var(--sky))',borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',marginRight:10,flexShrink:0,marginTop:2}}><span style={{color:'#fff',fontSize:12,fontFamily:'Lora,serif',fontWeight:700}}>A</span></div>}
+              <div style={{maxWidth:'74%',background:m.r==='u'?'linear-gradient(135deg,var(--teal),var(--sky))':'var(--card)',color:m.r==='u'?'#fff':'var(--ink)',border:m.r==='u'?'none':'1px solid var(--bdr)',borderRadius:m.r==='u'?'18px 18px 5px 18px':'18px 18px 18px 5px',padding:'13px 17px',boxShadow:'var(--sh1)',lineHeight:1.65,fontSize:15,whiteSpace:'pre-wrap',fontWeight:m.r==='u'?500:400}}>
+                {m.t}
+              </div>
+            </div>
+          ))}
+          {busy&&<div style={{display:'flex',marginBottom:18}}><div style={{width:30,height:30,background:'linear-gradient(135deg,var(--teal),var(--sky))',borderRadius:9,display:'flex',alignItems:'center',justifyContent:'center',marginRight:10,flexShrink:0}}><span style={{color:'#fff',fontSize:12,fontFamily:'Lora,serif',fontWeight:700}}>A</span></div><div className="card" style={{padding:'14px 18px',display:'flex',gap:5,alignItems:'center'}}><div style={{width:7,height:7,borderRadius:'50%',background:'var(--teal)'}} className="d1"/><div style={{width:7,height:7,borderRadius:'50%',background:'var(--teal)'}} className="d2"/><div style={{width:7,height:7,borderRadius:'50%',background:'var(--teal)'}} className="d3"/></div></div>}
+          <div ref={bot}/>
+        </div>
+      </div>
+      <div style={{padding:'14px 20px',borderTop:'1px solid var(--bdr)',background:'var(--bg)',flexShrink:0}}>
+        <div style={{maxWidth:660,margin:'0 auto',position:'relative'}}>
+          <textarea value={inp} onChange={e=>setInp(e.target.value)} onKeyDown={onKey} placeholder="Tell Atlas anything…" rows={1} style={{width:'100%',padding:'13px 52px 13px 17px',background:'var(--card)',border:'1.5px solid var(--bdr2)',borderRadius:14,fontFamily:'Nunito,sans-serif',fontSize:15,color:'var(--ink)',outline:'none',resize:'none',lineHeight:1.5,boxShadow:'var(--sh1)'}}/>
+          <button onClick={send} disabled={!inp.trim()||busy} className="btn btn-p" style={{position:'absolute',right:5,top:'50%',transform:'translateY(-50%)',padding:'8px 11px',borderRadius:10,minWidth:'auto'}}>
+            <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 19l9 2-9-18-9 18 9-2zm0 0v-8"/></svg>
+          </button>
+        </div>
+        <p style={{textAlign:'center',fontSize:12,color:'var(--ink3)',marginTop:8}}>Try: "I make $4k/month and spend about $2.5k on essentials"</p>
+      </div>
+    </div>
+  );
+};
+
+/* ── SCREEN 3: Summary ── */
+const S3=({fin,baseline,onCont})=>{
+  const items=[{l:'Monthly income',v:fc(fin.monthlyIncome||0),ok:true},{l:'Essential expenses',v:fc(fin.essentialExpenses||0),ok:true},{l:'Emergency buffer',v:`${baseline.bufMo.toFixed(1)} months`,ok:baseline.bufMo>=3},{l:'Future allocation',v:fp(baseline.futPct),ok:baseline.futPct>=.15},{l:'Debt pressure',v:baseline.dExp,ok:baseline.dExp==='Low'},{l:'Stated goal',v:(fin.primaryGoal||'stability').replace('_',' '),ok:true}];
+  return(
+    <div style={{minHeight:'100vh',background:'var(--bg)',display:'flex',alignItems:'center',justifyContent:'center',padding:'40px 24px'}}>
+      <div className="si" style={{width:'100%',maxWidth:520}}>
+        <div style={{display:'flex',alignItems:'center',gap:12,marginBottom:28}}>
+          <div style={{width:42,height:42,background:'linear-gradient(135deg,var(--teal),var(--sky))',borderRadius:13,display:'flex',alignItems:'center',justifyContent:'center',boxShadow:'0 2px 8px rgba(10,124,110,0.28)'}}><span style={{color:'#fff',fontFamily:'Lora,serif',fontWeight:700,fontSize:18}}>A</span></div>
+          <div><div className="serif" style={{fontWeight:700,fontSize:16,color:'var(--ink)'}}>Atlas</div><div style={{fontSize:12,color:'var(--ink3)'}}>Here's what I'm seeing</div></div>
+        </div>
+        <div className="card-lg" style={{padding:'32px 28px',marginBottom:20}}>
+          <h2 className="serif" style={{fontSize:22,fontWeight:700,color:'var(--ink)',marginBottom:8,lineHeight:1.35}}>Here's what I understand<br/>about your situation.</h2>
+          <p style={{color:'var(--ink3)',fontSize:13,marginBottom:24,lineHeight:1.6}}>Take a moment to review this. If anything looks off, we can fix it together.</p>
+          <div style={{display:'flex',flexDirection:'column',gap:11}}>
+            {items.map(({l,v,ok})=>(
+              <div key={l} style={{display:'flex',alignItems:'center',justifyContent:'space-between',padding:'12px 15px',background:'var(--bg2)',borderRadius:13,border:'1px solid var(--bdr)'}}>
+                <span style={{fontSize:13,color:'var(--ink2)',fontWeight:500}}>{l}</span>
+                <div style={{display:'flex',alignItems:'center',gap:9}}>
+                  <span style={{fontWeight:700,fontSize:14,color:'var(--ink)'}}>{v}</span>
+                  <div style={{width:18,height:18,borderRadius:'50%',background:ok?'var(--green-lt)':'var(--amber-lt)',display:'flex',alignItems:'center',justifyContent:'center'}}>
+                    <svg width="10" height="10" fill="none" viewBox="0 0 24 24" stroke={ok?'var(--green)':'var(--amber)'}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>
+                  </div>
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+        <button onClick={onCont} className="btn btn-p" style={{width:'100%',justifyContent:'center',fontSize:16,padding:'16px'}}>
+          See where I stand →
+        </button>
+      </div>
+    </div>
+  );
+};
+
+/* ── SCREEN 4: Tier Reveal ── */
+const S4=({fin,baseline,onDash,onAction})=>{
+  const t=tc(baseline.tier);
+  const[modal,setModal]=useState(false);
+  const lLbls={stabilize_cashflow:'Stabilise your cashflow',eliminate_high_interest_debt:'Tackle high-interest debt',build_emergency_buffer:'Build your emergency buffer',increase_future_allocation:'Grow your future allocation',optimize_discretionary_spend:'Optimise one spending category'};
+  return(
+    <div style={{minHeight:'100vh',background:'var(--bg)',padding:'36px 20px'}}>
+      <div style={{maxWidth:580,margin:'0 auto'}}>
+        <div className="fu card-lg" style={{padding:'32px 28px',marginBottom:20,textAlign:'center',background:`linear-gradient(135deg,${t.b},var(--card))`,borderColor:t.c}}>
+          <div style={{fontSize:48,marginBottom:14}}>{t.em}</div>
+          <p style={{fontSize:13,color:'var(--ink3)',marginBottom:6}}>{baseline.expl.tl.reveal}</p>
+          <h2 className="serif" style={{fontSize:30,fontWeight:700,color:t.c,marginBottom:8,letterSpacing:'-.02em'}}>{t.lbl}</h2>
+          <p style={{fontSize:14,color:'var(--ink2)',lineHeight:1.7,maxWidth:380,margin:'0 auto 22px'}}>{baseline.expl.tl.bridge}</p>
+          <Ladder cur={baseline.tier} compact/>
+        </div>
+        <div className="fu card-md" style={{animationDelay:'.12s',padding:'26px',marginBottom:14,borderLeft:`4px solid ${t.c}`}}>
+          <div className="pill" style={{background:t.b,color:t.c,marginBottom:14,fontSize:12}}>Your next move</div>
+          <h3 className="serif" style={{fontSize:19,fontWeight:700,color:'var(--ink)',marginBottom:9}}>{lLbls[baseline.lever]}</h3>
+          <p style={{fontSize:14,color:'var(--ink2)',lineHeight:1.7,marginBottom:16}}>{baseline.expl.why}</p>
+          <p style={{fontSize:14,color:'var(--teal)',fontWeight:600,lineHeight:1.6,marginBottom:22,padding:'12px 15px',background:'var(--teal-lt)',borderRadius:12}}>{baseline.expl.next}</p>
+          <div style={{display:'flex',gap:10,flexWrap:'wrap'}}>
+            <button onClick={()=>setModal(true)} className="btn btn-p" style={{flex:1,justifyContent:'center',minWidth:160}}>{lLbls[baseline.lever]} →</button>
+            <button onClick={onDash} className="btn btn-s" style={{flexShrink:0}}>Dashboard</button>
+          </div>
+        </div>
+        <div className="fu" style={{animationDelay:'.22s'}}>
+          <Explain expl={baseline.expl}/>
+        </div>
+      </div>
+      <AP>{modal&&<Modal key="m" fin={fin} baseline={baseline} onClose={()=>setModal(false)} onSaved={()=>{setModal(false);onDash()}}/>}</AP>
+    </div>
+  );
+};
+
+/* ── SCREEN 6: Dashboard ── */
+const S6=({fin,baseline,onTalk,onNav})=>{
+  const{db}=useA();
+  const[modal,setModal]=useState(false);
+  const[steps,setSteps]=useState([]);
+  useEffect(()=>{db.all('plan').then(s=>setSteps(s||[])).catch(()=>{});},[]);
+  const t=tc(baseline.tier);
+  const inc=fin.monthlyIncome||0,ess=fin.essentialExpenses||0,net=baseline.metrics?.net||0,disc=baseline.metrics?.disc||0,fut=Math.max(0,net-disc);
+  const alloc=inc>0?[{l:'Essentials',a:ess,p:ess/inc,c:'var(--sky)'},{l:'Lifestyle',a:disc,p:Math.max(0,disc/inc),c:'var(--amber)'},{l:'Future You',a:fut,p:Math.max(0,fut/inc),c:'var(--teal)'}]:[];
+  const lLbls={stabilize_cashflow:'Stabilise cashflow',eliminate_high_interest_debt:'Tackle high-interest debt',build_emergency_buffer:'Build emergency buffer',increase_future_allocation:'Grow future allocation',optimize_discretionary_spend:'Optimise spending'};
+  return(
+    <div style={{minHeight:'100vh',background:'var(--bg)'}}>
+      <div style={{padding:'14px 24px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',justifyContent:'space-between',background:'var(--card)',position:'sticky',top:0,zIndex:10}}>
+        <Logo sz={30}/>
+        <div style={{display:'flex',gap:8}}>
+          <button onClick={()=>onNav('strategy')} className="btn-g" style={{fontSize:13}}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z"/></svg>
+            Strategy
+          </button>
+          <button onClick={()=>onNav('settings')} className="btn-g" style={{fontSize:13}}>
+            <svg width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"/><circle cx="12" cy="12" r="3" strokeWidth={2}/></svg>
+            Settings
+          </button>
+        </div>
+      </div>
+      <div style={{maxWidth:860,margin:'0 auto',padding:'28px 20px',display:'grid',gridTemplateColumns:'repeat(auto-fit,minmax(280px,1fr))',gap:18}}>
+        {/* Tier */}
+        <div className="card-md fu" style={{padding:'26px',background:`linear-gradient(140deg,${t.b},var(--card))`,borderColor:t.c}}>
+          <div style={{display:'flex',justifyContent:'space-between',alignItems:'flex-start',marginBottom:14}}>
+            <div><div style={{fontSize:12,color:'var(--ink3)',fontWeight:600,marginBottom:5}}>YOUR POSITION</div><h2 className="serif" style={{fontSize:24,fontWeight:700,color:t.c,letterSpacing:'-.01em'}}>{t.em} {t.lbl}</h2></div>
+            <div className="pill" style={{background:t.b,color:t.c,fontSize:11}}>Active</div>
+          </div>
+          <div style={{display:'flex',gap:12,marginBottom:18}}>
+            {[['BUFFER',`${baseline.bufMo.toFixed(1)} mo`,'6 mo target'],['FUTURE',fp(baseline.futPct),'15% target'],['DEBT',baseline.dExp,'exposure']].map(([l,v,s])=>(
+              <div key={l} style={{flex:1,padding:'11px 13px',background:'rgba(255,255,255,.45)',borderRadius:11,border:'1px solid var(--bdr)'}}>
+                <div style={{fontSize:10,color:'var(--ink3)',fontWeight:700,marginBottom:4}}>{l}</div>
+                <div className="serif" style={{fontSize:17,fontWeight:700,color:'var(--ink)'}}>{v}</div>
+                <div style={{fontSize:10,color:'var(--ink3)'}}>{s}</div>
+              </div>
+            ))}
+          </div>
+          {baseline.tier!=='GrowthReady'&&(
+            <div>
+              <div style={{display:'flex',justifyContent:'space-between',fontSize:10,color:'var(--ink3)',marginBottom:4}}>
+                <span>{t.lbl}</span><span>{TIERS[TIERS.findIndex(x=>x.id===baseline.tier)+1]?.lbl}</span>
+              </div>
+              <div style={{height:5,background:'var(--bg3)',borderRadius:3,overflow:'hidden'}}>
+                <div style={{width:`${Math.min(88,Math.round(baseline.bufMo/6*100))}%`,height:'100%',background:`linear-gradient(90deg,${t.c},var(--sky))`,borderRadius:3,transition:'width 1s ease'}}/>
+              </div>
+            </div>
+          )}
+        </div>
+        {/* Next step */}
+        <div className="card-md fu" style={{animationDelay:'.1s',padding:'26px',borderLeft:`4px solid ${t.c}`}}>
+          <div style={{fontSize:11,fontWeight:700,color:'var(--ink3)',marginBottom:10}}>YOUR NEXT STEP</div>
+          <h3 className="serif" style={{fontSize:18,fontWeight:700,color:'var(--ink)',marginBottom:8}}>{lLbls[baseline.lever]}</h3>
+          <p style={{color:'var(--ink2)',fontSize:13,lineHeight:1.65,marginBottom:18}}>{baseline.expl.next}</p>
+          <button onClick={()=>setModal(true)} className="btn btn-p" style={{width:'100%',justifyContent:'center'}}>Take this step →</button>
+          {steps.length>0&&<div style={{marginTop:12,padding:'9px 13px',background:'var(--green-lt)',borderRadius:10,fontSize:12,color:'var(--green)',display:'flex',alignItems:'center',gap:6}}><svg width="12" height="12" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2.5} d="M5 13l4 4L19 7"/></svg>{steps.length} commitment{steps.length>1?'s':''} saved</div>}
+        </div>
+        {/* Allocation */}
+        {inc>0&&(
+          <div className="card fu" style={{animationDelay:'.18s',padding:'26px'}}>
+            <div style={{fontSize:11,fontWeight:700,color:'var(--ink3)',marginBottom:18}}>WHERE YOUR MONEY GOES</div>
+            <div style={{height:8,borderRadius:4,overflow:'hidden',display:'flex',marginBottom:18}}>
+              {alloc.filter(s=>s.p>0).map(s=><div key={s.l} style={{flex:s.p,background:s.c,transition:'flex .5s ease'}}/>)}
+            </div>
+            {alloc.map(s=>(
+              <div key={s.l} style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:11}}>
+                <div style={{display:'flex',alignItems:'center',gap:9}}><div style={{width:9,height:9,borderRadius:2,background:s.c,flexShrink:0}}/><span style={{fontSize:13,color:'var(--ink2)',fontWeight:500}}>{s.l}</span></div>
+                <div><span style={{fontWeight:700,fontSize:14,color:'var(--ink)'}}>{fc(s.a)}</span><span style={{fontSize:11,color:'var(--ink3)',marginLeft:7}}>{fp(s.p)}</span></div>
+              </div>
+            ))}
+          </div>
+        )}
+        {/* Buffer */}
+        <div className="card fu" style={{animationDelay:'.24s',padding:'26px'}}>
+          <div style={{fontSize:11,fontWeight:700,color:'var(--ink3)',marginBottom:14}}>EMERGENCY BUFFER</div>
+          <div style={{display:'flex',alignItems:'baseline',gap:7,marginBottom:11}}>
+            <span className="serif" style={{fontSize:30,fontWeight:700,color:'var(--ink)'}}>{baseline.bufMo.toFixed(1)}</span>
+            <span style={{color:'var(--ink3)',fontSize:13}}>months</span>
+          </div>
+          <div style={{height:7,background:'var(--bg3)',borderRadius:4,overflow:'hidden',marginBottom:7}}>
+            <div style={{width:`${Math.min(100,baseline.bufMo/6*100)}%`,height:'100%',background:'linear-gradient(90deg,var(--sky),var(--teal))',borderRadius:4,transition:'width 1s ease'}}/>
+          </div>
+          <div style={{display:'flex',justifyContent:'space-between',fontSize:11,color:'var(--ink3)',marginBottom:12}}>
+            <span>0 months</span><span>Target: 6 months</span>
+          </div>
+          {baseline.bufMo<6&&<div style={{fontSize:12,color:'var(--ink2)',lineHeight:1.6}}>{fc(Math.max(0,(fin.essentialExpenses||0)*6-(fin.totalSavings||0)))} more to reach your 6-month target.</div>}
+        </div>
+      </div>
+      {/* Sticky CTA */}
+      <div style={{position:'fixed',bottom:22,right:22}}>
+        <button onClick={onTalk} className="btn btn-p" style={{borderRadius:100,padding:'13px 20px',boxShadow:'0 4px 18px rgba(10,124,110,.38)'}}>
+          <svg width="17" height="17" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8 12h.01M12 12h.01M16 12h.01M21 12c0 4.418-4.03 8-9 8a9.863 9.863 0 01-4.255-.949L3 20l1.395-3.72C3.512 15.042 3 13.574 3 12c0-4.418 4.03-8 9-8s9 3.582 9 8z"/></svg>
+          Talk with Atlas
+        </button>
+      </div>
+      <AP>{modal&&<Modal key="m" fin={fin} baseline={baseline} onClose={()=>setModal(false)} onSaved={()=>setModal(false)}/>}</AP>
+    </div>
+  );
+};
+
+/* ── SCREEN 7: Strategy ── */
+const S7=({fin,baseline,onBack})=>{
+  const criteria={Foundation:['Monthly outflow ≥ inflow (negative cashflow)','Emergency buffer < 1 month'],Stabilizing:['Buffer between 1–3 months','High-interest debt > 2× monthly income'],Strategic:['Buffer between 3–6 months','Debt-to-income ratio > 30%'],GrowthReady:['Buffer ≥ 6 months','Debt-to-income ≤ 30%','Positive monthly cashflow']};
+  return(
+    <div style={{minHeight:'100vh',background:'var(--bg)'}}>
+      <div style={{padding:'14px 24px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:14,background:'var(--card)',position:'sticky',top:0,zIndex:10}}>
+        <button onClick={onBack} className="btn-g">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+          Dashboard
+        </button>
+        <div style={{flex:1,textAlign:'center'}}><span className="serif" style={{fontWeight:700,fontSize:16,color:'var(--ink)'}}>Your Strategy</span></div>
+      </div>
+      <div style={{maxWidth:660,margin:'0 auto',padding:'32px 20px'}}>
+        <div className="card-md fu" style={{padding:'26px',marginBottom:20}}>
+          <h3 className="serif" style={{fontSize:18,fontWeight:700,color:'var(--ink)',marginBottom:6}}>Your progression path</h3>
+          <p style={{color:'var(--ink3)',fontSize:13,marginBottom:18,lineHeight:1.6}}>Each tier represents a different level of financial stability and positioning.</p>
+          <Ladder cur={baseline.tier}/>
+        </div>
+        <div className="card fu" style={{animationDelay:'.1s',padding:'26px',marginBottom:18}}>
+          <h3 className="serif" style={{fontSize:17,fontWeight:700,color:'var(--ink)',marginBottom:14}}>What changes my tier?</h3>
+          {TIERS.map(t=>{
+            const isCur=t.id===baseline.tier;
+            return(
+              <div key={t.id} style={{marginBottom:13,padding:'13px 15px',background:isCur?t.b:'var(--bg2)',borderRadius:13,border:`1px solid ${isCur?t.c:'var(--bdr)'}`}}>
+                <div style={{display:'flex',alignItems:'center',gap:8,marginBottom:7}}>
+                  <span style={{fontSize:15}}>{t.em}</span>
+                  <span className="serif" style={{fontWeight:700,color:isCur?t.c:'var(--ink2)',fontSize:14}}>{t.lbl}</span>
+                  {isCur&&<span className="pill" style={{background:t.b,color:t.c,fontSize:10,padding:'3px 9px'}}>You're here</span>}
+                </div>
+                {criteria[t.id]?.map((c,i)=><div key={i} style={{fontSize:12,color:'var(--ink3)',paddingLeft:24,lineHeight:1.5}}>· {c}</div>)}
+              </div>
+            );
+          })}
+        </div>
+        <div className="card fu" style={{animationDelay:'.15s',padding:'26px',marginBottom:18}}>
+          <h3 className="serif" style={{fontSize:17,fontWeight:700,color:'var(--ink)',marginBottom:14}}>Buffer analysis</h3>
+          <div style={{display:'flex',gap:14,marginBottom:14}}>
+            <div style={{flex:1,textAlign:'center',padding:'14px',background:'var(--bg2)',borderRadius:12,border:'1px solid var(--bdr)'}}><div className="serif" style={{fontSize:26,fontWeight:700,color:'var(--ink)'}}>{baseline.bufMo.toFixed(1)}</div><div style={{fontSize:11,color:'var(--ink3)'}}>current months</div></div>
+            <div style={{display:'flex',alignItems:'center',fontSize:18,color:'var(--ink3)'}}>→</div>
+            <div style={{flex:1,textAlign:'center',padding:'14px',background:'var(--teal-lt)',borderRadius:12,border:'1px solid rgba(10,124,110,.18)'}}><div className="serif" style={{fontSize:26,fontWeight:700,color:'var(--teal)'}}>6.0</div><div style={{fontSize:11,color:'var(--teal)'}}>target months</div></div>
+          </div>
+          {baseline.bufMo<6&&<div style={{padding:'13px 15px',background:'var(--sky-lt)',borderRadius:12,fontSize:13,color:'var(--sky)',lineHeight:1.65}}>You need <strong>{fc(Math.max(0,(fin.essentialExpenses||0)*6-(fin.totalSavings||0)))}</strong> more to reach 6 months. At {fc(baseline.sug||100)}/month that's ~{Math.ceil(Math.max(0,(fin.essentialExpenses||0)*6-(fin.totalSavings||0))/(baseline.sug||100))} months away.</div>}
+        </div>
+        <div className="fu" style={{animationDelay:'.2s'}}><Explain expl={baseline.expl}/></div>
+      </div>
+    </div>
+  );
+};
+
+/* ── SCREEN 8: Settings ── */
+const S8=({onBack,onDelete,onExport})=>{
+  const{theme,setTheme}=useA();
+  const[confirm,setConfirm]=useState(false);
+  const[insights,setInsights]=useState(false);
+  return(
+    <div style={{minHeight:'100vh',background:'var(--bg)'}}>
+      <div style={{padding:'14px 24px',borderBottom:'1px solid var(--bdr)',display:'flex',alignItems:'center',gap:14,background:'var(--card)',position:'sticky',top:0,zIndex:10}}>
+        <button onClick={onBack} className="btn-g">
+          <svg width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M7 16l-4-4m0 0l4-4m-4 4h18"/></svg>
+          Dashboard
+        </button>
+        <div style={{flex:1,textAlign:'center'}}><span className="serif" style={{fontWeight:700,fontSize:16,color:'var(--ink)'}}>Settings & Privacy</span></div>
+      </div>
+      <div style={{maxWidth:520,margin:'0 auto',padding:'32px 20px',display:'flex',flexDirection:'column',gap:18}}>
+        {/* Appearance */}
+        <div className="card fu" style={{padding:'24px'}}>
+          <h3 className="serif" style={{fontSize:16,fontWeight:700,color:'var(--ink)',marginBottom:14}}>Appearance</h3>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between'}}>
+            <div><div style={{fontSize:14,fontWeight:600,color:'var(--ink)'}}>Theme</div><div style={{fontSize:12,color:'var(--ink3)'}}>Choose what feels comfortable</div></div>
+            <button onClick={()=>setTheme(t=>t==='dark'?'light':'dark')} className="btn btn-s" style={{display:'flex',alignItems:'center',gap:7,fontSize:13,padding:'10px 16px'}}>
+              {theme==='dark'?'☀️ Light mode':'🌙 Dark mode'}
+            </button>
+          </div>
+        </div>
+        {/* Privacy */}
+        <div className="card fu" style={{animationDelay:'.05s',padding:'24px'}}>
+          <div style={{display:'flex',gap:10,alignItems:'flex-start',marginBottom:14}}>
+            <svg width="19" height="19" fill="none" viewBox="0 0 24 24" stroke="currentColor" style={{color:'var(--teal)',flexShrink:0,marginTop:2}}><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 12l2 2 4-4m5.618-4.016A11.955 11.955 0 0112 2.944a11.955 11.955 0 01-8.618 3.04A12.02 12.02 0 003 9c0 5.591 3.824 10.29 9 11.622 5.176-1.332 9-6.03 9-11.622 0-1.042-.133-2.052-.382-3.016z"/></svg>
+            <h3 className="serif" style={{fontSize:16,fontWeight:700,color:'var(--ink)'}}>Data & Privacy</h3>
+          </div>
+          <p style={{fontSize:13,color:'var(--ink2)',lineHeight:1.7,marginBottom:14}}>Your financial data lives entirely on your device using IndexedDB — a private browser database. Nothing is sent to external servers without your explicit action.</p>
+          <div style={{padding:'12px 14px',background:'var(--teal-lt)',borderRadius:11,fontSize:12,color:'var(--teal)',lineHeight:1.6}}><strong>Conversation:</strong> Messages may be sent to the Claude API only when you're actively chatting, to generate responses. Your financial numbers are not transmitted.</div>
+        </div>
+        {/* Bank sync (coming) */}
+        <div className="card fu" style={{animationDelay:'.08s',padding:'24px',opacity:.65}}>
+          <h3 className="serif" style={{fontSize:16,fontWeight:700,color:'var(--ink)',marginBottom:7}}>Bank sync</h3>
+          <p style={{fontSize:13,color:'var(--ink3)',lineHeight:1.65,marginBottom:12}}>Automatic transaction analysis via direct bank connection. Atlas is deliberately hands-off for now.</p>
+          <div className="pill pill-sky" style={{fontSize:11}}>Coming later</div>
+        </div>
+        {/* Insights toggle */}
+        <div className="card fu" style={{animationDelay:'.1s',padding:'24px'}}>
+          <div style={{display:'flex',alignItems:'center',justifyContent:'space-between',marginBottom:8}}>
+            <h3 className="serif" style={{fontSize:16,fontWeight:700,color:'var(--ink)'}}>Behavioural insights</h3>
+            <button onClick={()=>setInsights(o=>!o)} style={{width:46,height:25,background:insights?'var(--teal)':'var(--bg3)',borderRadius:100,border:'none',cursor:'pointer',position:'relative',transition:'background .2s',flexShrink:0}}>
+              <div style={{width:19,height:19,background:'#fff',borderRadius:'50%',position:'absolute',top:3,left:insights?24:3,transition:'left .2s',boxShadow:'0 1px 3px rgba(0,0,0,.2)'}}/>
+            </button>
+          </div>
+          <p style={{fontSize:12,color:'var(--ink3)',lineHeight:1.6}}>Off by default. When enabled, Atlas may remember conversation patterns to improve future responses.</p>
+        </div>
+        {/* Data controls */}
+        <div className="card fu" style={{animationDelay:'.13s',padding:'24px'}}>
+          <h3 className="serif" style={{fontSize:16,fontWeight:700,color:'var(--ink)',marginBottom:14}}>Your data</h3>
+          <div style={{display:'flex',flexDirection:'column',gap:10}}>
+            <button onClick={onExport} className="btn btn-s" style={{textAlign:'left',display:'flex',alignItems:'center',gap:9}}>
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+              Export all data (JSON)
+            </button>
+            <button onClick={()=>setConfirm(true)} style={{textAlign:'left',display:'flex',alignItems:'center',gap:9,background:'var(--rose-lt)',border:'1px solid rgba(184,64,64,.18)',borderRadius:14,padding:'12px 15px',color:'var(--rose)',fontFamily:'Nunito,sans-serif',fontWeight:600,fontSize:13,cursor:'pointer'}}>
+              <svg width="15" height="15" fill="none" viewBox="0 0 24 24" stroke="currentColor"><path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M19 7l-.867 12.142A2 2 0 0116.138 21H7.862a2 2 0 01-1.995-1.858L5 7m5 4v6m4-6v6m1-10V4a1 1 0 00-1-1h-4a1 1 0 00-1 1v3M4 7h16"/></svg>
+              Delete all my data
+            </button>
+          </div>
+        </div>
+      </div>
+      <AP>
+        {confirm&&(
+          <div onClick={e=>{if(e.target===e.currentTarget)setConfirm(false)}} style={{position:'fixed',inset:0,background:'rgba(28,24,20,.55)',display:'flex',alignItems:'center',justifyContent:'center',padding:24,zIndex:100}}>
+            <div className="card-lg" style={{width:'100%',maxWidth:360,padding:'30px',background:'var(--card)'}}>
+              <h3 className="serif" style={{fontSize:19,fontWeight:700,color:'var(--ink)',marginBottom:8}}>Delete all data?</h3>
+              <p style={{fontSize:13,color:'var(--ink2)',lineHeight:1.65,marginBottom:22}}>This permanently removes all your financial data, conversations, and strategies from this device. This cannot be undone.</p>
+              <div style={{display:'flex',gap:10}}>
+                <button onClick={()=>setConfirm(false)} className="btn btn-s" style={{flex:1,justifyContent:'center'}}>Cancel</button>
+                <button onClick={()=>{setConfirm(false);onDelete()}} style={{flex:1,background:'var(--rose)',color:'#fff',border:'none',borderRadius:14,padding:'12px',fontFamily:'Nunito,sans-serif',fontWeight:700,fontSize:14,cursor:'pointer'}}>Yes, delete</button>
+              </div>
+            </div>
+          </div>
+        )}
+      </AP>
+    </div>
+  );
+};
+
+/* ── ROOT ── */
+const db=new DB(),claude=new Claude(),engine=new Engine();
+
+function App(){
+  const[theme,setTheme]=useState('light');
+  const[scr,setScr]=useState('landing');
+  const[sess,setSess]=useState(null);
+  useEffect(()=>{document.documentElement.setAttribute('data-theme',theme);db.set('prefs',{k:'theme',v:theme});},[theme]);
+  useEffect(()=>{
+    Promise.all([db.get('fin','cur'),db.get('strat','cur')]).then(([f,s])=>{if(f&&s&&f.monthlyIncome>0){setSess({fin:f,baseline:s});setScr('dashboard')}}).catch(()=>{});
+    db.get('prefs','theme').then(p=>{if(p?.v)setTheme(p.v)}).catch(()=>{});
+  },[]);
+  const doExport=async()=>{
+    const[f,c,s,p]=await Promise.all([db.get('fin','cur'),db.all('conv'),db.get('strat','cur'),db.all('plan')]);
+    const blob=new Blob([JSON.stringify({financialData:f,conversations:c,strategy:s,planSteps:p},null,2)],{type:'application/json'});
+    const url=URL.createObjectURL(blob);const a=document.createElement('a');a.href=url;a.download=`atlas-export-${Date.now()}.json`;a.click();URL.revokeObjectURL(url);
+  };
+  const doDelete=async()=>{await db.nuke();setSess(null);setScr('landing')};
+  const ctx={theme,setTheme,db,claude,engine};
+
+  const pages={
+    landing:<S1 onStart={()=>setScr('conversation')}/>,
+    conversation:<S2 onDone={d=>{setSess(d);setScr('summary')}}/>,
+    summary:sess&&<S3 fin={sess.fin} baseline={sess.baseline} onCont={()=>setScr('tierReveal')}/>,
+    tierReveal:sess&&<S4 fin={sess.fin} baseline={sess.baseline} onDash={()=>setScr('dashboard')} onAction={()=>{}}/>,
+    dashboard:sess&&<S6 fin={sess.fin} baseline={sess.baseline} onTalk={()=>setScr('conversation')} onNav={setScr}/>,
+    strategy:sess&&<S7 fin={sess.fin} baseline={sess.baseline} onBack={()=>setScr('dashboard')}/>,
+    settings:<S8 onBack={()=>setScr('dashboard')} onDelete={doDelete} onExport={doExport}/>
+  };
+
+  return(
+    <Ctx.Provider value={ctx}>
+      <AP mode="wait">
+        <div key={scr} style={{opacity:1}}>
+          {pages[scr]||pages.landing}
+        </div>
+      </AP>
+    </Ctx.Provider>
+  );
+}
+
+ReactDOM.createRoot(document.getElementById('root')).render(React.createElement(App));
+</script>
+</body>
+</html>
