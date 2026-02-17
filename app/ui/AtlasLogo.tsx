@@ -15,7 +15,7 @@ export default function AtlasLogo({ size = 22, title = 'Atlas' }: AtlasLogoProps
       aria-label={title}
     >
       <path
-        d="M7.5 17c1.2-2.9 3.3-4.5 4.5-4.5s3.3 1.6 4.5 4.5"
+        d="M20 44c3.2-7.8 9-12 12-12s8.8 4.2 12 12"
         stroke="currentColor"
         strokeWidth="1.9"
         strokeLinecap="round"
