@@ -9,8 +9,9 @@ import type { ChatMessage, FinancialState, Strategy } from '@/lib/state/types';
 import { conversationReducer, createInitialConversationState, type Screen } from '@/lib/state/conversationMachine';
 import { applyUserTurn, classifyInterruption, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
 import { createVoice } from '@/lib/voice/voice';
-import { ConversationScreen, DashboardScreen, LandingScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
+import { ConversationScreen, DashboardScreen, LandingScreen, PlanScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
 import { Button } from '@/components/Buttons';
+import { BarChart3, LayoutList, MessageSquare, Settings } from 'lucide-react';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -53,6 +54,14 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   );
 
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [isMobile, setIsMobile] = useState(false);
+  const [activeTab, setActiveTab] = useState<'talk' | 'plan' | 'dashboard' | 'settings'>('talk');
+  const tabStacksRef = useRef({
+    talk: 'conversation' as Screen,
+    plan: 'plan' as Screen,
+    dashboard: 'dashboard' as Screen,
+    settings: 'settings' as Screen,
+  });
   const [speakReplies, setSpeakReplies] = useState(false);
   const [voiceAutoSend, setVoiceAutoSend] = useState(false);
   const [editingLast, setEditingLast] = useState(false);
@@ -63,6 +72,39 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [st, dispatch] = useReducer(conversationReducer, createInitialConversationState(initialScreen));
 
   const bot = useRef<HTMLDivElement | null>(null);
+
+  const handleConfirmFin = useCallback(async () => {
+    if (!st.pendingFin) return;
+    const b = (await engine.run(st.pendingFin, { answered: st.answered, unknown: st.unknown })) as Strategy;
+    await db.set('strat', { k: 'baseline', ...b });
+    dispatch({ type: 'SEND_STRATEGY_READY', baseline: b });
+    dispatch({ type: 'SET_SELECTED_LEVER', lever: b.lever });
+    dispatch({ type: 'SET_PENDING_BLOCK', block: 'lever' });
+  }, [db, engine, st.pendingFin, st.answered, st.unknown]);
+
+  const handleEditFin = useCallback(() => {
+    dispatch({ type: 'SET_PENDING_BLOCK', block: null });
+  }, [dispatch]);
+
+  const handleSelectLever = useCallback((lever: Strategy['lever']) => {
+    dispatch({ type: 'SET_SELECTED_LEVER', lever });
+  }, [dispatch]);
+
+  const handleConfirmNextStep = useCallback(async () => {
+    if (st.pendingBlock === 'lever') {
+      if (!st.baseline || !st.selectedLever) return;
+      const nextBaseline = { ...st.baseline, lever: st.selectedLever };
+      await db.set('strat', { k: 'baseline', ...nextBaseline });
+      dispatch({ type: 'HYDRATE_BASELINE', baseline: nextBaseline });
+      dispatch({ type: 'SET_PENDING_BLOCK', block: 'next' });
+      return;
+    }
+    if (st.pendingBlock === 'next') {
+      dispatch({ type: 'SET_PENDING_BLOCK', block: null });
+      dispatch({ type: 'SET_PENDING_FIN', fin: null });
+      dispatch({ type: 'NAVIGATE', scr: 'summary' });
+    }
+  }, [db, st.pendingBlock, st.baseline, st.selectedLever, dispatch]);
 
   const metricExplainerText = useCallback(
     (metric: string, fin: FinancialState, baseline: Strategy) => {
@@ -150,6 +192,33 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(max-width: 719px)');
+    const onChange = () => setIsMobile(!!mq.matches);
+    onChange();
+    try {
+      mq.addEventListener('change', onChange);
+      return () => mq.removeEventListener('change', onChange);
+    } catch {
+      mq.addListener(onChange);
+      return () => mq.removeListener(onChange);
+    }
+  }, []);
+
+  useEffect(() => {
+    const tabForScreen = (scr: Screen) => {
+      if (scr === 'conversation' || scr === 'summary' || scr === 'tier') return 'talk';
+      if (scr === 'plan' || scr === 'strategy') return 'plan';
+      if (scr === 'dashboard') return 'dashboard';
+      if (scr === 'settings') return 'settings';
+      return 'talk';
+    };
+    const tab = tabForScreen(st.scr);
+    tabStacksRef.current[tab] = st.scr;
+    setActiveTab(tab);
+  }, [st.scr]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -370,16 +439,8 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
       await db.set('fin', { k: 'cur', ...uf, ts: Date.now() });
 
       if (miss.length === 0) {
-        const b = (await engine.run(uf, { answered: answeredNext, unknown: unknownNext })) as Strategy;
-        if (b.confidence === 'low') {
-          const k = b.explainability.metrics && typeof (b.explainability as any).followupKey === 'string' ? ((b.explainability as any).followupKey as keyof FinancialState) : undefined;
-          const fk = k || (b.explainability.inputsUsed.monthlyIncome === '0' ? ('monthlyIncome' as const) : b.explainability.inputsUsed.essentialExpenses === '0' ? ('essentialExpenses' as const) : ('highInterestDebt' as const));
-          const q = nextQuestionForMissing(fk, prevMsgs.length);
-          dispatch({ type: 'SEND_ASKED', text: q.text, questionKey: q.key });
-          return;
-        }
-        await db.set('strat', { k: 'baseline', ...b });
-        dispatch({ type: 'SEND_STRATEGY_READY', baseline: b });
+        dispatch({ type: 'SET_PENDING_FIN', fin: uf });
+        dispatch({ type: 'SET_PENDING_BLOCK', block: 'confirm' });
         return;
       }
 
@@ -450,11 +511,9 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
     }
   };
 
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
-      {st.scr === 'landing' && <LandingScreen theme={theme} onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))} onStart={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} />}
-
-      {st.scr === 'conversation' && (
+  const renderTalkStack = (scr: Screen) => (
+    <>
+      <div style={{ display: scr === 'conversation' ? 'block' : 'none' }}>
         <ConversationScreen
           theme={theme}
           onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
@@ -462,6 +521,13 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
           apiStatus={apiStatus}
           msgs={st.msgs}
           busy={st.busy}
+          pendingBlock={st.pendingBlock}
+          pendingFin={st.pendingFin}
+          selectedLever={st.selectedLever}
+          onConfirmFin={handleConfirmFin}
+          onEditFin={handleEditFin}
+          onSelectLever={handleSelectLever}
+          onConfirmNextStep={handleConfirmNextStep}
           inp={st.inp}
           onChangeInp={(v) => dispatch({ type: 'SET_INPUT', text: v })}
           onKeyDown={onKeyDown}
@@ -502,10 +568,9 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
             dispatch({ type: 'STREAM_CANCELED' });
           }}
         />
-      )}
-
-      {st.scr === 'summary' &&
-        st.baseline && (
+      </div>
+      {st.baseline && (
+        <div style={{ display: scr === 'summary' ? 'block' : 'none' }}>
           <SummaryScreen
             theme={theme}
             onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
@@ -518,10 +583,10 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
             fc={fc}
             fp={fp}
           />
-        )}
-
-      {st.scr === 'tier' &&
-        st.baseline && (
+        </div>
+      )}
+      {st.baseline && (
+        <div style={{ display: scr === 'tier' ? 'block' : 'none' }}>
           <TierRevealScreen
             theme={theme}
             onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
@@ -539,87 +604,172 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
             tc={tc}
             fp={fp}
           />
-        )}
+        </div>
+      )}
+    </>
+  );
 
-      {st.scr === 'dashboard' &&
-        !st.baseline && (
-          <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--padY) var(--padX)' }}>
-            <div style={{ width: '100%', maxWidth: 560, display: 'grid', gap: 12, textAlign: 'center' }}>
-              <h1 className="srOnly">Dashboard</h1>
-              <div style={{ fontWeight: 950, fontSize: 18 }}>Dashboard not ready yet</div>
-              <div style={{ color: 'var(--ink2)', lineHeight: 1.7 }}>
-                Once Atlas has a baseline strategy, your dashboard will populate automatically.
-              </div>
-              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
-                <Button onClick={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} variant="primary" size="md">
-                  Go to conversation →
-                </Button>
-              </div>
+  const renderDashboard = () =>
+    !st.baseline ? (
+      <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--padY) var(--padX)' }}>
+        <div style={{ width: '100%', maxWidth: 560, display: 'grid', gap: 12, textAlign: 'center' }}>
+          <h1 className="srOnly">Dashboard</h1>
+          <div style={{ fontWeight: 950, fontSize: 18 }}>Dashboard not ready yet</div>
+          <div style={{ color: 'var(--ink2)', lineHeight: 1.7 }}>
+            Once Atlas has a baseline strategy, your dashboard will populate automatically.
+          </div>
+          <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+            <Button onClick={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} variant="primary" size="md">
+              Go to conversation →
+            </Button>
+          </div>
+        </div>
+      </div>
+    ) : (
+      <DashboardScreen
+        theme={theme}
+        onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        apiErr={st.apiErr}
+        apiStatus={claude.status}
+        fin={st.fin}
+        baseline={st.baseline}
+        onTalk={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })}
+        onStrategy={() => dispatch({ type: 'NAVIGATE', scr: 'strategy' })}
+        onSettings={() => dispatch({ type: 'NAVIGATE', scr: 'settings' })}
+        fc={fc}
+        fp={fp}
+      />
+    );
+
+  const renderPlan = () => {
+    if (!st.baseline) {
+      return (
+        <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--padY) var(--padX)' }}>
+          <div style={{ width: '100%', maxWidth: 560, display: 'grid', gap: 12, textAlign: 'center' }}>
+            <h1 className="srOnly">Plan</h1>
+            <div style={{ fontWeight: 950, fontSize: 18 }}>Plan not ready yet</div>
+            <div style={{ color: 'var(--ink2)', lineHeight: 1.7 }}>
+              Once Atlas has a baseline strategy, your plan will populate automatically.
+            </div>
+            <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+              <Button onClick={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} variant="primary" size="md">
+                Go to conversation →
+              </Button>
             </div>
           </div>
-        )}
-
-      {st.scr === 'dashboard' &&
-        st.baseline && (
-          <DashboardScreen
-            theme={theme}
-            onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-            apiErr={st.apiErr}
-            apiStatus={claude.status}
-            fin={st.fin}
-            baseline={st.baseline}
-            onTalk={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })}
-            onStrategy={() => dispatch({ type: 'NAVIGATE', scr: 'strategy' })}
-            onSettings={() => dispatch({ type: 'NAVIGATE', scr: 'settings' })}
-            fc={fc}
-            fp={fp}
-          />
-        )}
-
-      {st.scr === 'strategy' &&
-        st.baseline && (
-          <StrategyScreen
-            theme={theme}
-            onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
-            apiErr={st.apiErr}
-            apiStatus={claude.status}
-            baseline={st.baseline}
-            onBack={() => dispatch({ type: 'NAVIGATE', scr: 'dashboard' })}
-            onAsk={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })}
-            tc={tc}
-          />
-        )}
-
-      {st.scr === 'settings' && (
-        <SettingsScreen
+        </div>
+      );
+    }
+    if (st.scr === 'strategy') {
+      return (
+        <StrategyScreen
           theme={theme}
           onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
           apiErr={st.apiErr}
           apiStatus={claude.status}
-          onThemeLight={() => setTheme('light')}
-          onThemeDark={() => setTheme('dark')}
-          speakReplies={speakReplies}
-          onToggleSpeakReplies={() => {
-            const v = !speakReplies;
-            setSpeakReplies(v);
-            void db.set('prefs', { k: 'speakReplies', v });
-            if (!v) voice.stopSpeak();
-          }}
-          voiceAutoSend={voiceAutoSend}
-          onToggleVoiceAutoSend={() => {
-            const v = !voiceAutoSend;
-            setVoiceAutoSend(v);
-            void db.set('prefs', { k: 'voiceAutoSend', v });
-          }}
-          onDeleteLocalData={() => {
-            void (async () => {
-              await db.nuke();
-              dispatch({ type: 'RESET' });
-            })();
-          }}
-          onBackToDashboard={() => dispatch({ type: 'NAVIGATE', scr: 'dashboard' })}
-          canBackToDashboard={!!st.baseline}
+          baseline={st.baseline}
+          onBack={() => dispatch({ type: 'NAVIGATE', scr: 'dashboard' })}
+          onAsk={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })}
+          tc={tc}
         />
+      );
+    }
+    return (
+      <PlanScreen
+        theme={theme}
+        onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        apiErr={st.apiErr}
+        apiStatus={claude.status}
+        baseline={st.baseline}
+        onRefine={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })}
+      />
+    );
+  };
+
+  const renderSettings = () => (
+    <SettingsScreen
+      theme={theme}
+      onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+      apiErr={st.apiErr}
+      apiStatus={claude.status}
+      onThemeLight={() => setTheme('light')}
+      onThemeDark={() => setTheme('dark')}
+      speakReplies={speakReplies}
+      onToggleSpeakReplies={() => {
+        const v = !speakReplies;
+        setSpeakReplies(v);
+        void db.set('prefs', { k: 'speakReplies', v });
+        if (!v) voice.stopSpeak();
+      }}
+      voiceAutoSend={voiceAutoSend}
+      onToggleVoiceAutoSend={() => {
+        const v = !voiceAutoSend;
+        setVoiceAutoSend(v);
+        void db.set('prefs', { k: 'voiceAutoSend', v });
+      }}
+      onDeleteLocalData={() => {
+        void (async () => {
+          await db.nuke();
+          dispatch({ type: 'RESET' });
+        })();
+      }}
+      onBackToDashboard={() => dispatch({ type: 'NAVIGATE', scr: 'dashboard' })}
+      canBackToDashboard={!!st.baseline}
+    />
+  );
+
+  const showTabs = isMobile && st.scr !== 'landing';
+  const tabTarget = (tab: typeof activeTab) => tabStacksRef.current[tab];
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+      {st.scr === 'landing' && <LandingScreen theme={theme} onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))} onStart={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} />}
+
+      {showTabs ? (
+        <>
+          <div style={{ display: activeTab === 'talk' ? 'block' : 'none' }}>{renderTalkStack(tabTarget('talk'))}</div>
+          <div style={{ display: activeTab === 'plan' ? 'block' : 'none' }}>{renderPlan()}</div>
+          <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>{renderDashboard()}</div>
+          <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>{renderSettings()}</div>
+
+          <div className="atlasTabBar" role="tablist" aria-label="Primary">
+            {([
+              { id: 'talk', label: 'Talk', icon: MessageSquare },
+              { id: 'plan', label: 'Plan', icon: LayoutList },
+              { id: 'dashboard', label: 'Dashboard', icon: BarChart3 },
+              { id: 'settings', label: 'Settings', icon: Settings },
+            ] as const).map((tab) => {
+              const Icon = tab.icon;
+              const isActive = activeTab === tab.id;
+              return (
+                <button
+                  key={tab.id}
+                  type="button"
+                  role="tab"
+                  aria-selected={isActive}
+                  aria-label={tab.label}
+                  className={["atlasTabBtn", isActive ? "atlasTabBtnActive" : ""].filter(Boolean).join(' ')}
+                  onClick={() => {
+                    setActiveTab(tab.id);
+                    dispatch({ type: 'NAVIGATE', scr: tabTarget(tab.id) });
+                  }}
+                >
+                  <Icon size={18} aria-hidden />
+                  <span>{tab.label}</span>
+                </button>
+              );
+            })}
+          </div>
+        </>
+      ) : (
+        <>
+          {st.scr === 'conversation' && renderTalkStack('conversation')}
+          {st.scr === 'summary' && renderTalkStack('summary')}
+          {st.scr === 'tier' && renderTalkStack('tier')}
+          {st.scr === 'dashboard' && renderDashboard()}
+          {(st.scr === 'plan' || st.scr === 'strategy') && renderPlan()}
+          {st.scr === 'settings' && renderSettings()}
+        </>
       )}
     </div>
   );

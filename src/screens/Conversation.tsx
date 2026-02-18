@@ -1,10 +1,11 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
-import type { ChatMessage } from '@/lib/state/types';
+import type { ChatMessage, Lever } from '@/lib/state/types';
 import { TopBar } from '@/components/TopBar';
 import { IconButton } from '@/components/IconButton';
 import { Textarea } from '@/components/TextInput';
 import { Button } from '@/components/Buttons';
+import { Card } from '@/components/Card';
 import { PageContainer } from '@/components/Layout';
 import { ArrowUp, Mic, Pencil, Square } from 'lucide-react';
 
@@ -110,6 +111,13 @@ export function ConversationScreen({
   apiStatus,
   msgs,
   busy,
+  pendingBlock,
+  pendingFin,
+  selectedLever,
+  onConfirmFin,
+  onEditFin,
+  onSelectLever,
+  onConfirmNextStep,
   inp,
   onChangeInp,
   onKeyDown,
@@ -134,6 +142,13 @@ export function ConversationScreen({
   apiStatus: 'unknown' | 'online' | 'degraded' | 'offline';
   msgs: ChatMessage[];
   busy: boolean;
+  pendingBlock?: 'confirm' | 'lever' | 'next' | null;
+  pendingFin?: { monthlyIncome: number; essentialExpenses: number; totalSavings: number; highInterestDebt: number | null; lowInterestDebt: number | null } | null;
+  selectedLever?: string | null;
+  onConfirmFin?: () => void;
+  onEditFin?: () => void;
+  onSelectLever?: (lever: Lever) => void;
+  onConfirmNextStep?: () => void;
   inp: string;
   onChangeInp: (v: string) => void;
   onKeyDown: (e: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
@@ -230,6 +245,14 @@ export function ConversationScreen({
     return 'Jump to latest ↓';
   }, [lastMsgRole, showJump]);
 
+  const leverOptions = [
+    { id: 'stabilize_cashflow', label: 'Stabilize cashflow' },
+    { id: 'eliminate_high_interest_debt', label: 'Eliminate high-interest debt' },
+    { id: 'build_emergency_buffer', label: 'Build emergency buffer' },
+    { id: 'increase_future_allocation', label: 'Increase future allocation' },
+    { id: 'optimize_discretionary_spend', label: 'Optimize discretionary spend' },
+  ];
+
   const startLongPress = (idx: number) => {
     if (isDesktop) return;
     if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
@@ -253,14 +276,15 @@ export function ConversationScreen({
           <h1 className="srOnly">Conversation</h1>
           {showJump && (
             <div style={{ position: 'sticky', top: 10, zIndex: 5, display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-              <button
+              <Button
                 onClick={scrollToBottom}
-                className="btn btnSecondary"
-                style={{ padding: '8px 12px', borderRadius: 999, fontWeight: 900, fontSize: 12, boxShadow: 'var(--sh1)' }}
+                variant="secondary"
+                size="sm"
                 data-testid="jumpToLatest"
+                style={{ borderRadius: 999, fontWeight: 900, fontSize: 12, boxShadow: 'var(--sh1)' }}
               >
                 {jumpLabel}
-              </button>
+              </Button>
             </div>
           )}
           {msgs.map((m, i) => (
@@ -357,6 +381,84 @@ export function ConversationScreen({
               </div>
             </div>
           )}
+          {pendingBlock === 'confirm' && pendingFin && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+              <div style={{ maxWidth: '86%', width: '100%' }}>
+                <Card>
+                  <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>CONFIRM CAPTURED NUMBERS</div>
+                  <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                    {[
+                      { label: 'Monthly income', value: `$${pendingFin.monthlyIncome.toLocaleString()}` },
+                      { label: 'Essentials', value: `$${pendingFin.essentialExpenses.toLocaleString()}` },
+                      { label: 'Savings', value: `$${pendingFin.totalSavings.toLocaleString()}` },
+                      { label: 'High-interest debt', value: pendingFin.highInterestDebt === null ? 'Unknown' : `$${pendingFin.highInterestDebt.toLocaleString()}` },
+                      { label: 'Low-interest debt', value: pendingFin.lowInterestDebt === null ? 'Unknown' : `$${pendingFin.lowInterestDebt.toLocaleString()}` },
+                    ].map((row) => (
+                      <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '8px 10px', borderRadius: 12, border: '1px solid var(--bdr)', background: 'var(--bg2)' }}>
+                        <div style={{ color: 'var(--ink2)', fontWeight: 800 }}>{row.label}</div>
+                        <div style={{ fontWeight: 950 }}>{row.value}</div>
+                      </div>
+                    ))}
+                  </div>
+                  <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <Button onClick={onConfirmFin} variant="primary" size="sm" disabled={!onConfirmFin}>Yes, looks right</Button>
+                    <Button onClick={onEditFin} variant="secondary" size="sm" disabled={!onEditFin}>Edit numbers</Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+          {pendingBlock === 'lever' && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+              <div style={{ maxWidth: '86%', width: '100%' }}>
+                <Card>
+                  <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>PICK ONE LEVER</div>
+                  <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                    {leverOptions.map((opt) => {
+                      const active = selectedLever === opt.id;
+                      return (
+                        <button
+                          key={opt.id}
+                          type="button"
+                          onClick={() => onSelectLever?.(opt.id as Lever)}
+                          className="atlasNextStep"
+                          aria-pressed={active}
+                          style={{
+                            textAlign: 'left',
+                            padding: '10px 12px',
+                            borderRadius: 12,
+                            border: '1px solid var(--bdr)',
+                            background: active ? 'color-mix(in srgb, var(--teal) 12%, var(--bg2))' : 'var(--bg2)',
+                            fontWeight: 850,
+                          }}
+                        >
+                          {opt.label}
+                        </button>
+                      );
+                    })}
+                  </div>
+                  <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <Button onClick={onConfirmNextStep} variant="primary" size="sm" disabled={!selectedLever || !onConfirmNextStep}>Confirm lever</Button>
+                    <Button onClick={onEditFin} variant="secondary" size="sm" disabled={!onEditFin}>Edit numbers</Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
+          {pendingBlock === 'next' && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+              <div style={{ maxWidth: '86%', width: '100%' }}>
+                <Card>
+                  <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ONE NEXT STEP</div>
+                  <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>{nextStepHint || 'Confirm and we’ll turn this into a simple action.'}</div>
+                  <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    <Button onClick={onConfirmNextStep} variant="primary" size="sm" disabled={!onConfirmNextStep}>Confirm step</Button>
+                    <Button onClick={onEditFin} variant="secondary" size="sm" disabled={!onEditFin}>Refine in Talk</Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
           <div ref={botRef} />
         </PageContainer>
       </div>
@@ -391,16 +493,17 @@ export function ConversationScreen({
           )}
           {apiErr && canRetry && onRetry && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-              <button
+              <Button
                 onClick={onRetry}
                 disabled={busy}
-                className="btn btnSecondary"
-                style={{ padding: '8px 12px', borderRadius: 999, fontWeight: 950, fontSize: 12, boxShadow: 'var(--sh1)' }}
+                variant="secondary"
+                size="sm"
+                style={{ borderRadius: 999, fontWeight: 950, fontSize: 12, boxShadow: 'var(--sh1)' }}
                 aria-label="Retry last message"
                 title="Retry"
               >
                 Retry
-              </button>
+              </Button>
             </div>
           )}
           {onNextStep && nextStepHint && (

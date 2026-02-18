@@ -1,7 +1,7 @@
 import type { ChatMessage, FinancialState, Strategy } from './types';
 import type { AtlasMode } from './atlasConversationController';
 
-export type Screen = 'landing' | 'conversation' | 'summary' | 'tier' | 'dashboard' | 'strategy' | 'settings';
+export type Screen = 'landing' | 'conversation' | 'summary' | 'tier' | 'dashboard' | 'strategy' | 'plan' | 'settings';
 
 export type ConversationState = {
   scr: Screen;
@@ -9,6 +9,9 @@ export type ConversationState = {
   msgs: ChatMessage[];
   inp: string;
   fin: FinancialState;
+  pendingFin: FinancialState | null;
+  pendingBlock: 'confirm' | 'lever' | 'next' | null;
+  selectedLever: Strategy['lever'] | null;
   missing: Array<keyof FinancialState>;
   lastQuestionKey?: keyof FinancialState;
   mode: AtlasMode;
@@ -22,6 +25,9 @@ export type ConversationState = {
 export type ConversationEvent =
   | { type: 'NAVIGATE'; scr: Screen }
   | { type: 'SET_INPUT'; text: string }
+  | { type: 'SET_PENDING_FIN'; fin: FinancialState | null }
+  | { type: 'SET_PENDING_BLOCK'; block: ConversationState['pendingBlock'] }
+  | { type: 'SET_SELECTED_LEVER'; lever: Strategy['lever'] | null }
   | { type: 'HYDRATE_FIN'; fin: Partial<FinancialState> }
   | { type: 'HYDRATE_BASELINE'; baseline: Strategy | null }
   | { type: 'SET_MODE'; mode: AtlasMode }
@@ -71,6 +77,9 @@ export function createInitialConversationState(initialScreen: Screen = 'landing'
     msgs: [initialAssistantMessage],
     inp: '',
     fin: createDefaultFin(),
+    pendingFin: null,
+    pendingBlock: null,
+    selectedLever: null,
     missing: [],
     lastQuestionKey: undefined,
     mode: 'text',
@@ -92,6 +101,15 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
 
     case 'SET_INPUT':
       return { ...state, inp: ev.text };
+
+    case 'SET_PENDING_FIN':
+      return { ...state, pendingFin: ev.fin };
+
+    case 'SET_PENDING_BLOCK':
+      return { ...state, pendingBlock: ev.block };
+
+    case 'SET_SELECTED_LEVER':
+      return { ...state, selectedLever: ev.lever };
 
     case 'HYDRATE_FIN':
       return { ...state, fin: { ...state.fin, ...ev.fin } };
@@ -168,7 +186,6 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
       return {
         ...state,
         baseline: ev.baseline,
-        scr: 'summary',
         busy: false,
         streaming: false,
         msgs: [...state.msgs, { r: 'a', t: 'Perfect — I have enough to start.\n\nLet me reflect this back and we’ll pick one clear next step.' }],
@@ -189,6 +206,9 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
         msgs: [initialAssistantMessage],
         inp: '',
         fin: createDefaultFin(),
+        pendingFin: null,
+        pendingBlock: null,
+        selectedLever: null,
         missing: [],
         lastQuestionKey: undefined,
         mode: 'text',

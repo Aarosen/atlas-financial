@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
+import { Button, ButtonLink } from '@/components/Buttons';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browserClient';
 import { Badge } from '@/components/Badge';
 import { Card } from '@/components/Card';
@@ -132,14 +133,15 @@ export function LoginClient() {
             className="input"
           />
 
-          <button
+          <Button
             onClick={() => void sendLink()}
             disabled={status === 'sending' || !email.trim()}
-            className="btn btnPrimary"
+            variant="primary"
+            size="md"
             style={{ justifySelf: 'start', opacity: status === 'sending' ? 0.7 : 1 }}
           >
             {status === 'sending' ? 'Sending…' : 'Send magic link'}
-          </button>
+          </Button>
 
           {status === 'sent' && <div style={{ marginTop: 6, color: 'var(--ink2)', lineHeight: 1.7 }}>Check your email for a sign-in link.</div>}
 
@@ -152,9 +154,9 @@ export function LoginClient() {
       </div>
 
       <div style={{ marginTop: 18 }}>
-        <Link href="/" className="btn btnSecondary">
+        <ButtonLink href="/" variant="secondary">
           ← Back
-        </Link>
+        </ButtonLink>
       </div>
     </div>
   );

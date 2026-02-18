@@ -1,4 +1,5 @@
-import type { ButtonHTMLAttributes, ReactNode } from 'react';
+import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
+import Link from 'next/link';
 
 export type ButtonVariant = 'primary' | 'secondary';
 export type ButtonSize = 'md' | 'sm';
@@ -38,5 +39,29 @@ export function GhostBtn({ onClick, children, disabled }: { onClick: () => void;
     <Button onClick={onClick} disabled={disabled} variant="secondary" size="md">
       {children}
     </Button>
+  );
+}
+
+export function ButtonLink({
+  href,
+  variant = 'primary',
+  size = 'md',
+  className,
+  children,
+  ...rest
+}: {
+  href: string;
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+  children: ReactNode;
+} & Omit<AnchorHTMLAttributes<HTMLAnchorElement>, 'href'>) {
+  const variantClass = variant === 'secondary' ? 'btnSecondary' : 'btnPrimary';
+  const sizeClass = size === 'sm' ? 'btnSm' : 'btnMd';
+  const cn = ['btn', variantClass, sizeClass, className].filter(Boolean).join(' ');
+  return (
+    <Link href={href} className={cn} {...rest}>
+      {children}
+    </Link>
   );
 }

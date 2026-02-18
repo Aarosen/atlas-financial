@@ -31,6 +31,12 @@ export function DashboardScreen({
   fp: (n: number) => string;
 }) {
   const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
+  const basedOn = {
+    net: ['Monthly income', 'Essentials', 'Debt payments'],
+    buffer: ['Total savings', 'Essentials'],
+    future: ['Future allocation %', 'Monthly income'],
+    debt: ['Debt balances', 'Debt payments'],
+  };
 
   const explain = (metric: string) => {
     if (typeof window === 'undefined') return;
@@ -74,28 +80,28 @@ export function DashboardScreen({
               <Card>
                 <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>NET EACH MONTH</div>
                 <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{fc(net)}</div>
-                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Click to explain</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Explain • Based on: {basedOn.net.join(', ')}</div>
               </Card>
             </ClickCard>
             <ClickCard metric="buffer">
               <Card>
                 <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>BUFFER</div>
                 <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{baseline.bufMo.toFixed(1)} mo</div>
-                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Click to explain</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Explain • Based on: {basedOn.buffer.join(', ')}</div>
               </Card>
             </ClickCard>
             <ClickCard metric="future">
               <Card>
                 <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>FUTURE ALLOCATION</div>
                 <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{fp(baseline.futPct)}</div>
-                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Click to explain</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Explain • Based on: {basedOn.future.join(', ')}</div>
               </Card>
             </ClickCard>
             <ClickCard metric="debt">
               <Card>
                 <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>DEBT PRESSURE</div>
                 <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{baseline.dExp}</div>
-                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Click to explain</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Explain • Based on: {basedOn.debt.join(', ')}</div>
               </Card>
             </ClickCard>
           </div>
@@ -103,7 +109,7 @@ export function DashboardScreen({
             <div style={{ fontWeight: 950, fontSize: 18 }}>Focus</div>
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>{focus}</div>
             <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <PrimaryBtn onClick={onTalk}>Talk it through</PrimaryBtn>
+              <PrimaryBtn onClick={onTalk}>Refine in Talk</PrimaryBtn>
               <GhostBtn onClick={onStrategy}>How tiers work</GhostBtn>
               <GhostBtn onClick={onSettings}>Settings</GhostBtn>
             </div>

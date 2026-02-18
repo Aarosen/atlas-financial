@@ -47,9 +47,19 @@ export function SettingsScreen({
           <Card>
             <div style={{ fontWeight: 950, fontSize: 16 }}>Data</div>
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>Messages you type may be sent to our AI provider to generate responses.</div>
-            <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>Atlas stores your financial state locally (IndexedDB today; later Supabase). You can wipe local data anytime.</div>
+            <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>Financial state is stored locally and can be deleted at any time.</div>
             <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <GhostBtn onClick={onDeleteLocalData}>Delete local data</GhostBtn>
+              <GhostBtn
+                onClick={() => {
+                  if (typeof window !== 'undefined') {
+                    const ok = window.confirm('Delete local data? This will remove your conversation, baseline, and plan from this device.');
+                    if (!ok) return;
+                  }
+                  onDeleteLocalData();
+                }}
+              >
+                Delete local data
+              </GhostBtn>
               <PrimaryBtn onClick={onBackToDashboard} disabled={!canBackToDashboard}>
                 Back to dashboard
               </PrimaryBtn>

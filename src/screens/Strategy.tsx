@@ -31,6 +31,7 @@ export function StrategyScreen({
   };
   const t = tc(baseline.tier);
   const ex = baseline.explainability;
+  const basedOn = Object.keys(ex.inputsUsed || {}).join(', ');
 
   return (
     <ScreenWrap>
@@ -51,14 +52,15 @@ export function StrategyScreen({
               ))}
             </div>
             <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <PrimaryBtn onClick={onBack}>Back to dashboard</PrimaryBtn>
-              <GhostBtn onClick={onAsk}>Ask Atlas a question</GhostBtn>
+              <PrimaryBtn onClick={onAsk}>Refine in Talk</PrimaryBtn>
+              <GhostBtn onClick={onBack}>Back to dashboard</GhostBtn>
             </div>
           </Card>
 
           <Card>
             <div style={{ fontWeight: 950, fontSize: 16 }}>Explain</div>
             <div style={{ marginTop: 10, color: 'var(--ink2)', lineHeight: 1.7 }}>Tier: {ex.tier} • Lever: {ex.lever}</div>
+            <div style={{ marginTop: 8, color: 'var(--ink3)', fontSize: 12 }}>Based on: {basedOn || 'Your recent inputs'}</div>
             <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
               <div>
                 <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>REASONS</div>

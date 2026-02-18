@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Badge } from '@/components/Badge';
+import { ButtonLink } from '@/components/Buttons';
 import { Card } from '@/components/Card';
 import { Grid, Inline, PageContainer, Stack } from '@/components/Layout';
 
@@ -18,12 +19,12 @@ export default function Page() {
         </p>
 
         <Inline style={{ marginTop: 22 }} gap={12}>
-          <Link href="/conversation" className="btn btnPrimary" style={{ boxShadow: 'var(--sh3)' }}>
+          <ButtonLink href="/conversation" variant="primary" style={{ boxShadow: 'var(--sh3)' }}>
             Start a conversation →
-          </Link>
-          <Link href="/privacy" className="btn btnSecondary">
+          </ButtonLink>
+          <ButtonLink href="/privacy" variant="secondary">
             Privacy & data
-          </Link>
+          </ButtonLink>
         </Inline>
       </Stack>
 
@@ -88,12 +89,12 @@ export default function Page() {
       </Card>
 
       <Inline style={{ marginTop: 26 }} gap={12}>
-        <Link href="/conversation" className="btn btnPrimary" style={{ boxShadow: 'var(--sh3)' }}>
+        <ButtonLink href="/conversation" variant="primary" style={{ boxShadow: 'var(--sh3)' }}>
           Try Atlas now →
-        </Link>
-        <Link href="/product" className="btn btnSecondary">
+        </ButtonLink>
+        <ButtonLink href="/product" variant="secondary">
           Explore product
-        </Link>
+        </ButtonLink>
       </Inline>
     </PageContainer>
   );

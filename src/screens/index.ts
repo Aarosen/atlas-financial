@@ -5,3 +5,4 @@ export { TierRevealScreen } from './TierReveal';
 export { DashboardScreen } from './Dashboard';
 export { StrategyScreen } from './Strategy';
 export { SettingsScreen } from './Settings';
+export { PlanScreen } from './Plan';

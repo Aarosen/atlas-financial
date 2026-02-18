@@ -33,6 +33,7 @@ export function TierRevealScreen({
     increase_future_allocation: 'Grow your future allocation',
     optimize_discretionary_spend: 'Optimise one spending category',
   };
+  const basedOn = ['Monthly income', 'Essentials', 'Savings', 'Debt balances'];
 
   return (
     <ScreenWrap>
@@ -60,9 +61,10 @@ export function TierRevealScreen({
           <Card>
             <div style={{ fontWeight: 950, fontSize: 16 }}>Your best next lever</div>
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.6 }}>{leverLabels[baseline.lever] || baseline.lever}</div>
+            <div style={{ marginTop: 6, color: 'var(--ink3)', fontSize: 12 }}>Based on: {basedOn.join(', ')}</div>
             <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <PrimaryBtn onClick={onOpenDashboard}>Open dashboard →</PrimaryBtn>
-              <GhostBtn onClick={onKeepTalking}>Keep talking</GhostBtn>
+              <PrimaryBtn onClick={onKeepTalking}>Refine in Talk</PrimaryBtn>
+              <GhostBtn onClick={onOpenDashboard}>Open dashboard →</GhostBtn>
             </div>
           </Card>
         </Stack>

@@ -59,7 +59,7 @@ export function SummaryScreen({
             <div style={{ color: 'var(--ink2)', lineHeight: 1.7 }}>Next, I’ll place you into a tier (not a label — just a way to pick the right move at the right time).</div>
             <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <PrimaryBtn onClick={onShowTier}>Show my tier →</PrimaryBtn>
-              <GhostBtn onClick={onEditViaChat}>Edit via chat</GhostBtn>
+              <GhostBtn onClick={onEditViaChat}>Refine in Talk</GhostBtn>
             </div>
           </Card>
         </Stack>

@@ -3,6 +3,7 @@ import AtlasLogo from './AtlasLogo';
 import { Lock, MessageSquare, Smartphone, Target } from 'lucide-react';
 import { Badge } from '@/components/Badge';
 import { Card } from '@/components/Card';
+import { ButtonLink } from '@/components/Buttons';
 import { Grid, Inline, PageContainer, Stack } from '@/components/Layout';
 
 export default function Landing() {
@@ -24,19 +25,12 @@ export default function Landing() {
             </p>
 
             <Inline style={{ marginTop: 22 }} gap={12}>
-              <Link
-                href="/conversation"
-                className="btn btnPrimary"
-                style={{ boxShadow: 'var(--sh3)' }}
-              >
+              <ButtonLink href="/conversation" variant="primary" style={{ boxShadow: 'var(--sh3)' }}>
                 Start a conversation →
-              </Link>
-              <Link
-                href="/how-it-works"
-                className="btn btnSecondary"
-              >
+              </ButtonLink>
+              <ButtonLink href="/how-it-works" variant="secondary">
                 See how it works
-              </Link>
+              </ButtonLink>
             </Inline>
 
             <Inline style={{ marginTop: 18, color: 'var(--ink2)', fontSize: 13, fontWeight: 700 }} gap={14}>

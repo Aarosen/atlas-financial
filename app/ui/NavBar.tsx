@@ -1,4 +1,5 @@
 import Link from 'next/link';
+import { ButtonLink } from '@/components/Buttons';
 import AtlasLogo from './AtlasLogo';
 
 export default function NavBar() {
@@ -20,13 +21,9 @@ export default function NavBar() {
           <Link href="/privacy" className="navLink">
             Privacy
           </Link>
-          <Link
-            href="/conversation"
-            className="btn btnPrimary"
-            style={{ padding: '10px 14px', borderRadius: 14, fontWeight: 900, fontSize: 13 }}
-          >
+          <ButtonLink href="/conversation" variant="primary" size="sm" style={{ padding: '10px 14px', borderRadius: 14, fontWeight: 900, fontSize: 13 }}>
             Start
-          </Link>
+          </ButtonLink>
         </div>
       </div>
     </div>

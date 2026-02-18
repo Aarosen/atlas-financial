@@ -1,5 +1,6 @@
 import Link from 'next/link';
 import { Badge } from '@/components/Badge';
+import { ButtonLink } from '@/components/Buttons';
 import { Card } from '@/components/Card';
 import { Inline, PageContainer } from '@/components/Layout';
 
@@ -17,12 +18,12 @@ export default function Page() {
       </p>
 
       <Inline style={{ marginTop: 22 }} gap={12}>
-        <Link href="/conversation" className="btn btnPrimary" style={{ boxShadow: 'var(--sh3)' }}>
+        <ButtonLink href="/conversation" variant="primary" style={{ boxShadow: 'var(--sh3)' }}>
           Start a conversation →
-        </Link>
-        <Link href="/product" className="btn btnSecondary">
+        </ButtonLink>
+        <ButtonLink href="/product" variant="secondary">
           Back to product
-        </Link>
+        </ButtonLink>
       </Inline>
 
       <div className="grid" style={{ marginTop: 26 }}>
@@ -43,7 +44,7 @@ export default function Page() {
         <Card className="lift">
           <div style={{ fontWeight: 980, letterSpacing: '-0.02em' }}>When AI is used</div>
           <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.9 }}>
-            If you’ve configured an Anthropic key, messages you send may be forwarded to Anthropic to generate replies and extract key facts. Atlas only sends what you type.
+            Messages you type may be sent to our AI provider to generate responses. Atlas only sends what you type for the current request.
           </div>
         </Card>
 
@@ -53,6 +54,7 @@ export default function Page() {
             <div>We don’t sell your data.</div>
             <div>We don’t ask for your bank password.</div>
             <div>We don’t require an account just to try Atlas.</div>
+            <div>You can delete local data at any time from Settings.</div>
           </div>
         </Card>
       </div>
@@ -65,12 +67,12 @@ export default function Page() {
       </Card>
 
       <Inline style={{ marginTop: 26 }} gap={12}>
-        <Link href="/conversation" className="btn btnPrimary" style={{ boxShadow: 'var(--sh3)' }}>
+        <ButtonLink href="/conversation" variant="primary" style={{ boxShadow: 'var(--sh3)' }}>
           Try Atlas now →
-        </Link>
-        <Link href="/how-it-works" className="btn btnSecondary">
+        </ButtonLink>
+        <ButtonLink href="/how-it-works" variant="secondary">
           See how it works
-        </Link>
+        </ButtonLink>
       </Inline>
     </PageContainer>
   );
