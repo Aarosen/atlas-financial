@@ -294,6 +294,8 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
       const dontKnow = /\b(don'?t\s+know|not\s+sure|no\s+idea)\b/i.test(ut);
       const isNo = /^\s*(no|none|nope|nah|n\/a)\b/i.test(ut);
 
+      const effectiveQuestionKey = (base.lastQuestionKey || missBefore[0]) as keyof FinancialState | undefined;
+
       const answeredNext: Partial<Record<keyof FinancialState, boolean>> = { ...base.answered };
       const unknownNext: Partial<Record<keyof FinancialState, boolean>> = { ...base.unknown };
 
@@ -309,16 +311,16 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         return v;
       };
 
-      if (dontKnow && base.lastQuestionKey) {
-        const k = base.lastQuestionKey;
+      if (dontKnow && effectiveQuestionKey) {
+        const k = effectiveQuestionKey;
         answeredNext[k] = true;
         unknownNext[k] = true;
         if (k === 'highInterestDebt' || k === 'lowInterestDebt') (uf as any)[k] = 0;
         if (k === 'totalSavings') (uf as any)[k] = 0;
       }
 
-      if (!dontKnow && isNo && base.lastQuestionKey) {
-        const k = base.lastQuestionKey;
+      if (!dontKnow && isNo && effectiveQuestionKey) {
+        const k = effectiveQuestionKey;
         if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
           (uf as any)[k] = 0;
           answeredNext[k] = true;
@@ -326,10 +328,10 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         }
       }
 
-      if (!dontKnow && base.lastQuestionKey) {
+      if (!dontKnow && effectiveQuestionKey) {
         const v = parseBareNumber(ut);
         if (v !== null) {
-          const k = base.lastQuestionKey;
+          const k = effectiveQuestionKey;
           if (k === 'monthlyIncome' || k === 'essentialExpenses') {
             if (v > 0) {
               (uf as any)[k] = v;
@@ -381,7 +383,7 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
           if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
             if (!(typeof v === 'number' && v >= 0)) return false;
             if (v > 0) return true;
-            if (base.lastQuestionKey === k && (isNo || hasDigit)) return true;
+            if (effectiveQuestionKey === k && (isNo || hasDigit)) return true;
             return hasDigit && mentionedDebt;
           }
 
