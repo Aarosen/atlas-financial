@@ -100,16 +100,7 @@ test('1) happy path onboarding → tier reveal', async ({ page }: { page: Page }
 
   const input = page.locator('textarea');
 
-  await input.fill('My income is $8000/month.');
-  await input.press('Enter');
-
-  await input.fill('Essentials are $3000/month.');
-  await input.press('Enter');
-
-  await input.fill('Savings $24000.');
-  await input.press('Enter');
-
-  await input.fill('No debt.');
+  await input.fill('Income $8000/month. Essentials $3000/month. Savings $24000. No debt.');
   await input.press('Enter');
 
   await expect(page.getByText('Here’s what I heard')).toBeVisible();

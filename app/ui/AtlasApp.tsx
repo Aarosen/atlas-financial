@@ -38,6 +38,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const db = useMemo(() => new AtlasDb(), []);
   const claude = useMemo(() => new ClaudeClient(), []);
   const engine = useMemo(() => new StrategyEngine(), []);
+  const [mounted, setMounted] = useState(false);
   const [voiceListening, setVoiceListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const voice = useMemo(
@@ -59,6 +60,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [st, dispatch] = useReducer(conversationReducer, createInitialConversationState(initialScreen));
 
   const bot = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    setMounted(true);
+  }, []);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -287,7 +292,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             dispatch({ type: 'SET_INPUT', text: t });
           }}
           botRef={bot}
-          voiceSupported={voice.sttSupported}
+          voiceSupported={mounted ? voice.sttSupported : false}
           onVoiceStart={() => {
             dispatch({ type: 'SET_MODE', mode: 'voice' });
             voice.stopSpeak();
