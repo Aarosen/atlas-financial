@@ -10,7 +10,11 @@
     "dev": "next dev",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "test": "vitest run",
+    "test:watch": "vitest",
+    "e2e": "playwright test",
+    "e2e:ui": "playwright test --ui"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -23,8 +27,11 @@
     "@types/node": "^22.13.5",
     "@types/react": "^19.0.10",
     "@types/react-dom": "^19.0.4",
+    "@playwright/test": "^1.50.1",
     "eslint": "^9.20.1",
     "eslint-config-next": "^15.2.0",
-    "typescript": "^5.7.3"
+    "typescript": "^5.7.3",
+    "jsdom": "^26.0.0",
+    "vitest": "^2.1.8"
   }
 }

@@ -1,5 +1,7 @@
 export const runtime = 'edge';
 
+import { fallbackAnswer, violatesGuardrails } from '@/lib/server/guardrails';
+
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
 const FALLBACK_MODELS = ['claude-3-haiku-20240307', 'claude-3-opus-20240229'] as const;
@@ -74,6 +76,31 @@ async function callAnthropic(args: {
   });
 }
 
+async function callAnthropicStream(args: {
+  apiKey: string;
+  model: string;
+  maxTokens: number;
+  system: string;
+  messages: any[];
+}) {
+  return await fetch(ANTHROPIC_API, {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+      'x-api-key': args.apiKey,
+      Authorization: `Bearer ${args.apiKey}`,
+      'anthropic-version': '2023-06-01',
+    },
+    body: JSON.stringify({
+      model: args.model,
+      max_tokens: args.maxTokens,
+      system: args.system,
+      messages: args.messages,
+      stream: true,
+    }),
+  });
+}
+
 export async function OPTIONS() {
   return new Response(null, {
     status: 204,
@@ -111,9 +138,9 @@ export async function POST(req: Request) {
     return jsonError(400, 'Invalid JSON body');
   }
 
-  const { type, messages, missing } = body as { type?: string; messages?: any[]; missing?: string[] };
+  const { type, messages, missing, question } = body as { type?: string; messages?: any[]; missing?: string[]; question?: string };
 
-  if (!type || !['extract', 'chat'].includes(type)) {
+  if (!type || !['extract', 'chat', 'answer', 'answer_stream'].includes(type)) {
     return jsonError(400, 'Invalid request type.');
   }
 
@@ -211,12 +238,116 @@ WHAT ATLAS IS NOT:
   (If directly asked whether you're a financial advisor, answer honestly and simply, once)`;
 
   const systemPrompt = type === 'extract' ? extractPrompt : chatPrompt;
-  const maxTokens = type === 'extract' ? 500 : 350;
+  const maxTokens = type === 'extract' ? 500 : type === 'answer' ? 180 : 350;
+
+  const answerPrompt = `You are Atlas. Answer the user's question briefly and clearly.
+
+HARD OUTPUT CONSTRAINTS (must follow exactly):
+- Max 2 sentences total
+- Max 1 question mark total
+- No lists, no bullets, no numbering
+- Plain text only
+
+If the user asks something outside scope, respond briefly and redirect to the onboarding question.`;
 
   try {
     const trimmedMessages = messages.slice(-10);
     let usedModel = modelCandidates[0] || DEFAULT_MODEL;
-    let response = await callAnthropic({ apiKey, model: usedModel, maxTokens, system: systemPrompt, messages: trimmedMessages });
+    const sys = type === 'answer' ? answerPrompt : systemPrompt;
+    const msgPayload =
+      type === 'answer'
+        ? [{ role: 'user', content: `Question: ${String(question || '').trim()}` }]
+        : trimmedMessages;
+
+    if (type === 'answer_stream') {
+      const sysStream = answerPrompt;
+      const streamPayload = [{ role: 'user', content: `Question: ${String(question || '').trim()}` }];
+      let response = await callAnthropicStream({ apiKey, model: usedModel, maxTokens: 220, system: sysStream, messages: streamPayload });
+
+      if (!response.ok) {
+        let bodyText = await readUpstreamErrorBody(response);
+        if (response.status === 404 && bodyText.includes('not_found_error') && bodyText.includes('model')) {
+          for (const m of modelCandidates.slice(1)) {
+            usedModel = m;
+            response = await callAnthropicStream({ apiKey, model: usedModel, maxTokens: 220, system: sysStream, messages: streamPayload });
+            if (response.ok) break;
+            bodyText = await readUpstreamErrorBody(response);
+            if (!(response.status === 404 && bodyText.includes('not_found_error') && bodyText.includes('model'))) break;
+          }
+        }
+        if (!response.ok) {
+          if (response.status === 401) return jsonError(401, 'Anthropic auth failed (check ANTHROPIC_API_KEY).');
+          if (response.status === 429) return jsonError(429, 'Anthropic rate limit reached. Please try again.');
+          if (response.status === 400) return jsonError(400, `Anthropic request rejected. ${bodyText ? `Details: ${bodyText}` : ''}`.trim());
+          return jsonError(502, `Upstream API error (${response.status}). ${bodyText ? `Details: ${bodyText}` : ''}`.trim());
+        }
+      }
+
+      if (!response.body) return jsonError(502, 'Upstream stream missing body');
+
+      const enc = new TextEncoder();
+      const dec = new TextDecoder();
+      let carry = '';
+
+      const sse = new ReadableStream<Uint8Array>({
+        async start(controller) {
+          const reader = response.body!.getReader();
+          try {
+            while (true) {
+              const { value, done } = await reader.read();
+              if (done) break;
+              const chunk = dec.decode(value, { stream: true });
+              carry += chunk;
+
+              // Anthropic streams as SSE; we forward only text deltas.
+              while (true) {
+                const idx = carry.indexOf('\n\n');
+                if (idx < 0) break;
+                const frame = carry.slice(0, idx);
+                carry = carry.slice(idx + 2);
+
+                const lines = frame.split('\n');
+                const dataLines = lines.filter((l) => l.startsWith('data:')).map((l) => l.slice(5).trim());
+                for (const dl of dataLines) {
+                  if (!dl || dl === '[DONE]') continue;
+                  try {
+                    const j = JSON.parse(dl);
+                    const delta = j?.delta?.text;
+                    if (typeof delta === 'string' && delta) {
+                      controller.enqueue(enc.encode(`data: ${JSON.stringify({ delta })}\n\n`));
+                    }
+                  } catch {
+                    // ignore
+                  }
+                }
+              }
+            }
+            controller.enqueue(enc.encode(`data: ${JSON.stringify({ done: true, model: usedModel })}\n\n`));
+          } catch {
+            controller.enqueue(enc.encode(`data: ${JSON.stringify({ done: true, error: 'stream_error', model: usedModel })}\n\n`));
+          } finally {
+            controller.close();
+            try {
+              reader.releaseLock();
+            } catch {
+              // ignore
+            }
+          }
+        },
+      });
+
+      return new Response(sse, {
+        status: 200,
+        headers: {
+          'Content-Type': 'text/event-stream; charset=utf-8',
+          'Cache-Control': 'no-cache, no-transform',
+          Connection: 'keep-alive',
+          'Access-Control-Allow-Origin': '*',
+        },
+      });
+    }
+
+    let response = await callAnthropic({ apiKey, model: usedModel, maxTokens, system: sys, messages: msgPayload });
 
     if (!response.ok) {
       let bodyText = await readUpstreamErrorBody(response);
@@ -250,6 +381,30 @@ WHAT ATLAS IS NOT:
       } catch {
         return jsonOk({ fields: {}, source: 'claude_parse_error', model: usedModel });
       }
+    }
+
+    if (type === 'answer') {
+      const t0 = String(text || '').trim();
+      if (!violatesGuardrails(t0)) {
+        return jsonOk({ text: t0, source: 'claude', model: usedModel });
+      }
+
+      const repairSystem = `Rewrite the following text to comply with ALL constraints.
+Constraints: max 2 sentences; max 1 question mark; no lists; plain text only.
+Return ONLY the rewritten text.`;
+      const repairMsg = [{ role: 'user', content: t0 }];
+      const repairResp = await callAnthropic({ apiKey, model: usedModel, maxTokens: 120, system: repairSystem, messages: repairMsg });
+      if (repairResp.ok) {
+        const repairData: any = await repairResp.json();
+        const repaired = String(repairData.content?.[0]?.text || '').trim();
+        if (!violatesGuardrails(repaired)) {
+          console.log('[atlas_guardrails] repaired_answer', { model: usedModel });
+          return jsonOk({ text: repaired, source: 'claude_repaired', model: usedModel });
+        }
+      }
+
+      console.log('[atlas_guardrails] fallback_answer', { model: usedModel });
+      return jsonOk({ text: fallbackAnswer(String(question || '').trim()), source: 'fallback' });
     }
 
     return jsonOk({ text, source: 'claude', model: usedModel });

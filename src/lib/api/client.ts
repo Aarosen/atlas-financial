@@ -1,8 +1,8 @@
-import type { FinancialState } from './types';
+import type { FinancialState } from '../state/types';
 
 export type ClaudeApiStatus = 'unknown' | 'online' | 'degraded' | 'offline';
 
-export class Claude {
+export class ClaudeClient {
   private ep = '/api/chat';
   private _apiStatus: ClaudeApiStatus = 'unknown';
   private _hadSuccess = false;
@@ -42,6 +42,86 @@ export class Claude {
     }
   }
 
+  async answerStream(args: {
+    msgs: Array<{ role: 'user' | 'assistant'; content: string }>;
+    question: string;
+    onDelta: (t: string) => void;
+    signal?: AbortSignal;
+  }): Promise<{ ok: boolean; canceled: boolean }> {
+    const { question, onDelta, signal } = args;
+    try {
+      const r = await fetch(this.ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'answer_stream', messages: args.msgs, question }),
+        signal,
+      });
+
+      if (!r.ok) {
+        const t = await r.text().catch(() => '');
+        this._lastErrorStatus = r.status;
+        this._setStatusFromHttpError(r.status);
+        throw new Error(t || `proxy_error_${r.status}`);
+      }
+
+      if (!r.body) throw new Error('stream_missing_body');
+
+      const dec = new TextDecoder();
+      const reader = r.body.getReader();
+      let carry = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        carry += dec.decode(value, { stream: true });
+
+        while (true) {
+          const idx = carry.indexOf('\n\n');
+          if (idx < 0) break;
+          const frame = carry.slice(0, idx);
+          carry = carry.slice(idx + 2);
+          const lines = frame.split('\n');
+
+          for (const ln of lines) {
+            if (!ln.startsWith('data:')) continue;
+            const payload = ln.slice(5).trim();
+            if (!payload) continue;
+            try {
+              const j = JSON.parse(payload);
+              if (typeof j?.delta === 'string' && j.delta) onDelta(j.delta);
+              if (j?.done) {
+                this._hadSuccess = true;
+                this._apiStatus = 'online';
+                this._lastErrorStatus = null;
+                try {
+                  reader.releaseLock();
+                } catch {
+                  // ignore
+                }
+                return { ok: true, canceled: false };
+              }
+            } catch {
+              // ignore
+            }
+          }
+        }
+      }
+
+      this._hadSuccess = true;
+      this._apiStatus = 'online';
+      this._lastErrorStatus = null;
+      return { ok: true, canceled: false };
+    } catch (e: any) {
+      const canceled = String(e?.name || '').toLowerCase() === 'aborterror';
+      if (!this._hadSuccess) {
+        this._apiStatus = 'unknown';
+      } else if (this._lastErrorStatus === null) {
+        this._apiStatus = 'offline';
+      }
+      return { ok: false, canceled };
+    }
+  }
+
   async chat(msgs: Array<{ role: 'user' | 'assistant'; content: string }>, missing: string[]) {
     try {
       const r = await fetch(this.ep, {
@@ -68,6 +148,35 @@ export class Claude {
         this._apiStatus = 'offline';
       }
       return this._fallbackQuestion(missing[0]);
+    }
+  }
+
+  async answer(msgs: Array<{ role: 'user' | 'assistant'; content: string }>, question: string) {
+    try {
+      const r = await fetch(this.ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'answer', messages: msgs, question }),
+      });
+      if (!r.ok) {
+        const t = await r.text().catch(() => '');
+        this._lastErrorStatus = r.status;
+        this._setStatusFromHttpError(r.status);
+        throw new Error(t || `proxy_error_${r.status}`);
+      }
+      const d = await r.json();
+      if (d.error) throw new Error(d.error);
+      this._hadSuccess = true;
+      this._apiStatus = 'online';
+      this._lastErrorStatus = null;
+      return (d.text as string) || '';
+    } catch {
+      if (!this._hadSuccess) {
+        this._apiStatus = 'unknown';
+      } else if (this._lastErrorStatus === null) {
+        this._apiStatus = 'offline';
+      }
+      return '';
     }
   }
 
