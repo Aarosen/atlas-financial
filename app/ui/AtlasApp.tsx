@@ -12,6 +12,7 @@ import { decideNextAction } from '@/lib/ai/orchestrator';
 import { createReplayEntry, detectReplayEmotion, logReplayEntry } from '@/lib/ai/replay';
 import { detectLiteracyLevel, detectResponsePreference } from '@/lib/ai/personalization';
 import { buildReasoningTrace } from '@/lib/ai/trace';
+import { buildCheckinMessage, shouldShowCheckin } from '@/lib/ai/checkins';
 import { createVoice } from '@/lib/voice/voice';
 import { ConversationScreen, DashboardScreen, LandingScreen, PlanScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
 import { Button } from '@/components/Buttons';
@@ -248,6 +249,18 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
     // Resolve 'unknown' quickly without spending tokens: checks whether /api/chat is reachable and configured.
     void claude.statusCheck().finally(() => setApiStatus(claude.status));
   }, [claude, st.scr]);
+
+  useEffect(() => {
+    if (!st.baseline) return;
+    if (st.scr !== 'conversation') return;
+    void db.get<{ v: number }>('prefs', 'lastCheckinAt').then((p) => {
+      const last = typeof p?.v === 'number' ? p.v : null;
+      if (!shouldShowCheckin({ lastCheckinAt: last })) return;
+      const msg = buildCheckinMessage();
+      dispatch({ type: 'SEND_ASKED', text: msg });
+      void db.set('prefs', { k: 'lastCheckinAt', v: Date.now() });
+    });
+  }, [db, st.baseline, st.scr]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);

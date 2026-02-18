@@ -1,5 +1,6 @@
 import type { Explainability, FinancialState, Lever, Strategy, Tier, TraceStep } from '../state/types';
 import { pickLever, pickTier, pickUrgency, scoreConfidence, strategyConfig, type StrategyContext } from './strategyConfig';
+import { calcBufferMonths, calcDti, calcFutureAllocation, calcNet, clamp0 } from './calculator';
 
 export class StrategyEngine {
   async run(d: Partial<FinancialState>, ctx: StrategyContext = {}): Promise<Strategy> {
@@ -7,12 +8,6 @@ export class StrategyEngine {
   }
 
   private _calc(d: Partial<FinancialState>, ctx: StrategyContext): Strategy {
-    const clamp0 = (n: any) => {
-      const v = Number(n);
-      if (!Number.isFinite(v)) return 0;
-      return Math.max(0, v);
-    };
-
     const inc = clamp0(d.monthlyIncome);
     const ess = clamp0(d.essentialExpenses);
     const dp = clamp0(d.monthlyDebtPayments);
@@ -20,14 +15,11 @@ export class StrategyEngine {
     const loD = clamp0(d.lowInterestDebt);
     const sav = clamp0(d.totalSavings);
 
-    const bufMo = ess > 0 ? sav / ess : 0;
-    const net = inc - ess - dp;
+    const net = calcNet(inc, ess, dp);
+    const bufMo = calcBufferMonths(sav, ess);
     const discIn = Number((d as any).discretionaryExpenses);
-    const disc = Number.isFinite(discIn) && discIn > 0 ? discIn : Math.max(0, net * 0.28);
-    const futAmt = Math.max(0, net - disc);
-    const futPct = inc > 0 ? futAmt / inc : 0;
-
-    const dti = inc > 0 ? (hiD + loD) / (inc * 12) : 0;
+    const { disc, futAmt, futPct } = calcFutureAllocation(net, inc, discIn);
+    const dti = calcDti(hiD, loD, inc);
     const dExp = hiD > inc * 3 ? 'Critical' : hiD > inc ? 'High' : hiD > inc * 0.5 ? 'Moderate' : 'Low';
 
     const tier = pickTier({ net, bufMo, hiDebt: hiD, income: inc, dti });

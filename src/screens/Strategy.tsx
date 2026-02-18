@@ -41,6 +41,7 @@ export function StrategyScreen({
           <Card>
             <div style={{ fontWeight: 980, fontSize: 'var(--fsH2)' }}>{t.name}</div>
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>{t.desc}</div>
+            <div style={{ marginTop: 10, color: 'var(--ink2)', fontWeight: 800 }}>Confidence: {baseline.confidence}</div>
           </Card>
           <Card>
             <div style={{ fontWeight: 950, fontSize: 16 }}>What that tier usually means</div>
