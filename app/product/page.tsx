@@ -59,7 +59,7 @@ export default function Page() {
             <strong>4.</strong> A calmer plan you can actually follow—because it’s sized to your capacity.
           </div>
         </Stack>
-      </div>
+      </Card>
 
       <Card style={{ marginTop: 18, background: 'var(--bg2)' }}>
         <div style={{ fontWeight: 980, letterSpacing: '-0.02em' }}>What Atlas won’t do</div>
