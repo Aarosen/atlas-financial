@@ -155,7 +155,7 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
         ...state,
         busy: false,
         streaming: false,
-        lastQuestionKey: ev.questionKey,
+        lastQuestionKey: ev.questionKey ?? state.lastQuestionKey,
         msgs: [...state.msgs, { r: 'a', t: ev.text }],
       };
 

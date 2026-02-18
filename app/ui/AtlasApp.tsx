@@ -487,9 +487,9 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
             setEditingLast(true);
             dispatch({ type: 'SET_INPUT', text: t });
           }}
-          nextStepHint={st.baseline ? 'Continue with one step' : null}
+          nextStepHint={st.baseline && st.missing.length === 0 ? 'Continue with one step' : null}
           onNextStep={
-            st.baseline
+            st.baseline && st.missing.length === 0
               ? () => {
                   dispatch({ type: 'SEND_ASKED', text: nextStepText(st.fin, st.baseline!) });
                 }

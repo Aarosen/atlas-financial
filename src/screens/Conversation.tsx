@@ -366,7 +366,7 @@ export function ConversationScreen({
             onBlur={() => setInpFocused(false)}
             placeholder="Tell Atlas anything…"
             rows={1}
-            style={{ width: '100%', padding: '12px 50px 12px 14px', borderRadius: 14, border: '1.5px solid var(--bdr2)', background: 'var(--card)', outline: 'none', resize: 'none', color: 'var(--ink)', maxHeight: 140, overflowY: 'auto' }}
+            style={{ width: '100%', padding: `12px ${voiceSupported && onVoiceStart ? 104 : 56}px 12px 14px`, borderRadius: 14, border: '1.5px solid var(--bdr2)', background: 'var(--card)', outline: 'none', resize: 'none', color: 'var(--ink)', maxHeight: 140, overflowY: 'auto' }}
           />
           {inpFocused && isDesktop && !busy && (
             <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
@@ -399,19 +399,23 @@ export function ConversationScreen({
             <button
               onClick={onVoiceStart}
               disabled={busy}
-              style={{ position: 'absolute', right: 48, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: '1px solid var(--bdr2)', color: 'var(--ink2)', width: 38, height: 34, borderRadius: 12, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1 }}
+              style={{ position: 'absolute', right: 54, top: '50%', transform: 'translateY(-50%)', background: 'var(--card)', border: '1px solid var(--bdr2)', color: 'var(--ink2)', width: 40, height: 38, borderRadius: 999, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--sh1)' }}
               aria-label="Voice input"
               title="Voice input"
             >
-              🎙️
+              <span style={{ fontSize: 16, lineHeight: '16px' }} aria-hidden>
+                🎙️
+              </span>
             </button>
           )}
           <button
             onClick={onSend}
             disabled={!inp.trim() || busy}
-            style={{ position: 'absolute', right: 6, top: '50%', transform: 'translateY(-50%)', background: 'linear-gradient(135deg,var(--teal),var(--sky))', border: 'none', color: '#fff', width: 38, height: 34, borderRadius: 12, cursor: busy ? 'not-allowed' : 'pointer', opacity: !inp.trim() || busy ? 0.5 : 1 }}
+            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'linear-gradient(135deg,var(--teal),var(--sky))', border: 'none', color: '#fff', width: 40, height: 38, borderRadius: 999, cursor: busy ? 'not-allowed' : 'pointer', opacity: !inp.trim() || busy ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--sh2)' }}
           >
-            →
+            <span style={{ fontSize: 18, lineHeight: '18px', fontWeight: 950 }} aria-hidden>
+              →
+            </span>
           </button>
         </div>
         <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink3)', marginTop: 8 }}>Try: “I make $4k/month and spend about $2.5k on essentials”</div>
