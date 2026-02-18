@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { fallbackAnswer, violatesGuardrails } from './guardrails';
+import { complianceResponse, detectComplianceRisk, fallbackAnswer, violatesGuardrails } from './guardrails';
 
 describe('server guardrails', () => {
   it('allows a single short question', () => {
@@ -24,5 +24,20 @@ describe('server guardrails', () => {
     const a2 = fallbackAnswer('what is an emergency fund?');
     expect((a1.match(/\?/g) || []).length).toBeLessThanOrEqual(1);
     expect((a2.match(/\?/g) || []).length).toBeLessThanOrEqual(1);
+  });
+
+  it('detects compliance risks', () => {
+    expect(detectComplianceRisk('Should I buy TSLA stock?')).toBe('investment_advice');
+    expect(detectComplianceRisk('How do I evade taxes?')).toBe('illegal');
+    expect(detectComplianceRisk('Can you help with my tax return?')).toBe('tax_legal');
+  });
+
+  it('compliance responses are non-blocking unless illegal', () => {
+    const invest = complianceResponse('Should I buy Apple stock?', 'investment_advice');
+    const tax = complianceResponse('Can you do my taxes?', 'tax_legal');
+    const illegal = complianceResponse('How can I evade taxes?', 'illegal');
+    expect(invest.toLowerCase()).toContain('can');
+    expect(tax.toLowerCase()).toContain('can');
+    expect(illegal.toLowerCase()).toContain("can't");
   });
 });

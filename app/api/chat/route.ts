@@ -1,6 +1,6 @@
 export const runtime = 'edge';
 
-import { fallbackAnswer, violatesGuardrails } from '@/lib/server/guardrails';
+import { complianceResponse, detectComplianceRisk, fallbackAnswer, violatesGuardrails } from '@/lib/server/guardrails';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -185,6 +185,14 @@ export async function POST(req: Request) {
   if (type === 'answer' || type === 'answer_stream' || type === 'answer_explain' || type === 'answer_explain_stream') {
     if (!question || !String(question).trim()) {
       return jsonError(400, 'question is required');
+    }
+  }
+
+  if (type === 'answer' || type === 'answer_stream' || type === 'answer_explain' || type === 'answer_explain_stream') {
+    const risk = detectComplianceRisk(String(question || ''));
+    if (risk) {
+      const safe = complianceResponse(String(question || ''), risk);
+      return jsonOk({ text: safe, source: 'compliance_guardrail', model: 'policy' });
     }
   }
 
