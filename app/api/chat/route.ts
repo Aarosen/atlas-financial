@@ -25,6 +25,30 @@ function checkRateLimit(ip: string) {
   return entry.count <= RATE_LIMIT;
 }
 
+function streamStaticResponse(text: string, meta: { model: string; tier: string; guardrail?: string }) {
+  const enc = new TextEncoder();
+  const body = new ReadableStream<Uint8Array>({
+    start(controller) {
+      controller.enqueue(enc.encode(`data: ${JSON.stringify({ delta: text })}\n\n`));
+      controller.enqueue(
+        enc.encode(
+          `data: ${JSON.stringify({ done: true, model: meta.model, tier: meta.tier, guardrail: meta.guardrail })}\n\n`
+        )
+      );
+      controller.close();
+    },
+  });
+  return new Response(body, {
+    status: 200,
+    headers: {
+      'Content-Type': 'text/event-stream; charset=utf-8',
+      'Cache-Control': 'no-cache, no-transform',
+      Connection: 'keep-alive',
+      'Access-Control-Allow-Origin': '*',
+    },
+  });
+}
+
 function detectEmotion(messages: Array<{ role: string; content: string }>): EmotionTag {
   const lastUser = [...messages].reverse().find((m) => m.role === 'user');
   const t = String(lastUser?.content || '').toLowerCase();
@@ -197,6 +221,9 @@ export async function POST(req: Request) {
     const risk = detectComplianceRisk(String(question || ''));
     if (risk) {
       const safe = complianceResponse(String(question || ''), risk);
+      if (type === 'answer_stream' || type === 'answer_explain_stream') {
+        return streamStaticResponse(safe, { model: 'policy', tier });
+      }
       return jsonOk({ text: safe, source: 'compliance_guardrail', model: 'policy', tier });
     }
   }

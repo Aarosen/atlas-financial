@@ -9,6 +9,7 @@ import type { ChatMessage, FinancialState, Strategy } from '@/lib/state/types';
 import { conversationReducer, createInitialConversationState, type Screen } from '@/lib/state/conversationMachine';
 import { applyUserTurn, classifyInterruption, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
 import { decideNextAction } from '@/lib/ai/orchestrator';
+import { createReplayEntry, detectReplayEmotion, logReplayEntry } from '@/lib/ai/replay';
 import { createVoice } from '@/lib/voice/voice';
 import { ConversationScreen, DashboardScreen, LandingScreen, PlanScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
 import { Button } from '@/components/Buttons';
@@ -45,6 +46,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [apiStatus, setApiStatus] = useState(claude.status);
   const [voiceListening, setVoiceListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
+  const [replayEnabled, setReplayEnabled] = useState(true);
   const voice = useMemo(
     () =>
       createVoice({
@@ -265,6 +267,11 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         if (typeof p?.v === 'boolean') setVoiceAutoSend(p.v);
       })
       .catch(() => {});
+    db.get<{ v: boolean }>('prefs', 'replayEnabled')
+      .then((p: { v: boolean } | undefined) => {
+        if (typeof p?.v === 'boolean') setReplayEnabled(p.v);
+      })
+      .catch(() => {});
     db.get<{ v: string }>('prefs', 'memorySummary')
       .then((p: { v: string } | undefined) => {
         if (typeof p?.v === 'string' && p.v.trim()) {
@@ -358,6 +365,12 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
   const doSend = useCallback(
     async (base: typeof st, ut: string) => {
       dispatch({ type: 'SEND_START', text: ut });
+      const kind = classifyInterruption(ut);
+      const logReplay = (entry: ReturnType<typeof createReplayEntry>) => {
+        void logReplayEntry({ enabled: replayEnabled, entry, set: db.set.bind(db) }).catch(() => {});
+      };
+
+      logReplay(createReplayEntry({ role: 'user', text: ut, kind, emotionTag: detectReplayEmotion(ut) }));
 
       const prevMsgs: ChatMessage[] = [...base.msgs, { r: 'u' as const, t: ut }];
       try {
@@ -371,16 +384,24 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
           return raw;
         };
 
-        const kind = classifyInterruption(ut);
         const missBefore = base.missing.length ? base.missing : missing(base.fin);
-      const resumeQ = missBefore.length ? nextQuestionForMissing(missBefore[0], prevMsgs.length) : null;
+        const resumeQ = missBefore.length ? nextQuestionForMissing(missBefore[0], prevMsgs.length) : null;
 
-      if (kind === 'meta') {
-        const ans = metaResponse(ut);
-        const out = resumeQ ? `${ans} ${resumeQ.text}` : ans;
-        dispatch({ type: 'SEND_ASKED', text: out, questionKey: resumeQ?.key });
-        return;
-      }
+        if (kind === 'meta') {
+          const ans = metaResponse(ut);
+          const out = resumeQ ? `${ans} ${resumeQ.text}` : ans;
+          logReplay(
+            createReplayEntry({
+              role: 'assistant',
+              text: out,
+              kind: 'meta',
+              questionKey: resumeQ?.key,
+              emotionTag: detectReplayEmotion(out),
+            })
+          );
+          dispatch({ type: 'SEND_ASKED', text: out, questionKey: resumeQ?.key });
+          return;
+        }
 
       if (kind === 'followup_question') {
         const am = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
@@ -392,6 +413,7 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
 
         dispatch({ type: 'STREAM_START' });
 
+        let streamed = '';
         const res = await claude.answerStream({
           msgs: am,
           question: ut,
@@ -400,6 +422,7 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
           onDelta: (t) => {
             if (streamIdRef.current !== myStreamId) return;
             if (ctrl.signal.aborted) return;
+            streamed += t;
             dispatch({ type: 'STREAM_DELTA', delta: t });
           },
           signal: ctrl.signal,
@@ -416,7 +439,26 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         }
 
         dispatch({ type: res.ok ? 'STREAM_DONE' : 'STREAM_DONE' });
+        if (res.ok) {
+          logReplay(
+            createReplayEntry({
+              role: 'assistant',
+              text: streamed.trim(),
+              kind: 'followup_question',
+              emotionTag: detectReplayEmotion(streamed),
+            })
+          );
+        }
         if (resumeQ) {
+          logReplay(
+            createReplayEntry({
+              role: 'assistant',
+              text: resumeQ.text,
+              kind: 'ask',
+              questionKey: resumeQ.key,
+              emotionTag: detectReplayEmotion(resumeQ.text),
+            })
+          );
           dispatch({ type: 'SEND_ASKED', text: resumeQ.text, questionKey: resumeQ.key });
         }
         return;
@@ -474,6 +516,15 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         return;
       }
       if (action.type === 'ask') {
+        logReplay(
+          createReplayEntry({
+            role: 'assistant',
+            text: action.text,
+            kind: 'ask',
+            questionKey: action.questionKey,
+            emotionTag: detectReplayEmotion(action.text),
+          })
+        );
         dispatch({ type: 'SEND_ASKED', text: action.text, questionKey: action.questionKey });
       }
     } catch (e: any) {
@@ -736,6 +787,12 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         const v = !voiceAutoSend;
         setVoiceAutoSend(v);
         void db.set('prefs', { k: 'voiceAutoSend', v });
+      }}
+      replayEnabled={replayEnabled}
+      onToggleReplayEnabled={() => {
+        const v = !replayEnabled;
+        setReplayEnabled(v);
+        void db.set('prefs', { k: 'replayEnabled', v });
       }}
       onDeleteLocalData={() => {
         void (async () => {

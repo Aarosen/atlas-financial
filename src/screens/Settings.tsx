@@ -14,6 +14,8 @@ export function SettingsScreen({
   onToggleSpeakReplies,
   voiceAutoSend,
   onToggleVoiceAutoSend,
+  replayEnabled,
+  onToggleReplayEnabled,
   onDeleteLocalData,
   onBackToDashboard,
   canBackToDashboard,
@@ -28,6 +30,8 @@ export function SettingsScreen({
   onToggleSpeakReplies: () => void;
   voiceAutoSend: boolean;
   onToggleVoiceAutoSend: () => void;
+  replayEnabled: boolean;
+  onToggleReplayEnabled: () => void;
   onDeleteLocalData: () => void;
   onBackToDashboard: () => void;
   canBackToDashboard: boolean;
@@ -48,7 +52,9 @@ export function SettingsScreen({
             <div style={{ fontWeight: 950, fontSize: 16 }}>Data</div>
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>Messages you type may be sent to our AI provider to generate responses.</div>
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>Financial state is stored locally and can be deleted at any time.</div>
+            <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>Conversation replay logs are stored locally for debugging and can be turned off.</div>
             <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+              <GhostBtn onClick={onToggleReplayEnabled}>{replayEnabled ? 'Replay logging: On' : 'Replay logging: Off'}</GhostBtn>
               <GhostBtn
                 onClick={() => {
                   if (typeof window !== 'undefined') {

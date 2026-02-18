@@ -1,14 +1,14 @@
-type StoreName = 'fin' | 'conv' | 'strat' | 'plan' | 'prefs';
+type StoreName = 'fin' | 'conv' | 'strat' | 'plan' | 'prefs' | 'replay';
 
 export class AtlasDb {
-  private name = 'AtlasDB_v2';
+  private name = 'AtlasDB_v3';
   private db: IDBDatabase | null = null;
 
   async open() {
     if (this.db) return;
 
     await new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open(this.name, 2);
+      const req = indexedDB.open(this.name, 3);
       req.onerror = () => reject(req.error);
       req.onsuccess = () => {
         this.db = req.result;
@@ -16,9 +16,9 @@ export class AtlasDb {
       };
       req.onupgradeneeded = (e) => {
         const db = (e.target as IDBOpenDBRequest).result;
-        (['fin', 'conv', 'strat', 'plan', 'prefs'] as StoreName[]).forEach((n) => {
+        (['fin', 'conv', 'strat', 'plan', 'prefs', 'replay'] as StoreName[]).forEach((n) => {
           if (!db.objectStoreNames.contains(n)) {
-            db.createObjectStore(n, n === 'conv' || n === 'plan' ? { keyPath: 'id', autoIncrement: true } : { keyPath: 'k' });
+            db.createObjectStore(n, n === 'conv' || n === 'plan' || n === 'replay' ? { keyPath: 'id', autoIncrement: true } : { keyPath: 'k' });
           }
         });
       };
@@ -67,7 +67,7 @@ export class AtlasDb {
     if (!this.db) throw new Error('db_not_open');
 
     await Promise.all(
-      (['fin', 'conv', 'strat', 'plan'] as StoreName[]).map(
+      (['fin', 'conv', 'strat', 'plan', 'replay'] as StoreName[]).map(
         (s) =>
           new Promise<void>((resolve, reject) => {
             const tx = this.db!.transaction([s], 'readwrite');

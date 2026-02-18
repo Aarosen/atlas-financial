@@ -78,13 +78,13 @@ export default function Landing() {
               </Inline>
 
               <Stack style={{ marginTop: 14 }} gap={10}>
-                <div style={{ padding: '12px 14px', borderRadius: 18, background: 'var(--bg2)', border: '1px solid var(--bdr)', color: 'var(--ink2)', lineHeight: 1.6, fontWeight: 750 }}>
+                <div style={{ padding: '12px 14px', borderRadius: 18, background: 'var(--bg2)', border: '1px solid var(--bdr)', color: 'var(--ink1)', lineHeight: 1.6, fontWeight: 750 }}>
                   Tell me what’s going on with money right now.
                 </div>
                 <div style={{ padding: '12px 14px', borderRadius: 18, background: 'linear-gradient(135deg,var(--teal),var(--sky))', color: '#fff', lineHeight: 1.6, fontWeight: 800, marginLeft: '14%' }}>
                   I feel behind. I make $5.5k/mo, rent is $2k, and I’ve got $4k in credit card debt.
                 </div>
-                <div style={{ padding: '12px 14px', borderRadius: 18, background: 'var(--bg2)', border: '1px solid var(--bdr)', color: 'var(--ink2)', lineHeight: 1.6, fontWeight: 750 }}>
+                <div style={{ padding: '12px 14px', borderRadius: 18, background: 'var(--bg2)', border: '1px solid var(--bdr)', color: 'var(--ink1)', lineHeight: 1.6, fontWeight: 750 }}>
                   We can fix this. Let’s pick one lever: reduce the interest pressure, then build a buffer.
                 </div>
               </Stack>
