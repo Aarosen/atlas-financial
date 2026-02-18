@@ -71,6 +71,7 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
   const userText = String(turn.userText || '');
   const kind = turn.kind || classifyInterruption(userText);
   const dontKnow = /\b(don'?t\s+know|not\s+sure|no\s+idea)\b/i.test(userText);
+  const isNo = /^\s*(no|none|nope|nah|n\/a)\b/i.test(userText);
 
   const collected: FinancialState = { ...st.collected };
   const answered: AtlasConversationState['answered'] = { ...st.answered };
@@ -89,6 +90,15 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
     unknown[k] = true;
     if (k === 'highInterestDebt' || k === 'lowInterestDebt') (collected as any)[k] = 0;
     if (k === 'totalSavings') (collected as any)[k] = 0;
+  }
+
+  if (!dontKnow && isNo && st.lastQuestionKey) {
+    const k = st.lastQuestionKey;
+    if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
+      answered[k] = true;
+      if (unknown[k]) delete unknown[k];
+      (collected as any)[k] = 0;
+    }
   }
 
   const parseBareNumber = (s: string): number | null => {

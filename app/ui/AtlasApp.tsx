@@ -282,6 +282,7 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
       }
 
       const dontKnow = /\b(don'?t\s+know|not\s+sure|no\s+idea)\b/i.test(ut);
+      const isNo = /^\s*(no|none|nope|nah|n\/a)\b/i.test(ut);
 
       const answeredNext: Partial<Record<keyof FinancialState, boolean>> = { ...base.answered };
       const unknownNext: Partial<Record<keyof FinancialState, boolean>> = { ...base.unknown };
@@ -304,6 +305,15 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         unknownNext[k] = true;
         if (k === 'highInterestDebt' || k === 'lowInterestDebt') (uf as any)[k] = 0;
         if (k === 'totalSavings') (uf as any)[k] = 0;
+      }
+
+      if (!dontKnow && isNo && base.lastQuestionKey) {
+        const k = base.lastQuestionKey;
+        if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
+          (uf as any)[k] = 0;
+          answeredNext[k] = true;
+          if (unknownNext[k]) delete unknownNext[k];
+        }
       }
 
       if (!dontKnow && base.lastQuestionKey) {
@@ -502,8 +512,21 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
 
       {st.scr === 'dashboard' &&
         !st.baseline && (
-          <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--padY) var(--padX)', color: 'var(--ink2)' }}>
-            Loading dashboard…
+          <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--padY) var(--padX)' }}>
+            <div style={{ width: '100%', maxWidth: 560, display: 'grid', gap: 12, textAlign: 'center' }}>
+              <div style={{ fontWeight: 950, fontSize: 18 }}>Dashboard not ready yet</div>
+              <div style={{ color: 'var(--ink2)', lineHeight: 1.7 }}>
+                Once Atlas has a baseline strategy, your dashboard will populate automatically.
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
+                <button
+                  onClick={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })}
+                  style={{ background: 'linear-gradient(135deg,var(--teal),var(--sky))', color: '#fff', border: 'none', borderRadius: 16, padding: '14px 18px', fontWeight: 900, cursor: 'pointer' }}
+                >
+                  Go to conversation →
+                </button>
+              </div>
+            </div>
           </div>
         )}
 
