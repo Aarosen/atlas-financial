@@ -91,6 +91,42 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
     if (k === 'totalSavings') (collected as any)[k] = 0;
   }
 
+  const parseBareNumber = (s: string): number | null => {
+    const t = s.trim();
+    const m = t.match(/^\$?\s*(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\s*$/i);
+    if (!m) return null;
+    let v = Number.parseFloat(m[1].replace(/,/g, ''));
+    if (!Number.isFinite(v)) return null;
+    if (m[2]) v *= 1000;
+    return v;
+  };
+
+  if (!dontKnow && st.lastQuestionKey) {
+    const v = parseBareNumber(userText);
+    if (v !== null) {
+      const k = st.lastQuestionKey;
+      if (k === 'monthlyIncome' || k === 'essentialExpenses') {
+        if (v > 0) {
+          (collected as any)[k] = v;
+          answered[k] = true;
+          if (unknown[k]) delete unknown[k];
+        }
+      } else if (k === 'totalSavings') {
+        if (v >= 0) {
+          (collected as any)[k] = v;
+          answered[k] = true;
+          if (unknown[k]) delete unknown[k];
+        }
+      } else if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
+        if (v >= 0) {
+          (collected as any)[k] = v;
+          answered[k] = true;
+          if (unknown[k]) delete unknown[k];
+        }
+      }
+    }
+  }
+
   if (turn.extractedFields) {
     for (const [k0, v] of Object.entries(turn.extractedFields)) {
       const k = k0 as keyof FinancialState;

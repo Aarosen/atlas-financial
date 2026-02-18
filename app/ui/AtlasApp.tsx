@@ -177,12 +177,48 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
       const uf: FinancialState = { ...base.fin };
 
+      const parseBareNumber = (s: string): number | null => {
+        const t = s.trim();
+        const m = t.match(/^\$?\s*(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\s*$/i);
+        if (!m) return null;
+        let v = Number.parseFloat(m[1].replace(/,/g, ''));
+        if (!Number.isFinite(v)) return null;
+        if (m[2]) v *= 1000;
+        return v;
+      };
+
       if (dontKnow && base.lastQuestionKey) {
         const k = base.lastQuestionKey;
         answeredNext[k] = true;
         unknownNext[k] = true;
         if (k === 'highInterestDebt' || k === 'lowInterestDebt') (uf as any)[k] = 0;
         if (k === 'totalSavings') (uf as any)[k] = 0;
+      }
+
+      if (!dontKnow && base.lastQuestionKey) {
+        const v = parseBareNumber(ut);
+        if (v !== null) {
+          const k = base.lastQuestionKey;
+          if (k === 'monthlyIncome' || k === 'essentialExpenses') {
+            if (v > 0) {
+              (uf as any)[k] = v;
+              answeredNext[k] = true;
+              if (unknownNext[k]) delete unknownNext[k];
+            }
+          } else if (k === 'totalSavings') {
+            if (v >= 0) {
+              (uf as any)[k] = v;
+              answeredNext[k] = true;
+              if (unknownNext[k]) delete unknownNext[k];
+            }
+          } else if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
+            if (v >= 0) {
+              (uf as any)[k] = v;
+              answeredNext[k] = true;
+              if (unknownNext[k]) delete unknownNext[k];
+            }
+          }
+        }
       }
 
       const ex = await claude.extract(ut, base.fin);

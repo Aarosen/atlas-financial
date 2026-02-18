@@ -50,6 +50,21 @@ describe('atlasConversationController scripted fixtures', () => {
       ],
     },
     {
+      name: 'numeric-only answer advances lastQuestionKey (prevents re-ask loop)',
+      turns: [
+        {
+          user: 'hi',
+          extracted: {},
+          expect: { phase: 'onboarding', lastQuestionKey: 'monthlyIncome' },
+        },
+        {
+          user: '6000',
+          extracted: {},
+          expect: { phase: 'onboarding', missing0: 'essentialExpenses', lastQuestionKey: 'essentialExpenses', collected: { monthlyIncome: 6000 } },
+        },
+      ],
+    },
+    {
       name: 'contradiction/correction overwrites value',
       turns: [
         {
