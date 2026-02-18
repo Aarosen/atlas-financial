@@ -39,6 +39,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const claude = useMemo(() => new ClaudeClient(), []);
   const engine = useMemo(() => new StrategyEngine(), []);
   const [mounted, setMounted] = useState(false);
+  const [apiStatus, setApiStatus] = useState(claude.status);
   const [voiceListening, setVoiceListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const voice = useMemo(
@@ -147,6 +148,13 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
   useEffect(() => {
     setMounted(true);
   }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (st.scr !== 'conversation') return;
+    // Resolve 'unknown' quickly without spending tokens: checks whether /api/chat is reachable and configured.
+    void claude.statusCheck().finally(() => setApiStatus(claude.status));
+  }, [claude, st.scr]);
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -292,6 +300,7 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
       }
 
       const ex = await claude.extract(ut, base.fin);
+      setApiStatus(claude.status);
 
       const st1 = applyUserTurn(
         {
@@ -354,6 +363,7 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         if (t.includes('proxy_error_') || t.includes('fetch') || t.includes('network') || t.includes('timeout')) return 'Connection issue — retry when you’re ready.';
         return raw;
       })();
+      setApiStatus(claude.status);
       dispatch({ type: 'SEND_FAILED', err: friendly });
     }
   },
@@ -418,7 +428,7 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
           theme={theme}
           onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
           apiErr={st.apiErr}
-          apiStatus={claude.status}
+          apiStatus={apiStatus}
           msgs={st.msgs}
           busy={st.busy}
           inp={st.inp}

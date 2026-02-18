@@ -119,17 +119,11 @@ export async function POST(req: Request) {
   }
 
   const apiKey = process.env.ANTHROPIC_API_KEY;
-  if (!apiKey) {
-    return jsonError(
+  const notConfigured = () =>
+    jsonError(
       500,
       'API not configured. Set ANTHROPIC_API_KEY (locally in .env.local, and in Vercel Environment Variables for deploys).'
     );
-  }
-
-  const requestedModel = process.env.ANTHROPIC_MODEL;
-  const modelCandidates = Array.from(
-    new Set([requestedModel, DEFAULT_MODEL, ...FALLBACK_MODELS].filter(Boolean) as string[])
-  );
 
   let body: any;
   try {
@@ -140,9 +134,23 @@ export async function POST(req: Request) {
 
   const { type, messages, missing, question } = body as { type?: string; messages?: any[]; missing?: string[]; question?: string };
 
-  if (!type || !['extract', 'chat', 'answer', 'answer_stream'].includes(type)) {
+  if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'status'].includes(type)) {
     return jsonError(400, 'Invalid request type.');
   }
+
+  if (type === 'status') {
+    if (!apiKey) return notConfigured();
+    return jsonOk({ configured: true });
+  }
+
+  if (!apiKey) {
+    return notConfigured();
+  }
+
+  const requestedModel = process.env.ANTHROPIC_MODEL;
+  const modelCandidates = Array.from(
+    new Set([requestedModel, DEFAULT_MODEL, ...FALLBACK_MODELS].filter(Boolean) as string[])
+  );
 
   if (!messages || !Array.isArray(messages)) {
     return jsonError(400, 'messages array is required');

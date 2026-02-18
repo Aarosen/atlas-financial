@@ -8,6 +8,35 @@ export class ClaudeClient {
   private _hadSuccess = false;
   private _lastErrorStatus: number | null = null;
 
+  async statusCheck(): Promise<{ configured: boolean } | null> {
+    try {
+      const r = await fetch(this.ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ type: 'status' }),
+      });
+      if (!r.ok) {
+        this._lastErrorStatus = r.status;
+        this._setStatusFromHttpError(r.status);
+        return null;
+      }
+      const d = await r.json().catch(() => ({}));
+      // If our own API endpoint is reachable and configured, we consider AI "online".
+      if (d?.configured) {
+        this._hadSuccess = true;
+        this._apiStatus = 'online';
+        this._lastErrorStatus = null;
+        return { configured: true };
+      }
+      this._apiStatus = 'unknown';
+      return null;
+    } catch {
+      // Network / fetch failure.
+      this._apiStatus = this._hadSuccess ? 'offline' : 'offline';
+      return null;
+    }
+  }
+
   async extract(msg: string, _ctx: Partial<FinancialState> = {}) {
     try {
       const r = await fetch(this.ep, {
@@ -189,10 +218,7 @@ export class ClaudeClient {
   }
 
   private _setStatusFromHttpError(status: number) {
-    if (!this._hadSuccess) {
-      this._apiStatus = 'unknown';
-      return;
-    }
+    // Even before we have a successful call, an HTTP error is still a real signal.
     if (status === 429 || status >= 500) {
       this._apiStatus = 'degraded';
       return;

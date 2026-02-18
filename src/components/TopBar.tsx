@@ -19,7 +19,7 @@ function Logo() {
 }
 
 function StatusPill({ apiErr, status }: { apiErr: string | null; status: ClaudeApiStatus }) {
-  if (apiErr && apiErr.toLowerCase().includes('api not configured')) {
+  if (apiErr && (apiErr.toLowerCase().includes('api not configured') || apiErr.toLowerCase().includes('not configured'))) {
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--amber-lt)', borderRadius: 999, padding: '6px 12px', border: '1px solid rgba(194,115,10,.2)' }}>
         <span style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--amber)', display: 'inline-block' }} />
