@@ -8,6 +8,7 @@ import { StrategyEngine } from '@/lib/engine/strategyEngine';
 import type { ChatMessage, FinancialState, Strategy } from '@/lib/state/types';
 import { conversationReducer, createInitialConversationState, type Screen } from '@/lib/state/conversationMachine';
 import { applyUserTurn, classifyInterruption, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
+import { decideNextAction } from '@/lib/ai/orchestrator';
 import { createVoice } from '@/lib/voice/voice';
 import { ConversationScreen, DashboardScreen, LandingScreen, PlanScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
 import { Button } from '@/components/Buttons';
@@ -466,14 +467,15 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
       });
       await db.set('fin', { k: 'cur', ...uf, ts: Date.now() });
 
-      if (miss.length === 0) {
+      const action = decideNextAction({ kind, missing: miss, turnIndex: prevMsgs.length });
+      if (action.type === 'complete') {
         dispatch({ type: 'SET_PENDING_FIN', fin: uf });
         dispatch({ type: 'SET_PENDING_BLOCK', block: 'confirm' });
         return;
       }
-
-      const q = nextQuestionForMissing(miss[0], prevMsgs.length);
-      dispatch({ type: 'SEND_ASKED', text: q.text, questionKey: q.key });
+      if (action.type === 'ask') {
+        dispatch({ type: 'SEND_ASKED', text: action.text, questionKey: action.questionKey });
+      }
     } catch (e: any) {
       const raw = String(e?.message || 'send_failed');
       const friendly = (() => {

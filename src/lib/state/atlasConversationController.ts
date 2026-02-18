@@ -235,6 +235,7 @@ export function classifyInterruption(userText: string): InterruptionType {
   const t = userText.trim().toLowerCase();
 
   if (/(what.*do.*(data|store|send)|privacy|private|stored|transmit)/i.test(t)) return 'meta';
+  if (/\b(store|send)\b/i.test(t) && /\bwhat|why|how\b/i.test(t)) return 'meta';
   if (/^(actually|correction|sorry|wait|i meant|update)/i.test(t) || /\bmy\s+(income|rent|expenses|savings|debt)\s+is\b/i.test(t)) return 'correction';
   if (t.includes('?')) return 'followup_question';
   return 'answer_to_question';
