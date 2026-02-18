@@ -296,7 +296,7 @@ export function ConversationScreen({
                 marginBottom: i > 0 && msgs[i - 1]?.r === m.r ? 6 : 10,
               }}
             >
-              <div className={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'atlasBubbleWrap' : undefined}>
+              <div className={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'atlasBubbleWrap' : undefined} style={{ display: 'flex', alignItems: 'center', gap: m.r === 'u' ? '8px' : '0' }}>
                 {m.r === 'u' && i === lastUserIdx && onEditLastUserMessage && (
                   <div className={['atlasEditAff', editAffForMsgIdx === i ? 'atlasEditAffShow' : ''].filter(Boolean).join(' ')}>
                     <IconButton
@@ -332,7 +332,7 @@ export function ConversationScreen({
                   }
                   data-testid={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'lastUserBubble' : undefined}
                   style={{
-                    maxWidth: '86%',
+                    maxWidth: m.r === 'a' ? '86%' : 'auto',
                     lineHeight: 1.6,
                     fontSize: 'var(--fsBody)',
                     padding: '11px 13px',
