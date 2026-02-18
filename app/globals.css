@@ -153,10 +153,10 @@ textarea:focus-visible{
 .atlasMsgAEnter{animation:atlas-msg-in var(--dur-ui) var(--ease-standard) both}
 @keyframes atlas-msg-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
-.atlasBubbleWrap{position:relative}
-.atlasEditAff{position:absolute;top:-10px;right:-10px;opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-standard), transform var(--dur-ui) var(--ease-standard);transform:translateY(2px)}
-.atlasBubbleWrap:hover .atlasEditAff{opacity:1;pointer-events:auto;transform:translateY(0)}
-.atlasEditAffShow{opacity:1;pointer-events:auto;transform:translateY(0)}
+.atlasBubbleWrap{position:relative;display:inline-block}
+.atlasEditAff{position:absolute;top:50%;right:-44px;transform:translateY(-50%);opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-standard), transform var(--dur-ui) var(--ease-standard);}
+.atlasBubbleWrap:hover .atlasEditAff{opacity:1;pointer-events:auto}
+.atlasEditAffShow{opacity:1;pointer-events:auto}
 
 .animIn{animation:atlas-in var(--dur-page) var(--ease-standard) both}
 @keyframes atlas-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
