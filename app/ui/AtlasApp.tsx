@@ -360,12 +360,37 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         }
       });
 
-      Object.keys(ex.fields || {}).forEach((k0) => {
+      const hasDigit = /\d/.test(ut);
+      const mentionedSavings = /\b(savings?|saved|emergency|cash)\b/i.test(ut);
+      const mentionedDebt = /\b(debt|loan|loans|card|cards|credit)\b/i.test(ut);
+
+      Object.entries(ex.fields || {}).forEach(([k0, v]) => {
         const k = k0 as keyof FinancialState;
-        if (k in uf) {
-          answeredNext[k] = true;
-          if (unknownNext[k]) delete unknownNext[k];
-        }
+        if (!(k in uf)) return;
+        if (v === undefined || v === null) return;
+
+        const shouldMarkAnswered = (() => {
+          if (k === 'monthlyIncome' || k === 'essentialExpenses') return typeof v === 'number' && v > 0;
+
+          if (k === 'totalSavings') {
+            if (!(typeof v === 'number' && v >= 0)) return false;
+            if (v > 0) return true;
+            return hasDigit && (base.lastQuestionKey === 'totalSavings' || mentionedSavings);
+          }
+
+          if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
+            if (!(typeof v === 'number' && v >= 0)) return false;
+            if (v > 0) return true;
+            if (base.lastQuestionKey === k && (isNo || hasDigit)) return true;
+            return hasDigit && mentionedDebt;
+          }
+
+          return true;
+        })();
+
+        if (!shouldMarkAnswered) return;
+        answeredNext[k] = true;
+        if (unknownNext[k]) delete unknownNext[k];
       });
 
       const miss = computeMissing(uf, answeredNext);
