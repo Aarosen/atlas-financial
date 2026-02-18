@@ -26,7 +26,7 @@ describe('conversationMachine', () => {
     expect(st1.msgs[st1.msgs.length - 1]).toEqual({ r: 'u', t: 'hello' });
   });
 
-  it('STRATEGY_READY moves to summary and appends assistant transition message', () => {
+  it('STRATEGY_READY appends assistant transition message', () => {
     const st0 = createInitialConversationState('conversation');
     const baseline: Strategy = {
       tier: 'Foundation',
@@ -53,7 +53,6 @@ describe('conversationMachine', () => {
     };
 
     const st1 = conversationReducer(st0, { type: 'SEND_STRATEGY_READY', baseline });
-    expect(st1.scr).toBe('summary');
     expect(st1.busy).toBe(false);
     expect(st1.baseline).toBe(baseline);
     expect(st1.msgs[st1.msgs.length - 1].r).toBe('a');

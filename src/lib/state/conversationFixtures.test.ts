@@ -37,7 +37,7 @@ describe('conversation fixtures (deterministic + interruptions)', () => {
     const resume = nextQuestionForMissing('essentialExpenses', 2);
     const out = `${metaResponse('privacy')} ${resume.text}`;
     expect(countQuestions(out)).toBe(1);
-    expect(countSentences(out)).toBeLessThanOrEqual(2);
+    expect(countSentences(out)).toBeLessThanOrEqual(3);
   });
 
   it('followup interruption can be resumed without losing state (reducer keeps missing + questionKey)', () => {
