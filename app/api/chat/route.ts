@@ -10,6 +10,8 @@ const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT = 20;
 const RATE_WINDOW = 60_000;
 
+type EmotionTag = 'anxious' | 'ashamed' | 'analytical' | 'motivated' | 'uncertain' | 'neutral';
+
 function checkRateLimit(ip: string) {
   const now = Date.now();
   const entry = rateLimitMap.get(ip) || { count: 0, resetAt: now + RATE_WINDOW };
@@ -20,6 +22,18 @@ function checkRateLimit(ip: string) {
   entry.count++;
   rateLimitMap.set(ip, entry);
   return entry.count <= RATE_LIMIT;
+}
+
+function detectEmotion(messages: Array<{ role: string; content: string }>): EmotionTag {
+  const lastUser = [...messages].reverse().find((m) => m.role === 'user');
+  const t = String(lastUser?.content || '').toLowerCase();
+  if (!t) return 'neutral';
+  if (/\b(overwhelmed|stressed|panic|anxious|worried|freaking out|nervous|scared)\b/.test(t)) return 'anxious';
+  if (/\b(embarrassed|ashamed|guilty|stupid|dumb|terrible with money|failure|behind)\b/.test(t)) return 'ashamed';
+  if (/\b(roi|apr|yield|basis points|allocation|portfolio|cashflow|net)\b/.test(t)) return 'analytical';
+  if (/\b(ready|motivated|let's do this|let us do this|excited|driven|committed)\b/.test(t)) return 'motivated';
+  if (/\b(not sure|confused|lost|no idea|unsure|don't know)\b/.test(t)) return 'uncertain';
+  return 'neutral';
 }
 
 function jsonOk(data: unknown, init?: ResponseInit) {
@@ -132,9 +146,15 @@ export async function POST(req: Request) {
     return jsonError(400, 'Invalid JSON body');
   }
 
-  const { type, messages, missing, question } = body as { type?: string; messages?: any[]; missing?: string[]; question?: string };
+  const { type, messages, missing, question, memorySummary } = body as {
+    type?: string;
+    messages?: any[];
+    missing?: string[];
+    question?: string;
+    memorySummary?: string;
+  };
 
-  if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'status'].includes(type)) {
+  if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'answer_explain', 'answer_explain_stream', 'status'].includes(type)) {
     return jsonError(400, 'Invalid request type.');
   }
 
@@ -162,7 +182,7 @@ export async function POST(req: Request) {
     }
   }
 
-  if (type === 'answer' || type === 'answer_stream') {
+  if (type === 'answer' || type === 'answer_stream' || type === 'answer_explain' || type === 'answer_explain_stream') {
     if (!question || !String(question).trim()) {
       return jsonError(400, 'question is required');
     }
@@ -264,8 +284,20 @@ WHAT ATLAS IS NOT:
 - Not a compliance engine — lead with the human conversation, not legal disclaimers
   (If directly asked whether you're a financial advisor, answer honestly and simply, once)`;
 
-  const systemPrompt = type === 'extract' ? extractPrompt : chatPrompt;
-  const maxTokens = type === 'extract' ? 500 : type === 'answer' ? 220 : type === 'answer_stream' ? 260 : 900;
+  const memoryContext = memorySummary ? `\n\nUSER MEMORY SUMMARY:\n${String(memorySummary).trim()}` : '';
+  const emotionTag = detectEmotion(messages);
+  const emotionContext = `\n\nUSER EMOTION TAG: ${emotionTag}.`;
+  const systemPrompt = type === 'extract' ? extractPrompt : `${chatPrompt}${memoryContext}${emotionContext}`;
+  const maxTokens =
+    type === 'extract'
+      ? 500
+      : type === 'answer'
+        ? 220
+        : type === 'answer_stream'
+          ? 260
+          : type === 'answer_explain' || type === 'answer_explain_stream'
+            ? 700
+            : 900;
 
   const answerPrompt = `You are Atlas. Answer the user's question briefly and clearly.
 
@@ -277,26 +309,38 @@ HARD OUTPUT CONSTRAINTS (must follow exactly):
 
 If the user asks something outside scope, respond briefly and redirect to the onboarding question.`;
 
+  const explainerPrompt = `You are Atlas. Answer the user's question with a clear, human explanation.
+
+Structure (use headings or short labels when helpful):
+1) What it is (plain English)
+2) Why it matters (the decision it affects)
+3) What “good” can look like (if relevant, use a range or benchmark)
+4) How to improve it (practical levers)
+5) One next step (single, concrete action)
+
+Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if needed.`;
+
   try {
     const trimmedMessages = messages.slice(-10);
     let usedModel = modelCandidates[0] || DEFAULT_MODEL;
-    const sys = type === 'answer' ? answerPrompt : systemPrompt;
+    const sys = type === 'answer' ? answerPrompt : type === 'answer_explain' ? explainerPrompt : systemPrompt;
     const msgPayload =
-      type === 'answer'
+      type === 'answer' || type === 'answer_explain'
         ? [{ role: 'user', content: `Question: ${String(question || '').trim()}` }]
         : trimmedMessages;
 
-    if (type === 'answer_stream') {
-      const sysStream = answerPrompt;
+    if (type === 'answer_stream' || type === 'answer_explain_stream') {
+      const sysStream = type === 'answer_stream' ? answerPrompt : explainerPrompt;
       const streamPayload = [{ role: 'user', content: `Question: ${String(question || '').trim()}` }];
-      let response = await callAnthropicStream({ apiKey, model: usedModel, maxTokens: 220, system: sysStream, messages: streamPayload });
+      const streamMaxTokens = type === 'answer_explain_stream' ? 700 : 220;
+      let response = await callAnthropicStream({ apiKey, model: usedModel, maxTokens: streamMaxTokens, system: sysStream, messages: streamPayload });
 
       if (!response.ok) {
         let bodyText = await readUpstreamErrorBody(response);
         if (response.status === 404 && bodyText.includes('not_found_error') && bodyText.includes('model')) {
           for (const m of modelCandidates.slice(1)) {
             usedModel = m;
-            response = await callAnthropicStream({ apiKey, model: usedModel, maxTokens: 220, system: sysStream, messages: streamPayload });
+            response = await callAnthropicStream({ apiKey, model: usedModel, maxTokens: streamMaxTokens, system: sysStream, messages: streamPayload });
             if (response.ok) break;
             bodyText = await readUpstreamErrorBody(response);
             if (!(response.status === 404 && bodyText.includes('not_found_error') && bodyText.includes('model'))) break;

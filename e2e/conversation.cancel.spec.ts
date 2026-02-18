@@ -20,7 +20,7 @@ async function installApiMocks(page: Page) {
       });
     }
 
-    if (body?.type === 'answer_stream') {
+    if (body?.type === 'answer_stream' || body?.type === 'answer_explain_stream') {
       const question = String(body?.question || '');
       const slow = question.toLowerCase().includes('slowstream');
       const frames = slow
@@ -37,7 +37,7 @@ async function installApiMocks(page: Page) {
       });
     }
 
-    if (body?.type === 'answer') {
+    if (body?.type === 'answer' || body?.type === 'answer_explain') {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',

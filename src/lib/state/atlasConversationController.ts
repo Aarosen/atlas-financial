@@ -194,31 +194,32 @@ export function nextQuestionForMissing(
   key: keyof FinancialState;
   text: string;
 } {
+  const withWhy = (q: string, why: string) => `${q} (${why} A rough number is totally fine.)`;
   const variants: Record<string, string[]> = {
     monthlyIncome: [
-      "What's your monthly take-home income? (Rough is totally fine — it just sets the scale.)",
-      'About how much hits your account each month, after tax? (A ballpark is perfect.)',
-      'What would you say your monthly take-home is? (We can be approximate.)',
+      withWhy("What's your monthly take-home income?", 'This tells us what we can safely work with.'),
+      withWhy('About how much hits your account each month, after tax?', 'It anchors every other decision we make.'),
+      withWhy('What would you say your monthly take-home is?', 'It sets the scale for goals and tradeoffs.'),
     ],
     essentialExpenses: [
-      'About how much goes to essentials each month — rent, groceries, utilities? (Estimate is fine.)',
-      'Roughly what do your essentials cost per month? (Housing + groceries + bills.)',
-      'What do you spend on essentials in a typical month? (Just a quick approximation.)',
+      withWhy('About how much goes to essentials each month — rent, groceries, utilities?', 'We need to know your non-negotiables first.'),
+      withWhy('Roughly what do your essentials cost per month?', 'This shows how much flexibility we actually have.'),
+      withWhy('What do you spend on essentials in a typical month?', 'It tells us how much buffer you really have.'),
     ],
     totalSavings: [
-      'How much do you have in savings/cash right now? (Even “$0” is a useful answer.)',
-      'About how much is in savings today? (Round numbers are great.)',
-      'What’s your current savings balance, roughly? (This helps me gauge your buffer.)',
+      withWhy('How much do you have in savings/cash right now?', 'This helps me gauge your safety net.'),
+      withWhy('About how much is in savings today?', 'It tells us how resilient you are to surprises.'),
+      withWhy('What’s your current savings balance, roughly?', 'It defines your emergency buffer.'),
     ],
     highInterestDebt: [
-      'Do you have any high-interest debt like credit cards — and if so, about how much total?',
-      'Any credit card balances (or other high-interest debt) — roughly how much total?',
-      'Do you carry any high-interest debt right now — roughly how much?',
+      withWhy('Do you have any high-interest debt like credit cards — and if so, about how much total?', 'This tells us what’s compounding against you.'),
+      withWhy('Any credit card balances (or other high-interest debt) — roughly how much total?', 'High-interest debt can erase progress quickly.'),
+      withWhy('Do you carry any high-interest debt right now — roughly how much?', 'It helps us decide the safest first move.'),
     ],
     lowInterestDebt: [
-      'Any other loans (student, car, mortgage) — and if so, about how much total?',
-      'Do you have any other debt like student loans, car loans, or a mortgage — roughly how much total?',
-      'Any lower-interest loans we should account for — roughly what’s the total?',
+      withWhy('Any other loans (student, car, mortgage) — and if so, about how much total?', 'This affects cashflow and long-term options.'),
+      withWhy('Do you have any other debt like student loans, car loans, or a mortgage — roughly how much total?', 'It helps us plan without overcommitting.'),
+      withWhy('Any lower-interest loans we should account for — roughly what’s the total?', 'It rounds out your full picture.'),
     ],
   };
 

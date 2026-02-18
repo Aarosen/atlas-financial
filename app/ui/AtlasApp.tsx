@@ -53,6 +53,19 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     []
   );
 
+  const buildMemorySummary = useCallback((fin: FinancialState, answered: Partial<Record<keyof FinancialState, boolean>>) => {
+    const parts: string[] = [];
+    if (answered.monthlyIncome && fin.monthlyIncome > 0) parts.push(`Monthly take-home: ${fc(fin.monthlyIncome)}.`);
+    if (answered.essentialExpenses && fin.essentialExpenses > 0) parts.push(`Essentials: ${fc(fin.essentialExpenses)} / month.`);
+    if (answered.totalSavings) parts.push(`Savings: ${fc(fin.totalSavings)}.`);
+    if (answered.highInterestDebt) parts.push(`High-interest debt: ${fc(fin.highInterestDebt ?? 0)}.`);
+    if (answered.lowInterestDebt) parts.push(`Low-interest debt: ${fc(fin.lowInterestDebt ?? 0)}.`);
+    if (fin.primaryGoal) parts.push(`Primary goal: ${fin.primaryGoal}.`);
+    if (fin.riskTolerance) parts.push(`Risk tolerance: ${fin.riskTolerance}.`);
+    if (fin.timeHorizonYears) parts.push(`Time horizon: ${fin.timeHorizonYears} years.`);
+    return parts.join(' ');
+  }, []);
+
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState<'talk' | 'plan' | 'dashboard' | 'settings'>('talk');
@@ -251,6 +264,13 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         if (typeof p?.v === 'boolean') setVoiceAutoSend(p.v);
       })
       .catch(() => {});
+    db.get<{ v: string }>('prefs', 'memorySummary')
+      .then((p: { v: string } | undefined) => {
+        if (typeof p?.v === 'string' && p.v.trim()) {
+          dispatch({ type: 'SET_MEMORY_SUMMARY', summary: p.v.trim() });
+        }
+      })
+      .catch(() => {});
   }, [db]);
 
   useEffect(() => {
@@ -374,6 +394,8 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         const res = await claude.answerStream({
           msgs: am,
           question: ut,
+          mode: 'explain',
+          memorySummary: st.memorySummary,
           onDelta: (t) => {
             if (streamIdRef.current !== myStreamId) return;
             if (ctrl.signal.aborted) return;
@@ -426,6 +448,12 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
       const miss = st1.missing;
       const answeredNext = st1.answered;
       const unknownNext = st1.unknown;
+
+      const memorySummary = buildMemorySummary(uf, answeredNext);
+      dispatch({ type: 'SET_MEMORY_SUMMARY', summary: memorySummary || null });
+      if (memorySummary) {
+        await db.set('prefs', { k: 'memorySummary', v: memorySummary, ts: Date.now() });
+      }
 
       dispatch({
         type: 'SEND_EXTRACTED',

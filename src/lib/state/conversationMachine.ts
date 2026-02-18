@@ -17,6 +17,7 @@ export type ConversationState = {
   mode: AtlasMode;
   answered: Partial<Record<keyof FinancialState, boolean>>;
   unknown: Partial<Record<keyof FinancialState, boolean>>;
+  memorySummary: string | null;
   streaming: boolean;
   busy: boolean;
   apiErr: string | null;
@@ -46,6 +47,7 @@ export type ConversationEvent =
       apiOk: boolean;
       err?: string | null;
     }
+  | { type: 'SET_MEMORY_SUMMARY'; summary: string | null }
   | { type: 'SEND_ASKED'; text: string; questionKey?: keyof FinancialState }
   | { type: 'SEND_STRATEGY_READY'; baseline: Strategy }
   | { type: 'SEND_FAILED'; err: string }
@@ -85,6 +87,7 @@ export function createInitialConversationState(initialScreen: Screen = 'landing'
     mode: 'text',
     answered: {},
     unknown: {},
+    memorySummary: null,
     streaming: false,
     busy: false,
     apiErr: null,
@@ -173,6 +176,12 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
         apiErr: ev.apiOk ? null : ev.err || 'Claude API unavailable',
       };
 
+    case 'SET_MEMORY_SUMMARY':
+      return {
+        ...state,
+        memorySummary: ev.summary,
+      };
+
     case 'SEND_ASKED':
       return {
         ...state,
@@ -214,6 +223,7 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
         mode: 'text',
         answered: {},
         unknown: {},
+        memorySummary: null,
         streaming: false,
         busy: false,
         apiErr: null,
