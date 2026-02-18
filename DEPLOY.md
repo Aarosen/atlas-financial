@@ -25,10 +25,11 @@ Option A — GitHub Desktop (easiest):
 3. Drag these files into the folder it creates:
    ```
    atlas-financial/
-   ├── api/
-   │   └── chat.js
-   ├── public/
-   │   └── index.html
+   ├── app/
+   │   └── api/
+   │       └── chat/
+   │           └── route.ts
+   ├── src/
    ├── vercel.json
    ├── package.json
    └── .gitignore
@@ -99,7 +100,7 @@ Vercel handles SSL automatically.
 ## Security notes
 
 - ✅ API key is server-side only — never visible in browser DevTools
-- ✅ Rate limiting: 20 requests per IP per minute (edit `api/chat.js` to adjust)
+- ✅ Rate limiting: add a server-side limiter to `app/api/chat/route.ts` for production traffic
 - ✅ Messages capped at last 10 per request to limit token usage
 - ✅ No financial data leaves your users' devices (stored in IndexedDB only)
 - ⚠️ For high-traffic production, add Vercel KV for persistent rate limiting
