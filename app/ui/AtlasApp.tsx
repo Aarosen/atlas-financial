@@ -7,7 +7,7 @@ import { AtlasDb } from '@/lib/db/atlasDb';
 import { StrategyEngine } from '@/lib/engine/strategyEngine';
 import type { ChatMessage, FinancialState, Strategy } from '@/lib/state/types';
 import { conversationReducer, createInitialConversationState, type Screen } from '@/lib/state/conversationMachine';
-import { applyUserTurn, classifyInterruption, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
+import { applyUserTurn, classifyInterruption, clarificationForMissing, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
 import { decideNextAction } from '@/lib/ai/orchestrator';
 import { createReplayEntry, detectReplayEmotion, logReplayEntry } from '@/lib/ai/replay';
 import { detectLiteracyLevel, detectResponsePreference } from '@/lib/ai/personalization';
@@ -524,6 +524,7 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
       const miss = st1.missing;
       const answeredNext = st1.answered;
       const unknownNext = st1.unknown;
+      const extractedCount = Object.keys((ex.fields as Record<string, unknown>) || {}).length;
 
       const memorySummary = buildMemorySummary(uf, answeredNext);
       dispatch({ type: 'SET_MEMORY_SUMMARY', summary: memorySummary || null });
@@ -541,6 +542,33 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         err: ex.apiOk === false ? normalizeApiErr(String((ex as any).err || '')) : null,
       });
       await db.set('fin', { k: 'cur', ...uf, ts: Date.now() });
+
+      if (
+        kind === 'answer_to_question' &&
+        missBefore.length > 0 &&
+        miss.length === missBefore.length &&
+        miss[0] === missBefore[0] &&
+        extractedCount === 0
+      ) {
+        const clar = clarificationForMissing(missBefore[0]);
+        logReplay(
+          createReplayEntry({
+            role: 'assistant',
+            text: clar,
+            kind: 'clarify',
+            questionKey: missBefore[0],
+            emotionTag: detectReplayEmotion(clar),
+            trace: buildReasoningTrace({
+              decision: 'ask',
+              questionKey: missBefore[0],
+              missingCount: miss.length,
+              answeredCount: Object.keys(answeredNext || {}).length,
+            }),
+          })
+        );
+        dispatch({ type: 'SEND_ASKED', text: clar, questionKey: missBefore[0] });
+        return;
+      }
 
       const action = decideNextAction({ kind, missing: miss, turnIndex: prevMsgs.length });
       if (action.type === 'complete') {

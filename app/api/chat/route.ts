@@ -1,6 +1,7 @@
 export const runtime = 'edge';
 
 import { inferModelTier } from '@/lib/ai/modelRouting';
+import { getPlaybookResponse } from '@/lib/ai/playbooks';
 import { complianceResponse, detectComplianceRisk, fallbackAnswer, violatesGuardrails } from '@/lib/server/guardrails';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
@@ -222,9 +223,18 @@ export async function POST(req: Request) {
     if (risk) {
       const safe = complianceResponse(String(question || ''), risk);
       if (type === 'answer_stream' || type === 'answer_explain_stream') {
-        return streamStaticResponse(safe, { model: 'policy', tier });
+        return streamStaticResponse(safe, { model: 'policy', tier, guardrail: 'compliance' });
       }
       return jsonOk({ text: safe, source: 'compliance_guardrail', model: 'policy', tier });
+    }
+    if (type === 'answer_explain' || type === 'answer_explain_stream') {
+      const pb = getPlaybookResponse(String(question || ''));
+      if (pb) {
+        if (type === 'answer_explain_stream') {
+          return streamStaticResponse(pb.body, { model: 'playbook', tier, guardrail: 'playbook' });
+        }
+        return jsonOk({ text: pb.body, source: 'playbook', model: 'playbook', tier });
+      }
     }
   }
 

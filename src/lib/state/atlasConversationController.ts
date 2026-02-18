@@ -229,6 +229,17 @@ export function nextQuestionForMissing(
   return { key: k, text: v[idx] };
 }
 
+export function clarificationForMissing(k: keyof FinancialState) {
+  const base: Record<string, string> = {
+    monthlyIncome: "Could you share a rough monthly take-home number? A ballpark is totally fine.",
+    essentialExpenses: 'Roughly what do your essentials total each month? Even a quick estimate helps.',
+    totalSavings: 'About how much do you have in savings/cash? Round numbers are great.',
+    highInterestDebt: 'Do you have any credit card or high-interest debt, and roughly how much?',
+    lowInterestDebt: 'Any other loans (student, car, mortgage) — roughly how much total?',
+  };
+  return base[k] || 'Could you share a rough number? Even a ballpark helps.';
+}
+
 export type InterruptionType = 'answer_to_question' | 'followup_question' | 'correction' | 'meta';
 
 export function classifyInterruption(userText: string): InterruptionType {
