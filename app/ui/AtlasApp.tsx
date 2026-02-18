@@ -1,4 +1,4 @@
-'use client';
+ 'use client';
 
 import { useCallback, useEffect, useMemo, useReducer, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent } from 'react';
@@ -13,6 +13,7 @@ import { createReplayEntry, detectReplayEmotion, logReplayEntry } from '@/lib/ai
 import { detectLiteracyLevel, detectResponsePreference } from '@/lib/ai/personalization';
 import { buildReasoningTrace } from '@/lib/ai/trace';
 import { buildCheckinMessage, shouldShowCheckin } from '@/lib/ai/checkins';
+import { createFeedbackEntry, shouldPromptFeedback } from '@/lib/ai/feedback';
 import { createVoice } from '@/lib/voice/voice';
 import { ConversationScreen, DashboardScreen, LandingScreen, PlanScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
 import { Button } from '@/components/Buttons';
@@ -263,6 +264,17 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
   }, [db, st.baseline, st.scr]);
 
   useEffect(() => {
+    if (st.scr !== 'conversation') return;
+    void db.get<{ v: number }>('prefs', 'lastFeedbackAt').then((p) => {
+      const last = typeof p?.v === 'number' ? p.v : null;
+      if (!shouldPromptFeedback({ lastPromptAt: last })) return;
+      const msg = 'Quick check: was that last response helpful? Reply "helpful" or "not helpful".';
+      dispatch({ type: 'SEND_ASKED', text: msg });
+      void db.set('prefs', { k: 'lastFeedbackAt', v: Date.now() });
+    });
+  }, [db, st.scr]);
+
+  useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     db.set('prefs', { k: 'theme', v: theme }).catch(() => {});
   }, [theme, db]);
@@ -408,6 +420,11 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
       if (literacy && literacy !== literacyLevel) {
         setLiteracyLevel(literacy);
         void db.set('prefs', { k: 'literacyLevel', v: literacy });
+      }
+
+      if (/^\s*(helpful|not helpful)\s*$/i.test(ut)) {
+        const rating = /helpful/i.test(ut) ? 'helpful' : 'not_helpful';
+        void db.set('feedback', createFeedbackEntry({ responseId: `resp_${Date.now()}`, rating }));
       }
 
       logReplay(createReplayEntry({ role: 'user', text: ut, kind, emotionTag: detectReplayEmotion(ut) }));
