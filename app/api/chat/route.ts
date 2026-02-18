@@ -1,5 +1,6 @@
 export const runtime = 'edge';
 
+import { inferModelTier } from '@/lib/ai/modelRouting';
 import { complianceResponse, detectComplianceRisk, fallbackAnswer, violatesGuardrails } from '@/lib/server/guardrails';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
@@ -167,9 +168,13 @@ export async function POST(req: Request) {
     return notConfigured();
   }
 
+  const tier = inferModelTier({ type: type || '', question, messages });
   const requestedModel = process.env.ANTHROPIC_MODEL;
+  const premiumModel = process.env.ANTHROPIC_MODEL_PREMIUM || requestedModel || DEFAULT_MODEL;
+  const lightModel = process.env.ANTHROPIC_MODEL_LIGHT || requestedModel || DEFAULT_MODEL;
+  const tierModel = tier === 'premium' ? premiumModel : lightModel;
   const modelCandidates = Array.from(
-    new Set([requestedModel, DEFAULT_MODEL, ...FALLBACK_MODELS].filter(Boolean) as string[])
+    new Set([tierModel, requestedModel, DEFAULT_MODEL, ...FALLBACK_MODELS].filter(Boolean) as string[])
   );
 
   if (!messages || !Array.isArray(messages)) {
@@ -192,7 +197,7 @@ export async function POST(req: Request) {
     const risk = detectComplianceRisk(String(question || ''));
     if (risk) {
       const safe = complianceResponse(String(question || ''), risk);
-      return jsonOk({ text: safe, source: 'compliance_guardrail', model: 'policy' });
+      return jsonOk({ text: safe, source: 'compliance_guardrail', model: 'policy', tier });
     }
   }
 
@@ -456,16 +461,16 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
       try {
         const clean = String(text).replace(/```json|```/g, '').trim();
         const fields = JSON.parse(clean);
-        return jsonOk({ fields, source: 'claude', model: usedModel });
+        return jsonOk({ fields, source: 'claude', model: usedModel, tier });
       } catch {
-        return jsonOk({ fields: {}, source: 'claude_parse_error', model: usedModel });
+        return jsonOk({ fields: {}, source: 'claude_parse_error', model: usedModel, tier });
       }
     }
 
     if (type === 'answer') {
       const t0 = String(text || '').trim();
       if (!violatesGuardrails(t0)) {
-        return jsonOk({ text: t0, source: 'claude', model: usedModel });
+        return jsonOk({ text: t0, source: 'claude', model: usedModel, tier });
       }
 
       const repairSystem = `Rewrite the following text to comply with ALL constraints.
@@ -478,15 +483,15 @@ Return ONLY the rewritten text.`;
         const repaired = String(repairData.content?.[0]?.text || '').trim();
         if (!violatesGuardrails(repaired)) {
           console.log('[atlas_guardrails] repaired_answer', { model: usedModel });
-          return jsonOk({ text: repaired, source: 'claude_repaired', model: usedModel });
+          return jsonOk({ text: repaired, source: 'claude_repaired', model: usedModel, tier });
         }
       }
 
       console.log('[atlas_guardrails] fallback_answer', { model: usedModel });
-      return jsonOk({ text: fallbackAnswer(String(question || '').trim()), source: 'fallback' });
+      return jsonOk({ text: fallbackAnswer(String(question || '').trim()), source: 'fallback', tier });
     }
 
-    return jsonOk({ text, source: 'claude', model: usedModel });
+    return jsonOk({ text, source: 'claude', model: usedModel, tier });
   } catch {
     return jsonError(500, 'An unexpected error occurred.');
   }
