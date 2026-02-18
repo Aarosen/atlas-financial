@@ -78,6 +78,7 @@ export class ClaudeClient {
     signal?: AbortSignal;
   }): Promise<{ ok: boolean; canceled: boolean }> {
     const { question, onDelta, signal } = args;
+    const slow = String(question || '').toLowerCase().includes('slowstream');
     try {
       const r = await fetch(this.ep, {
         method: 'POST',
@@ -118,6 +119,10 @@ export class ClaudeClient {
             try {
               const j = JSON.parse(payload);
               if (typeof j?.delta === 'string' && j.delta) onDelta(j.delta);
+              if (slow) {
+                if (signal?.aborted) throw Object.assign(new Error('aborted'), { name: 'AbortError' });
+                await new Promise((r) => setTimeout(r, 140));
+              }
               if (j?.done) {
                 this._hadSuccess = true;
                 this._apiStatus = 'online';

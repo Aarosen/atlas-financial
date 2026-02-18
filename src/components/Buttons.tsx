@@ -1,41 +1,42 @@
-import type { ReactNode } from 'react';
+import type { ButtonHTMLAttributes, ReactNode } from 'react';
 
-export function PrimaryBtn({ onClick, children, disabled }: { onClick: () => void; children: ReactNode; disabled?: boolean }) {
+export type ButtonVariant = 'primary' | 'secondary';
+export type ButtonSize = 'md' | 'sm';
+
+export function Button({
+  variant = 'primary',
+  size = 'md',
+  className,
+  children,
+  ...rest
+}: {
+  variant?: ButtonVariant;
+  size?: ButtonSize;
+  className?: string;
+  children: ReactNode;
+} & ButtonHTMLAttributes<HTMLButtonElement>) {
+  const variantClass = variant === 'secondary' ? 'btnSecondary' : 'btnPrimary';
+  const sizeClass = size === 'sm' ? 'btnSm' : 'btnMd';
+  const cn = ['btn', variantClass, sizeClass, className].filter(Boolean).join(' ');
   return (
-    <button
-      onClick={onClick}
-      disabled={disabled}
-      style={{
-        background: 'linear-gradient(135deg,var(--teal),var(--sky))',
-        color: '#fff',
-        border: 'none',
-        borderRadius: 16,
-        padding: '14px 18px',
-        fontWeight: 900,
-        cursor: disabled ? 'not-allowed' : 'pointer',
-        opacity: disabled ? 0.6 : 1,
-      }}
-    >
+    <button className={cn} {...rest}>
       {children}
     </button>
   );
 }
 
-export function GhostBtn({ onClick, children }: { onClick: () => void; children: ReactNode }) {
+export function PrimaryBtn({ onClick, children, disabled }: { onClick: () => void; children: ReactNode; disabled?: boolean }) {
   return (
-    <button
-      onClick={onClick}
-      style={{
-        background: 'transparent',
-        border: '1px solid var(--bdr2)',
-        borderRadius: 16,
-        padding: '14px 18px',
-        fontWeight: 800,
-        cursor: 'pointer',
-        color: 'var(--ink2)',
-      }}
-    >
+    <Button onClick={onClick} disabled={disabled} variant="primary" size="md">
       {children}
-    </button>
+    </Button>
+  );
+}
+
+export function GhostBtn({ onClick, children, disabled }: { onClick: () => void; children: ReactNode; disabled?: boolean }) {
+  return (
+    <Button onClick={onClick} disabled={disabled} variant="secondary" size="md">
+      {children}
+    </Button>
   );
 }

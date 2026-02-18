@@ -4,6 +4,8 @@ import { useEffect, useMemo, useState } from 'react';
 import { useSearchParams } from 'next/navigation';
 import Link from 'next/link';
 import { createSupabaseBrowserClient } from '@/lib/supabase/browserClient';
+import { Badge } from '@/components/Badge';
+import { Card } from '@/components/Card';
 
 export function LoginClient() {
   const sp = useSearchParams();
@@ -104,10 +106,10 @@ export function LoginClient() {
 
   return (
     <div className="container page animIn" style={{ maxWidth: 720 }}>
-      <div className="badge">
+      <Badge>
         <span style={{ width: 8, height: 8, borderRadius: 999, background: 'linear-gradient(135deg,var(--teal),var(--sky))', display: 'inline-block' }} />
         Account
-      </div>
+      </Badge>
 
       <h1 className="h2" style={{ marginTop: 16 }}>
         Sign in to continue.
@@ -116,7 +118,7 @@ export function LoginClient() {
         Atlas uses an account so your conversation and progress sync securely across devices.
       </p>
 
-      <div className="card" style={{ marginTop: 18 }}>
+      <Card style={{ marginTop: 18 }}>
         <div style={{ fontWeight: 950, letterSpacing: '-0.02em' }}>Email magic link</div>
         <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>We’ll email you a link to sign in. No password.</div>
 
@@ -128,14 +130,13 @@ export function LoginClient() {
             inputMode="email"
             autoComplete="email"
             className="input"
-            style={{ width: '100%', padding: '12px 14px', borderRadius: 14, border: '1.5px solid var(--bdr2)', background: 'var(--card)', color: 'var(--ink)' }}
           />
 
           <button
             onClick={() => void sendLink()}
             disabled={status === 'sending' || !email.trim()}
             className="btn btnPrimary"
-            style={{ justifySelf: 'start', padding: '12px 14px', borderRadius: 14, fontWeight: 900, opacity: status === 'sending' ? 0.7 : 1 }}
+            style={{ justifySelf: 'start', opacity: status === 'sending' ? 0.7 : 1 }}
           >
             {status === 'sending' ? 'Sending…' : 'Send magic link'}
           </button>
@@ -144,7 +145,7 @@ export function LoginClient() {
 
           {status === 'error' && <div style={{ marginTop: 6, color: 'var(--amber)', fontWeight: 800 }}>{err || 'Could not send link.'}</div>}
         </div>
-      </div>
+      </Card>
 
       <div style={{ marginTop: 14, color: 'var(--ink3)', fontSize: 13, lineHeight: 1.6 }}>
         By continuing, you agree to our <Link href="/privacy" className="navLink">privacy approach</Link>.

@@ -3,6 +3,7 @@ import type { FinancialState, Strategy } from '@/lib/state/types';
 import { Card } from '@/components/Card';
 import { GhostBtn, PrimaryBtn } from '@/components/Buttons';
 import { TopBar, ScreenWrap } from '@/components/TopBar';
+import { PageContainer, Stack } from '@/components/Layout';
 
 export function DashboardScreen({
   theme,
@@ -64,9 +65,10 @@ export function DashboardScreen({
 
   return (
     <ScreenWrap>
+      <h1 className="srOnly">Dashboard</h1>
       <TopBar title="Dashboard" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
-      <div style={{ padding: 'var(--padY) var(--padX)' }}>
-        <div style={{ maxWidth: 980, margin: '0 auto', display: 'grid', gap: 14, width: '100%' }}>
+      <PageContainer maxWidth={980} style={{ paddingTop: 'var(--padY)', paddingBottom: 'var(--padY)' }}>
+        <Stack gap={14}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
             <ClickCard metric="net">
               <Card>
@@ -106,8 +108,8 @@ export function DashboardScreen({
               <GhostBtn onClick={onSettings}>Settings</GhostBtn>
             </div>
           </Card>
-        </div>
-      </div>
+        </Stack>
+      </PageContainer>
     </ScreenWrap>
   );
 }

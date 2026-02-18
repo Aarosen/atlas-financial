@@ -10,6 +10,7 @@ import { conversationReducer, createInitialConversationState, type Screen } from
 import { applyUserTurn, classifyInterruption, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
 import { createVoice } from '@/lib/voice/voice';
 import { ConversationScreen, DashboardScreen, LandingScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
+import { Button } from '@/components/Buttons';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -58,6 +59,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const lastSendSnapshotRef = useRef<typeof st | null>(null);
   const lastUserTextRef = useRef<string | null>(null);
   const streamAbortRef = useRef<AbortController | null>(null);
+  const streamIdRef = useRef(0);
   const [st, dispatch] = useReducer(conversationReducer, createInitialConversationState(initialScreen));
 
   const bot = useRef<HTMLDivElement | null>(null);
@@ -292,10 +294,39 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
 
       if (kind === 'followup_question') {
         const am = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
-        const missNow = missBefore.map((k) => String(k));
-        const ans = await claude.chat(am, missNow);
-        const out = resumeQ ? `${String(ans || '').trim()}\n\n${resumeQ.text}` : String(ans || '').trim();
-        dispatch({ type: 'SEND_ASKED', text: out, questionKey: resumeQ?.key });
+
+        streamAbortRef.current?.abort();
+        const ctrl = new AbortController();
+        streamAbortRef.current = ctrl;
+        const myStreamId = ++streamIdRef.current;
+
+        dispatch({ type: 'STREAM_START' });
+
+        const res = await claude.answerStream({
+          msgs: am,
+          question: ut,
+          onDelta: (t) => {
+            if (streamIdRef.current !== myStreamId) return;
+            if (ctrl.signal.aborted) return;
+            dispatch({ type: 'STREAM_DELTA', delta: t });
+          },
+          signal: ctrl.signal,
+        });
+
+        if (streamIdRef.current !== myStreamId) {
+          // Canceled or replaced by a newer stream.
+          return;
+        }
+        streamAbortRef.current = null;
+        if (!res.ok && res.canceled) {
+          dispatch({ type: 'STREAM_CANCELED' });
+          return;
+        }
+
+        dispatch({ type: res.ok ? 'STREAM_DONE' : 'STREAM_DONE' });
+        if (resumeQ) {
+          dispatch({ type: 'SEND_ASKED', text: resumeQ.text, questionKey: resumeQ.key });
+        }
         return;
       }
 
@@ -466,6 +497,9 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
           streaming={st.streaming}
           onCancelStream={() => {
             streamAbortRef.current?.abort();
+            streamAbortRef.current = null;
+            streamIdRef.current++;
+            dispatch({ type: 'STREAM_CANCELED' });
           }}
         />
       )}
@@ -511,17 +545,15 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         !st.baseline && (
           <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--padY) var(--padX)' }}>
             <div style={{ width: '100%', maxWidth: 560, display: 'grid', gap: 12, textAlign: 'center' }}>
+              <h1 className="srOnly">Dashboard</h1>
               <div style={{ fontWeight: 950, fontSize: 18 }}>Dashboard not ready yet</div>
               <div style={{ color: 'var(--ink2)', lineHeight: 1.7 }}>
                 Once Atlas has a baseline strategy, your dashboard will populate automatically.
               </div>
               <div style={{ display: 'flex', justifyContent: 'center', gap: 10, flexWrap: 'wrap', marginTop: 6 }}>
-                <button
-                  onClick={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })}
-                  style={{ background: 'linear-gradient(135deg,var(--teal),var(--sky))', color: '#fff', border: 'none', borderRadius: 16, padding: '14px 18px', fontWeight: 900, cursor: 'pointer' }}
-                >
+                <Button onClick={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} variant="primary" size="md">
                   Go to conversation →
-                </button>
+                </Button>
               </div>
             </div>
           </div>

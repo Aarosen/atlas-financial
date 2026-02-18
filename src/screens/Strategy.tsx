@@ -2,6 +2,7 @@ import type { Strategy } from '@/lib/state/types';
 import { Card } from '@/components/Card';
 import { GhostBtn, PrimaryBtn } from '@/components/Buttons';
 import { TopBar, ScreenWrap } from '@/components/TopBar';
+import { PageContainer, Stack } from '@/components/Layout';
 
 export function StrategyScreen({
   theme,
@@ -34,8 +35,8 @@ export function StrategyScreen({
   return (
     <ScreenWrap>
       <TopBar title="Strategy" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
-      <div style={{ padding: 'var(--padY) var(--padX)' }}>
-        <div style={{ maxWidth: 820, margin: '0 auto', display: 'grid', gap: 14, width: '100%' }}>
+      <PageContainer style={{ paddingTop: 'var(--padY)', paddingBottom: 'var(--padY)' }}>
+        <Stack gap={14}>
           <Card>
             <div style={{ fontWeight: 980, fontSize: 'var(--fsH2)' }}>{t.name}</div>
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>{t.desc}</div>
@@ -115,8 +116,8 @@ export function StrategyScreen({
               </div>
             </div>
           </Card>
-        </div>
-      </div>
+        </Stack>
+      </PageContainer>
     </ScreenWrap>
   );
 }

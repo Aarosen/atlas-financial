@@ -2,6 +2,11 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
 import type { ChatMessage } from '@/lib/state/types';
 import { TopBar } from '@/components/TopBar';
+import { IconButton } from '@/components/IconButton';
+import { Textarea } from '@/components/TextInput';
+import { Button } from '@/components/Buttons';
+import { PageContainer } from '@/components/Layout';
+import { ArrowUp, Mic, Pencil, Square } from 'lucide-react';
 
 function renderMessageText(text: string): ReactNode {
   const t = String(text || '').replace(/\r\n/g, '\n');
@@ -159,6 +164,8 @@ export function ConversationScreen({
   const [isNearBottom, setIsNearBottom] = useState(true);
   const [inpFocused, setInpFocused] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
+  const [editAffForMsgIdx, setEditAffForMsgIdx] = useState<number | null>(null);
+  const longPressTimerRef = useRef<number | null>(null);
 
   const scrollToBottom = () => {
     try {
@@ -208,24 +215,46 @@ export function ConversationScreen({
 
   const showJump = useMemo(() => !isNearBottom && msgs.length > 3, [isNearBottom, msgs.length]);
   const lastMsgRole = msgs.length ? msgs[msgs.length - 1]?.r : undefined;
+  const lastAssistantIdx = useMemo(() => {
+    for (let i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i]?.r === 'a') return i;
+    }
+    return -1;
+  }, [msgs]);
   const jumpLabel = useMemo(() => {
     if (!showJump) return '';
     if (lastMsgRole === 'a') return 'New messages ↓';
     return 'Jump to latest ↓';
   }, [lastMsgRole, showJump]);
 
+  const startLongPress = (idx: number) => {
+    if (isDesktop) return;
+    if (longPressTimerRef.current) window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = window.setTimeout(() => {
+      setEditAffForMsgIdx(idx);
+    }, 450);
+  };
+
+  const cancelLongPress = () => {
+    if (!longPressTimerRef.current) return;
+    window.clearTimeout(longPressTimerRef.current);
+    longPressTimerRef.current = null;
+  };
+
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <TopBar title="Conversation" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
 
-      <div ref={scRef} style={{ flex: 1, overflowY: 'auto', padding: 'var(--padY) var(--padX)' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
+      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', paddingTop: 'var(--padY)', paddingBottom: 'var(--padY)' }}>
+        <PageContainer maxWidth={720}>
+          <h1 className="srOnly">Conversation</h1>
           {showJump && (
             <div style={{ position: 'sticky', top: 10, zIndex: 5, display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
               <button
                 onClick={scrollToBottom}
                 className="btn btnSecondary"
                 style={{ padding: '8px 12px', borderRadius: 999, fontWeight: 900, fontSize: 12, boxShadow: 'var(--sh1)' }}
+                data-testid="jumpToLatest"
               >
                 {jumpLabel}
               </button>
@@ -240,29 +269,73 @@ export function ConversationScreen({
                 marginBottom: i > 0 && msgs[i - 1]?.r === m.r ? 6 : 10,
               }}
             >
-              <div
-                onClick={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? onEditLastUserMessage : undefined}
-                style={{
-                  maxWidth: '86%',
-                  lineHeight: 1.6,
-                  fontSize: 'var(--fsBody)',
-                  padding: '11px 13px',
-                  borderRadius: m.r === 'u' ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
-                  background: m.r === 'u' ? 'linear-gradient(135deg,var(--teal),var(--sky))' : 'var(--bg2)',
-                  color: m.r === 'u' ? '#fff' : 'var(--ink)',
-                  border: m.r === 'u' ? 'none' : '1px solid var(--bdr)',
-                  boxShadow:
-                    m.r === 'u'
-                      ? i === lastUserIdx && onEditLastUserMessage
-                        ? '0 0 0 2px color-mix(in srgb, var(--sky) 26%, transparent)'
-                        : 'none'
-                      : 'var(--sh1)',
-                  cursor: m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'pointer' : 'default',
-                  opacity: m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 0.98 : 1,
-                }}
-                title={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'Click to edit and resend' : undefined}
-              >
-                {m.r === 'a' ? renderMessageText(m.t) : <div style={{ whiteSpace: 'pre-wrap' }}>{m.t}</div>}
+              <div className={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'atlasBubbleWrap' : undefined}>
+                {m.r === 'u' && i === lastUserIdx && onEditLastUserMessage && (
+                  <div className={['atlasEditAff', editAffForMsgIdx === i ? 'atlasEditAffShow' : ''].filter(Boolean).join(' ')}>
+                    <IconButton
+                      aria-label="Edit last message"
+                      title="Edit"
+                      onClick={() => {
+                        setEditAffForMsgIdx(null);
+                        onEditLastUserMessage();
+                      }}
+                    >
+                      <Pencil size={16} aria-hidden />
+                    </IconButton>
+                  </div>
+                )}
+
+                <div
+                  className={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'atlasBubbleInteractive' : undefined}
+                  onClick={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? onEditLastUserMessage : undefined}
+                  onPointerDown={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? () => startLongPress(i) : undefined}
+                  onPointerUp={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? cancelLongPress : undefined}
+                  onPointerCancel={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? cancelLongPress : undefined}
+                  role={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'button' : undefined}
+                  tabIndex={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 0 : undefined}
+                  onKeyDown={
+                    m.r === 'u' && i === lastUserIdx && onEditLastUserMessage
+                      ? (event) => {
+                          if (event.key === 'Enter' || event.key === ' ') {
+                            event.preventDefault();
+                            onEditLastUserMessage();
+                          }
+                        }
+                      : undefined
+                  }
+                  data-testid={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'lastUserBubble' : undefined}
+                  style={{
+                    maxWidth: '86%',
+                    lineHeight: 1.6,
+                    fontSize: 'var(--fsBody)',
+                    padding: '11px 13px',
+                    borderRadius: m.r === 'u' ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
+                    background: m.r === 'u' ? 'linear-gradient(135deg,var(--teal),var(--sky))' : 'var(--bg2)',
+                    color: m.r === 'u' ? '#fff' : 'var(--ink)',
+                    border: m.r === 'u' ? 'none' : '1px solid var(--bdr)',
+                    boxShadow:
+                      m.r === 'u'
+                        ? i === lastUserIdx && onEditLastUserMessage
+                          ? '0 0 0 2px color-mix(in srgb, var(--sky) 26%, transparent)'
+                          : 'none'
+                        : 'var(--sh1)',
+                    cursor: m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'pointer' : 'default',
+                    opacity: m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 0.98 : 1,
+                  }}
+                  title={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? (isDesktop ? 'Click to edit and resend' : 'Tap to edit • Long-press for options') : undefined}
+                  onMouseLeave={m.r === 'u' && i === lastUserIdx ? () => setEditAffForMsgIdx(null) : undefined}
+                >
+                  {m.r === 'a' ? (
+                    <div
+                      className={i === lastAssistantIdx ? 'atlasMsgAEnter' : undefined}
+                      data-testid={i === lastAssistantIdx ? 'lastAssistantBubble' : undefined}
+                    >
+                      {renderMessageText(m.t)}
+                    </div>
+                  ) : (
+                    <div style={{ whiteSpace: 'pre-wrap' }}>{m.t}</div>
+                  )}
+                </div>
               </div>
             </div>
           ))}
@@ -282,7 +355,7 @@ export function ConversationScreen({
             </div>
           )}
           <div ref={botRef} />
-        </div>
+        </PageContainer>
       </div>
 
       <div style={{ padding: '14px var(--padX)', paddingBottom: 'max(14px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
@@ -357,7 +430,7 @@ export function ConversationScreen({
               <div style={{ fontWeight: 950, color: 'var(--ink2)' }}>→</div>
             </button>
           )}
-          <textarea
+          <Textarea
             ref={taRef}
             value={inp}
             onChange={(e) => onChangeInp(e.target.value)}
@@ -366,7 +439,7 @@ export function ConversationScreen({
             onBlur={() => setInpFocused(false)}
             placeholder="Tell Atlas anything…"
             rows={1}
-            style={{ width: '100%', padding: `12px ${voiceSupported && onVoiceStart ? 104 : 56}px 12px 14px`, borderRadius: 14, border: '1.5px solid var(--bdr2)', background: 'var(--card)', outline: 'none', resize: 'none', color: 'var(--ink)', maxHeight: 140, overflowY: 'auto' }}
+            style={{ padding: `12px ${voiceSupported && onVoiceStart ? 104 : 56}px 12px 14px`, resize: 'none', maxHeight: 140, overflowY: 'auto' }}
           />
           {inpFocused && isDesktop && !busy && (
             <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
@@ -375,50 +448,52 @@ export function ConversationScreen({
             <div style={{ position: 'absolute', left: 12, bottom: 44, fontSize: 12, color: 'var(--ink2)', background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 999, padding: '4px 10px', boxShadow: 'var(--sh1)' }}>Listening…</div>
           )}
           {speaking && onStopSpeaking && (
-            <button
-              onClick={onStopSpeaking}
-              disabled={busy}
-              style={{ position: 'absolute', right: voiceSupported && onVoiceStart ? 90 : 48, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: '1px solid var(--bdr2)', color: 'var(--ink2)', height: 34, borderRadius: 12, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1, padding: '0 10px' }}
-              aria-label="Stop speaking"
-              title="Stop speaking"
-            >
-              Stop
-            </button>
+            <div style={{ position: 'absolute', right: voiceSupported && onVoiceStart ? 90 : 48, top: '50%', transform: 'translateY(-50%)' }}>
+              <Button
+                onClick={onStopSpeaking}
+                disabled={busy}
+                variant="secondary"
+                size="sm"
+                aria-label="Stop speaking"
+                title="Stop speaking"
+              >
+                <Square size={16} aria-hidden />
+                Stop
+              </Button>
+            </div>
           )}
           {streaming && onCancelStream && (
-            <button
-              onClick={onCancelStream}
-              style={{ position: 'absolute', right: voiceSupported && onVoiceStart ? 90 : 48, top: '50%', transform: 'translateY(-50%)', background: 'transparent', border: '1px solid var(--bdr2)', color: 'var(--ink2)', height: 34, borderRadius: 12, cursor: 'pointer', padding: '0 10px' }}
-              aria-label="Cancel response"
-              title="Cancel"
-            >
-              Cancel
-            </button>
+            <div style={{ position: 'absolute', right: voiceSupported && onVoiceStart ? 90 : 48, top: '50%', transform: 'translateY(-50%)' }}>
+              <Button onClick={onCancelStream} variant="secondary" size="sm" aria-label="Cancel response" title="Cancel">
+                Cancel
+              </Button>
+            </div>
           )}
           {voiceSupported && onVoiceStart && (
-            <button
-              onClick={onVoiceStart}
-              disabled={busy}
-              style={{ position: 'absolute', right: 54, top: '50%', transform: 'translateY(-50%)', background: 'var(--card)', border: '1px solid var(--bdr2)', color: 'var(--ink2)', width: 40, height: 38, borderRadius: 999, cursor: busy ? 'not-allowed' : 'pointer', opacity: busy ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--sh1)' }}
-              aria-label="Voice input"
-              title="Voice input"
-            >
-              <span style={{ fontSize: 16, lineHeight: '16px' }} aria-hidden>
-                🎙️
-              </span>
-            </button>
+            <div style={{ position: 'absolute', right: 54, top: '50%', transform: 'translateY(-50%)' }}>
+              <IconButton
+                onClick={onVoiceStart}
+                disabled={busy}
+                aria-label={voiceListening ? 'Voice input (listening)' : 'Voice input'}
+                title="Voice input"
+              >
+                <Mic size={18} aria-hidden />
+              </IconButton>
+            </div>
           )}
-          <button
-            onClick={onSend}
-            disabled={!inp.trim() || busy}
-            style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', background: 'linear-gradient(135deg,var(--teal),var(--sky))', border: 'none', color: '#fff', width: 40, height: 38, borderRadius: 999, cursor: busy ? 'not-allowed' : 'pointer', opacity: !inp.trim() || busy ? 0.5 : 1, display: 'flex', alignItems: 'center', justifyContent: 'center', boxShadow: 'var(--sh2)' }}
-          >
-            <span style={{ fontSize: 18, lineHeight: '18px', fontWeight: 950 }} aria-hidden>
-              →
-            </span>
-          </button>
+          <div style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>
+            <IconButton
+              onClick={onSend}
+              disabled={!inp.trim() || busy}
+              variant="primary"
+              aria-label="Send message"
+              title="Send"
+            >
+              <ArrowUp size={18} aria-hidden />
+            </IconButton>
+          </div>
         </div>
-        <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink3)', marginTop: 8 }}>Try: “I make $4k/month and spend about $2.5k on essentials”</div>
+        <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink2)', marginTop: 8 }}>Try: “I make $4k/month and spend about $2.5k on essentials”</div>
       </div>
     </div>
   );

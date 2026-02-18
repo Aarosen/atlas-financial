@@ -1,5 +1,10 @@
-import type { ReactNode } from 'react';
+import type { HTMLAttributes, ReactNode } from 'react';
 
-export function Card({ children }: { children: ReactNode }) {
-  return <div style={{ background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 18, padding: 16, boxShadow: 'var(--sh1)' }}>{children}</div>;
+export function Card({ children, className, ...rest }: { children: ReactNode } & HTMLAttributes<HTMLDivElement>) {
+  const cn = ['card', className].filter(Boolean).join(' ');
+  return (
+    <div className={cn} {...rest}>
+      {children}
+    </div>
+  );
 }

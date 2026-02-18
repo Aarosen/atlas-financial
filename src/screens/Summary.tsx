@@ -2,6 +2,7 @@ import type { FinancialState, Strategy } from '@/lib/state/types';
 import { Card } from '@/components/Card';
 import { GhostBtn, PrimaryBtn } from '@/components/Buttons';
 import { TopBar, ScreenWrap } from '@/components/TopBar';
+import { PageContainer, Stack } from '@/components/Layout';
 
 export function SummaryScreen({
   theme,
@@ -38,8 +39,8 @@ export function SummaryScreen({
   return (
     <ScreenWrap>
       <TopBar title="Summary" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
-      <div style={{ padding: 'var(--padY) var(--padX)' }}>
-        <div style={{ maxWidth: 820, margin: '0 auto', display: 'grid', gap: 14, width: '100%' }}>
+      <PageContainer style={{ paddingTop: 'var(--padY)', paddingBottom: 'var(--padY)' }}>
+        <Stack gap={14}>
           <Card>
             <div style={{ fontWeight: 950, fontSize: 'var(--fsH2)', letterSpacing: '-0.02em' }}>Here’s what I heard</div>
             <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
@@ -61,8 +62,8 @@ export function SummaryScreen({
               <GhostBtn onClick={onEditViaChat}>Edit via chat</GhostBtn>
             </div>
           </Card>
-        </div>
-      </div>
+        </Stack>
+      </PageContainer>
     </ScreenWrap>
   );
 }

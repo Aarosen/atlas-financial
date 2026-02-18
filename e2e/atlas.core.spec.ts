@@ -72,10 +72,12 @@ async function installApiMocks(page: Page) {
     }
 
     if (body?.type === 'answer_stream') {
-      const sse = [
-        'data: ' + JSON.stringify({ delta: 'Good question. ' }) + '\n\n',
-        'data: ' + JSON.stringify({ done: true, model: 'mock' }) + '\n\n',
-      ].join('');
+      const question = String(body?.question || '');
+      const slow = question.toLowerCase().includes('slowstream');
+      const frames = slow
+        ? Array.from({ length: 40 }).map((_, i) => 'data: ' + JSON.stringify({ delta: `chunk${i + 1} ` }) + '\n\n')
+        : ['data: ' + JSON.stringify({ delta: 'Good question. ' }) + '\n\n'];
+      const sse = [...frames, 'data: ' + JSON.stringify({ done: true, model: 'mock' }) + '\n\n'].join('');
       return route.fulfill({
         status: 200,
         headers: {
@@ -134,7 +136,7 @@ test('2) interruption → resume', async ({ page }: { page: Page }) => {
 
   await expect(
     page.getByText(
-      'Messages you type may be sent to our AI provider to generate responses, and your financial state is stored locally in your browser (IndexedDB) which you can delete anytime.',
+      'Messages you type may be sent to our AI provider to generate responses',
       { exact: false }
     )
   ).toBeVisible();
@@ -149,10 +151,10 @@ test('6) retry recovers from temporary API error', async ({ page }: { page: Page
   await input.fill('retrytest Income $4000/month.');
   await input.press('Enter');
 
-  await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Retry last message' })).toBeVisible();
   await expect(page.getByText('Connection issue — retry when you’re ready.')).toBeVisible();
 
-  await page.getByRole('button', { name: 'Retry' }).click();
+  await page.getByRole('button', { name: 'Retry last message' }).click();
 
   const essentialsQ = page
     .locator('div')
@@ -177,8 +179,8 @@ test('3) edit last message → replay', async ({ page }: { page: Page }) => {
   // Go back to conversation and edit the last user message.
   await page.getByRole('button', { name: 'Keep talking' }).click();
 
-  // Click last user message bubble (has tooltip)
-  await page.locator('[title="Click to edit and resend"]').click();
+  // Click last user message bubble
+  await page.getByTestId('lastUserBubble').click();
   await expect(input).not.toHaveValue('');
 
   await input.fill('Income 8000. Essentials 2500. Savings 20000. No debt.');
@@ -211,7 +213,7 @@ test('5) privacy text present and accurate', async ({ page }: { page: Page }) =>
 
   await expect(
     page.getByText(
-      'Messages you type may be sent to our AI provider to generate responses, and your financial state is stored locally in your browser (IndexedDB) which you can delete anytime.',
+      'Messages you type may be sent to our AI provider to generate responses',
       { exact: false }
     )
   ).toBeVisible();

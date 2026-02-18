@@ -3,17 +3,8 @@ import AtlasLogo from './AtlasLogo';
 
 export default function NavBar() {
   return (
-    <div
-      style={{
-        position: 'sticky',
-        top: 0,
-        zIndex: 20,
-        background: 'color-mix(in srgb, var(--bg) 82%, transparent)',
-        backdropFilter: 'saturate(160%) blur(10px)',
-        borderBottom: '1px solid var(--bdr)',
-      }}
-    >
-      <div className="container" style={{ paddingTop: 14, paddingBottom: 14, display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 14 }}>
+    <div className="atlasHeader">
+      <div className="atlasHeaderInner container">
         <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 10, textDecoration: 'none', color: 'var(--ink)' }}>
           <AtlasLogo size={22} />
           <span style={{ fontWeight: 950, letterSpacing: '-0.02em' }}>Atlas</span>

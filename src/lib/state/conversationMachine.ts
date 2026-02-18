@@ -134,8 +134,13 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
     case 'STREAM_CANCELED': {
       const msgs = [...state.msgs];
       const last = msgs[msgs.length - 1];
-      if (last && last.r === 'a' && String(last.t || '').trim().length === 0) {
-        msgs[msgs.length - 1] = { ...last, t: 'Canceled' };
+      if (last && last.r === 'a') {
+        const cur = String(last.t || '');
+        if (cur.trim().length === 0) {
+          msgs[msgs.length - 1] = { ...last, t: 'Canceled' };
+        } else if (!/\bcanceled\b/i.test(cur)) {
+          msgs[msgs.length - 1] = { ...last, t: `${cur.trim()}\n\nCanceled` };
+        }
       }
       return { ...state, streaming: false, busy: false, msgs };
     }

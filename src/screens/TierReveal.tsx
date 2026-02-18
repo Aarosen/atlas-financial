@@ -2,6 +2,7 @@ import type { Strategy } from '@/lib/state/types';
 import { Card } from '@/components/Card';
 import { GhostBtn, PrimaryBtn } from '@/components/Buttons';
 import { TopBar, ScreenWrap } from '@/components/TopBar';
+import { PageContainer, Stack } from '@/components/Layout';
 
 export function TierRevealScreen({
   theme,
@@ -36,8 +37,8 @@ export function TierRevealScreen({
   return (
     <ScreenWrap>
       <TopBar title="Your tier" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
-      <div style={{ padding: 'var(--padY) var(--padX)' }}>
-        <div style={{ maxWidth: 820, margin: '0 auto', display: 'grid', gap: 14, width: '100%' }}>
+      <PageContainer style={{ paddingTop: 'var(--padY)', paddingBottom: 'var(--padY)' }}>
+        <Stack gap={14}>
           <Card>
             <div style={{ fontWeight: 950, fontSize: 'var(--fsTitle)', letterSpacing: '-0.02em' }}>{t.name}</div>
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.6 }}>{t.desc}</div>
@@ -64,8 +65,8 @@ export function TierRevealScreen({
               <GhostBtn onClick={onKeepTalking}>Keep talking</GhostBtn>
             </div>
           </Card>
-        </div>
-      </div>
+        </Stack>
+      </PageContainer>
     </ScreenWrap>
   );
 }

@@ -1,6 +1,7 @@
 import { Card } from '@/components/Card';
 import { GhostBtn, PrimaryBtn } from '@/components/Buttons';
 import { TopBar, ScreenWrap } from '@/components/TopBar';
+import { PageContainer, Stack } from '@/components/Layout';
 
 export function SettingsScreen({
   theme,
@@ -34,8 +35,8 @@ export function SettingsScreen({
   return (
     <ScreenWrap>
       <TopBar title="Settings" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
-      <div style={{ padding: 'var(--padY) var(--padX)' }}>
-        <div style={{ maxWidth: 820, margin: '0 auto', display: 'grid', gap: 14, width: '100%' }}>
+      <PageContainer style={{ paddingTop: 'var(--padY)', paddingBottom: 'var(--padY)' }}>
+        <Stack gap={14}>
           <Card>
             <div style={{ fontWeight: 950, fontSize: 16 }}>Theme</div>
             <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
@@ -63,8 +64,8 @@ export function SettingsScreen({
               <GhostBtn onClick={onToggleVoiceAutoSend}>{voiceAutoSend ? 'Voice auto-send: On' : 'Voice auto-send: Off'}</GhostBtn>
             </div>
           </Card>
-        </div>
-      </div>
+        </Stack>
+      </PageContainer>
     </ScreenWrap>
   );
 }
