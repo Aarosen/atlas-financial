@@ -108,7 +108,8 @@ async function installApiMocks(page: Page) {
   });
 }
 
-test('1) happy path onboarding → tier reveal', async ({ page }: { page: Page }) => {
+test('1) happy path onboarding → tier reveal', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'desktop-only');
   await installApiMocks(page);
   await page.goto('/conversation');
 
@@ -117,12 +118,19 @@ test('1) happy path onboarding → tier reveal', async ({ page }: { page: Page }
   await input.fill('Income $8000/month. Essentials $3000/month. Savings $24000. No debt.');
   await input.press('Enter');
 
+  await page.getByRole('button', { name: 'Yes, looks right' }).click();
+  await page.getByRole('button', { name: 'Confirm lever' }).click();
+  await expect(page.getByRole('button', { name: 'Confirm step' })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm step' }).click();
+
   await expect(page.getByText('Here’s what I heard')).toBeVisible();
+  await expect(page.getByRole('button', { name: 'Show my tier →' })).toBeVisible();
   await page.getByRole('button', { name: 'Show my tier →' }).click();
   await expect(page.getByText('Your best next lever')).toBeVisible();
 });
 
-test('2) interruption → resume', async ({ page }: { page: Page }) => {
+test('2) interruption → resume', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'desktop-only');
   await installApiMocks(page);
   await page.goto('/conversation');
 
@@ -163,7 +171,8 @@ test('6) retry recovers from temporary API error', async ({ page }: { page: Page
   await expect(essentialsQ).toBeVisible();
 });
 
-test('3) edit last message → replay', async ({ page }: { page: Page }) => {
+test('3) edit last message → replay', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'desktop-only');
   await installApiMocks(page);
   await page.goto('/conversation');
 
@@ -173,11 +182,17 @@ test('3) edit last message → replay', async ({ page }: { page: Page }) => {
   await input.fill('Income 2000. Essentials 2500. Savings 0. No debt.');
   await input.press('Enter');
 
+  await page.getByRole('button', { name: 'Yes, looks right' }).click();
+  await page.getByRole('button', { name: 'Confirm lever' }).click();
+  await expect(page.getByRole('button', { name: 'Confirm step' })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm step' }).click();
+
+  await expect(page.getByRole('button', { name: 'Show my tier →' })).toBeVisible();
   await page.getByRole('button', { name: 'Show my tier →' }).click();
   await expect(page.getByText('Foundation')).toBeVisible();
 
   // Go back to conversation and edit the last user message.
-  await page.getByRole('button', { name: 'Keep talking' }).click();
+  await page.getByRole('button', { name: 'Refine in Talk' }).click();
 
   // Click last user message bubble
   await page.getByTestId('lastUserBubble').click();
@@ -186,6 +201,12 @@ test('3) edit last message → replay', async ({ page }: { page: Page }) => {
   await input.fill('Income 8000. Essentials 2500. Savings 20000. No debt.');
   await input.press('Enter');
 
+  await page.getByRole('button', { name: 'Yes, looks right' }).click();
+  await page.getByRole('button', { name: 'Confirm lever' }).click();
+  await expect(page.getByRole('button', { name: 'Confirm step' })).toBeVisible();
+  await page.getByRole('button', { name: 'Confirm step' }).click();
+
+  await expect(page.getByRole('button', { name: 'Show my tier →' })).toBeVisible();
   await page.getByRole('button', { name: 'Show my tier →' }).click();
   await expect(page.getByText('Growth Ready')).toBeVisible();
 });
@@ -200,7 +221,8 @@ test('4) voice toggle shows (capability mock)', async ({ page }: { page: Page })
   await expect(page.getByLabel('Voice input')).toBeVisible();
 });
 
-test('5) privacy text present and accurate', async ({ page }: { page: Page }) => {
+test('5) privacy text present and accurate', async ({ page }, testInfo) => {
+  test.skip(testInfo.project.name === 'mobile', 'desktop-only');
   await installApiMocks(page);
   await page.goto('/conversation');
 

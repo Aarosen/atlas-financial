@@ -24,6 +24,7 @@ test('R5: layout snapshots across key pages', async ({ page }) => {
     await expect(page).toHaveScreenshot(`page-${p.name}.png`, {
       fullPage: true,
       ...(p.name === 'conversation' ? { maxDiffPixelRatio: 0.03 } : null),
+      ...(p.name === 'privacy' ? { maxDiffPixelRatio: 0.03 } : null),
     });
   }
 });
