@@ -72,6 +72,9 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
   const kind = turn.kind || classifyInterruption(userText);
   const dontKnow = /\b(don'?t\s+know|not\s+sure|no\s+idea)\b/i.test(userText);
   const isNo = /^\s*(no|none|nope|nah|n\/a)\b/i.test(userText);
+  const effectiveQuestionKey = (st.lastQuestionKey || st.missing[0]) as keyof FinancialState | undefined;
+  const mentionsSavings = /\b(savings?|saved|emergency|cash)\b/i.test(userText);
+  const mentionsDebt = /\b(debt|loan|loans|card|cards|credit)\b/i.test(userText);
 
   const collected: FinancialState = { ...st.collected };
   const answered: AtlasConversationState['answered'] = { ...st.answered };
@@ -84,16 +87,16 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
     };
   }
 
-  if (dontKnow && st.lastQuestionKey) {
-    const k = st.lastQuestionKey;
+  if (dontKnow && effectiveQuestionKey) {
+    const k = effectiveQuestionKey;
     answered[k] = true;
     unknown[k] = true;
     if (k === 'highInterestDebt' || k === 'lowInterestDebt') (collected as any)[k] = 0;
     if (k === 'totalSavings') (collected as any)[k] = 0;
   }
 
-  if (!dontKnow && isNo && st.lastQuestionKey) {
-    const k = st.lastQuestionKey;
+  if (!dontKnow && isNo && effectiveQuestionKey) {
+    const k = effectiveQuestionKey;
     if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
       answered[k] = true;
       if (unknown[k]) delete unknown[k];
@@ -111,10 +114,10 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
     return v;
   };
 
-  if (!dontKnow && st.lastQuestionKey) {
+  if (!dontKnow && effectiveQuestionKey) {
     const v = parseBareNumber(userText);
     if (v !== null) {
-      const k = st.lastQuestionKey;
+      const k = effectiveQuestionKey;
       if (k === 'monthlyIncome' || k === 'essentialExpenses') {
         if (v > 0) {
           (collected as any)[k] = v;
@@ -138,11 +141,31 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
   }
 
   if (turn.extractedFields) {
-    for (const [k0, v] of Object.entries(turn.extractedFields)) {
+    for (const [k0, v0] of Object.entries(turn.extractedFields)) {
       const k = k0 as keyof FinancialState;
       if (!(k in collected)) continue;
-      if (v === undefined || v === null) continue;
-      (collected as any)[k] = v;
+      if (v0 === undefined || v0 === null) continue;
+      (collected as any)[k] = v0;
+
+      const shouldMarkAnswered = (() => {
+        if (k === 'monthlyIncome' || k === 'essentialExpenses') return typeof v0 === 'number' && v0 > 0;
+
+        if (k === 'totalSavings') {
+          if (!(typeof v0 === 'number' && v0 >= 0)) return false;
+          if (v0 > 0) return true;
+          return effectiveQuestionKey === 'totalSavings' || mentionsSavings;
+        }
+
+        if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
+          if (!(typeof v0 === 'number' && v0 >= 0)) return false;
+          if (v0 > 0) return true;
+          return effectiveQuestionKey === k || mentionsDebt;
+        }
+
+        return true;
+      })();
+
+      if (!shouldMarkAnswered) continue;
       answered[k] = true;
       if (unknown[k]) delete unknown[k];
     }

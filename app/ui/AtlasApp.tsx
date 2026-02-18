@@ -7,7 +7,7 @@ import { AtlasDb } from '@/lib/db/atlasDb';
 import { StrategyEngine } from '@/lib/engine/strategyEngine';
 import type { ChatMessage, FinancialState, Strategy } from '@/lib/state/types';
 import { conversationReducer, createInitialConversationState, type Screen } from '@/lib/state/conversationMachine';
-import { classifyInterruption, computeMissing, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
+import { applyUserTurn, classifyInterruption, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
 import { createVoice } from '@/lib/voice/voice';
 import { ConversationScreen, DashboardScreen, LandingScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
 
@@ -291,111 +291,32 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         return;
       }
 
-      const dontKnow = /\b(don'?t\s+know|not\s+sure|no\s+idea)\b/i.test(ut);
-      const isNo = /^\s*(no|none|nope|nah|n\/a)\b/i.test(ut);
-
-      const effectiveQuestionKey = (base.lastQuestionKey || missBefore[0]) as keyof FinancialState | undefined;
-
-      const answeredNext: Partial<Record<keyof FinancialState, boolean>> = { ...base.answered };
-      const unknownNext: Partial<Record<keyof FinancialState, boolean>> = { ...base.unknown };
-
-      const uf: FinancialState = { ...base.fin };
-
-      const parseBareNumber = (s: string): number | null => {
-        const t = s.trim();
-        const m = t.match(/^\$?\s*(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\s*$/i);
-        if (!m) return null;
-        let v = Number.parseFloat(m[1].replace(/,/g, ''));
-        if (!Number.isFinite(v)) return null;
-        if (m[2]) v *= 1000;
-        return v;
-      };
-
-      if (dontKnow && effectiveQuestionKey) {
-        const k = effectiveQuestionKey;
-        answeredNext[k] = true;
-        unknownNext[k] = true;
-        if (k === 'highInterestDebt' || k === 'lowInterestDebt') (uf as any)[k] = 0;
-        if (k === 'totalSavings') (uf as any)[k] = 0;
-      }
-
-      if (!dontKnow && isNo && effectiveQuestionKey) {
-        const k = effectiveQuestionKey;
-        if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
-          (uf as any)[k] = 0;
-          answeredNext[k] = true;
-          if (unknownNext[k]) delete unknownNext[k];
-        }
-      }
-
-      if (!dontKnow && effectiveQuestionKey) {
-        const v = parseBareNumber(ut);
-        if (v !== null) {
-          const k = effectiveQuestionKey;
-          if (k === 'monthlyIncome' || k === 'essentialExpenses') {
-            if (v > 0) {
-              (uf as any)[k] = v;
-              answeredNext[k] = true;
-              if (unknownNext[k]) delete unknownNext[k];
-            }
-          } else if (k === 'totalSavings') {
-            if (v >= 0) {
-              (uf as any)[k] = v;
-              answeredNext[k] = true;
-              if (unknownNext[k]) delete unknownNext[k];
-            }
-          } else if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
-            if (v >= 0) {
-              (uf as any)[k] = v;
-              answeredNext[k] = true;
-              if (unknownNext[k]) delete unknownNext[k];
-            }
-          }
-        }
-      }
-
       const ex = await claude.extract(ut, base.fin);
 
-      Object.entries(ex.fields).forEach(([k, v]) => {
-        if (v !== undefined && v !== null && k in uf) {
-          (uf as any)[k] = v;
+      const st1 = applyUserTurn(
+        {
+          sessionId: 'ui',
+          phase: missBefore.length ? ('onboarding' as const) : ('baseline_ready' as const),
+          collected: base.fin,
+          missing: missBefore,
+          lastQuestionKey: base.lastQuestionKey,
+          lastTurnAt: Date.now(),
+          mode: base.mode,
+          answered: base.answered,
+          unknown: base.unknown,
+        },
+        {
+          userText: ut,
+          extractedFields: ex.fields as any,
+          kind,
+          now: Date.now(),
         }
-      });
+      );
 
-      const hasDigit = /\d/.test(ut);
-      const mentionedSavings = /\b(savings?|saved|emergency|cash)\b/i.test(ut);
-      const mentionedDebt = /\b(debt|loan|loans|card|cards|credit)\b/i.test(ut);
-
-      Object.entries(ex.fields || {}).forEach(([k0, v]) => {
-        const k = k0 as keyof FinancialState;
-        if (!(k in uf)) return;
-        if (v === undefined || v === null) return;
-
-        const shouldMarkAnswered = (() => {
-          if (k === 'monthlyIncome' || k === 'essentialExpenses') return typeof v === 'number' && v > 0;
-
-          if (k === 'totalSavings') {
-            if (!(typeof v === 'number' && v >= 0)) return false;
-            if (v > 0) return true;
-            return hasDigit && (base.lastQuestionKey === 'totalSavings' || mentionedSavings);
-          }
-
-          if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
-            if (!(typeof v === 'number' && v >= 0)) return false;
-            if (v > 0) return true;
-            if (effectiveQuestionKey === k && (isNo || hasDigit)) return true;
-            return hasDigit && mentionedDebt;
-          }
-
-          return true;
-        })();
-
-        if (!shouldMarkAnswered) return;
-        answeredNext[k] = true;
-        if (unknownNext[k]) delete unknownNext[k];
-      });
-
-      const miss = computeMissing(uf, answeredNext);
+      const uf: FinancialState = st1.collected;
+      const miss = st1.missing;
+      const answeredNext = st1.answered;
+      const unknownNext = st1.unknown;
 
       dispatch({
         type: 'SEND_EXTRACTED',

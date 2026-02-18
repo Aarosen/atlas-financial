@@ -129,10 +129,15 @@ test('2) interruption → resume', async ({ page }: { page: Page }) => {
   await input.press('Enter');
 
   // Meta interruption should be answered locally and then resume asking.
-  await input.fill('What do you store about me?');
+  await input.fill('What do you store and send?');
   await input.press('Enter');
 
-  await expect(page.getByText('Messages you type may be sent to our AI provider to generate responses, and your financial state is stored locally in your browser (IndexedDB) which you can delete anytime.')).toBeVisible();
+  await expect(
+    page.getByText(
+      'Messages you type may be sent to our AI provider to generate responses, and your financial state is stored locally in your browser (IndexedDB) which you can delete anytime.',
+      { exact: false }
+    )
+  ).toBeVisible();
 });
 
 test('6) retry recovers from temporary API error', async ({ page }: { page: Page }) => {
