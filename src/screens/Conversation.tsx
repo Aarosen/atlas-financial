@@ -166,6 +166,9 @@ export function ConversationScreen({
   const [isDesktop, setIsDesktop] = useState(false);
   const [editAffForMsgIdx, setEditAffForMsgIdx] = useState<number | null>(null);
   const longPressTimerRef = useRef<number | null>(null);
+  const hasInput = inp.trim().length > 0;
+  const showMic = !!voiceSupported && !!onVoiceStart && !hasInput;
+  const showSend = hasInput || !showMic;
 
   const scrollToBottom = () => {
     try {
@@ -439,7 +442,7 @@ export function ConversationScreen({
             onBlur={() => setInpFocused(false)}
             placeholder="Tell Atlas anything…"
             rows={1}
-            style={{ padding: `12px ${voiceSupported && onVoiceStart ? 104 : 56}px 12px 14px`, resize: 'none', maxHeight: 140, overflowY: 'auto' }}
+            style={{ padding: `12px ${showMic ? 104 : 56}px 12px 14px`, resize: 'none', maxHeight: 140, overflowY: 'auto' }}
           />
           {inpFocused && isDesktop && !busy && (
             <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
@@ -469,7 +472,7 @@ export function ConversationScreen({
               </Button>
             </div>
           )}
-          {voiceSupported && onVoiceStart && (
+          {showMic && (
             <div style={{ position: 'absolute', right: 54, top: '50%', transform: 'translateY(-50%)' }}>
               <IconButton
                 onClick={onVoiceStart}
@@ -481,17 +484,19 @@ export function ConversationScreen({
               </IconButton>
             </div>
           )}
-          <div style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>
-            <IconButton
-              onClick={onSend}
-              disabled={!inp.trim() || busy}
-              variant="primary"
-              aria-label="Send message"
-              title="Send"
-            >
-              <ArrowUp size={18} aria-hidden />
-            </IconButton>
-          </div>
+          {showSend && (
+            <div style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>
+              <IconButton
+                onClick={onSend}
+                disabled={!hasInput || busy}
+                variant="primary"
+                aria-label="Send message"
+                title="Send"
+              >
+                <ArrowUp size={18} aria-hidden />
+              </IconButton>
+            </div>
+          )}
         </div>
         <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink2)', marginTop: 8 }}>Try: “I make $4k/month and spend about $2.5k on essentials”</div>
       </div>
