@@ -61,6 +61,89 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   const bot = useRef<HTMLDivElement | null>(null);
 
+  const metricExplainerText = useCallback(
+    (metric: string, fin: FinancialState, baseline: Strategy) => {
+      const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
+
+      if (metric === 'net') {
+        return `Net each month (net cashflow)
+
+- What it is: the money left over after essentials and minimum debt payments.
+- Why it matters: it determines whether we’re building stability or drifting into debt.
+- Your number: ${fc(net)} / month.
+- What “good” looks like: >= ${fc(0)} is the first milestone; then we aim to grow the surplus.
+- How to improve it: lower essentials, reduce minimum debt payments over time, or increase income.
+
+One next step: tell me one category you can realistically cut by $50–$150 this week (rent, groceries, subscriptions, phone, insurance), and I’ll give you the exact play.`;
+      }
+
+      if (metric === 'buffer') {
+        return `Buffer (emergency runway)
+
+- What it is: how many months you could cover essentials if income stopped.
+- Why it matters: it buys you time and prevents one surprise from turning into high-interest debt.
+- Your number: ${baseline.bufMo.toFixed(1)} months.
+- What “good” looks like: 1 month is relief, 3 months is stable, 6 months is very strong.
+- How to improve it: a small automatic transfer + reducing one leak in spending.
+
+One next step: pick a weekly auto-transfer amount you’d actually keep (even $10–$25). What number feels safe?`;
+      }
+
+      if (metric === 'future') {
+        return `Future allocation
+
+- What it is: the % of your income going toward your future (retirement/investing/sinking funds).
+- Why it matters: it’s the engine of long-term wealth — after cashflow is stable.
+- Your number: ${fp(baseline.futPct)}.
+- What “good” looks like: 10% is a start; 15% is strong for most people; higher if you’re catching up.
+- How to improve it: tiny % bumps (1–2%) and automations.
+
+One next step: do you have a 401(k) match or a Roth IRA option?`;
+      }
+
+      return `Debt pressure
+
+- What it is: a simple rating of how much your debt payments constrain your monthly flexibility.
+- Why it matters: high pressure makes every month fragile; low pressure gives you room to build.
+- Your number: ${baseline.dExp}.
+- What “good” looks like: Low (or trending lower over time).
+- How to improve it: prioritize high-interest balances, avoid new revolving debt, and renegotiate rates where possible.
+
+One next step: list your highest-interest debt (card name + balance + APR, rough is fine) and we’ll pick the best first target.`;
+    },
+    []
+  );
+
+  const nextStepText = useCallback(
+    (fin: FinancialState, baseline: Strategy) => {
+      const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
+      if (baseline.lever === 'stabilize_cashflow') {
+        return `Dashboard’s open — let’s take one step.
+
+Your net each month is ${fc(net)}. One clean move: pick one bill or category we can cut by $50–$150 this week, and set a 10-minute timer to find the cheapest alternative. When you tell me the category (rent, groceries, subscriptions, phone, insurance), I’ll give you the exact play.`;
+      }
+      if (baseline.lever === 'eliminate_high_interest_debt') {
+        return `Dashboard’s open — one step.
+
+The fastest win is to stop interest from compounding: list your credit cards (name + balance + APR, rough is fine). Then we’ll choose one card to target first and I’ll tell you exactly what to pay and what to keep as minimums.`;
+      }
+      if (baseline.lever === 'build_emergency_buffer') {
+        return `Dashboard’s open — one step.
+
+Let’s start your buffer with something automatic: choose a weekly auto-transfer amount that won’t break anything (even $10–$25). Tell me a number you’d actually keep, and we’ll set a target date for your first $500.`;
+      }
+      if (baseline.lever === 'increase_future_allocation') {
+        return `Dashboard’s open — one step.
+
+We’ll raise your “future allocation” without pain: tell me whether you have a 401(k) match or Roth IRA option. Then we’ll pick a small bump (1%–2%) and I’ll translate it into dollars per paycheck.`;
+      }
+      return `Dashboard’s open — one step.
+
+Pick one discretionary category you want to shrink (dining, delivery, subscriptions, shopping). I’ll help you set a simple rule for the next 7 days that actually sticks.`;
+    },
+    []
+  );
+
   useEffect(() => {
     setMounted(true);
   }, []);
@@ -125,6 +208,51 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     bot.current?.scrollIntoView({ behavior: 'smooth' });
   }, [st.msgs]);
 
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'atlas:dashboardOpenedAt') return;
+      if (!st.baseline) return;
+      if (st.scr === 'dashboard') return;
+      if (st.scr !== 'conversation') dispatch({ type: 'NAVIGATE', scr: 'conversation' });
+      dispatch({ type: 'SEND_ASKED', text: nextStepText(st.fin, st.baseline) });
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [st.baseline, st.fin, st.scr, nextStepText]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onStorage = (e: StorageEvent) => {
+      if (e.key !== 'atlas:explainMetric') return;
+      if (!st.baseline) return;
+      if (st.scr === 'dashboard') return;
+      let metric = '';
+      try {
+        const parsed = JSON.parse(String(e.newValue || ''));
+        metric = String(parsed?.metric || '');
+      } catch {
+        metric = '';
+      }
+      if (!metric) return;
+
+      if (st.scr !== 'conversation') dispatch({ type: 'NAVIGATE', scr: 'conversation' });
+      dispatch({ type: 'SEND_ASKED', text: metricExplainerText(metric, st.fin, st.baseline) });
+    };
+    window.addEventListener('storage', onStorage);
+    return () => window.removeEventListener('storage', onStorage);
+  }, [metricExplainerText, st.baseline, st.fin, st.scr]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (st.scr !== 'dashboard') return;
+    try {
+      window.localStorage.setItem('atlas:dashboardOpenedAt', String(Date.now()));
+    } catch {
+      // ignore
+    }
+  }, [st.scr]);
+
   const missing = useCallback((f: FinancialState) => NEED.filter((k) => f[k] === null || f[k] === undefined), []);
 
   const doSend = useCallback(
@@ -146,27 +274,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
       if (kind === 'followup_question') {
         const am = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
-
-        streamAbortRef.current?.abort();
-        const ac = new AbortController();
-        streamAbortRef.current = ac;
-
-        dispatch({ type: 'STREAM_START' });
-
-        const r = await claude.answerStream({
-          msgs: am,
-          question: ut,
-          onDelta: (t: string) => dispatch({ type: 'STREAM_DELTA', delta: t }),
-          signal: ac.signal,
-        });
-
-        if (r.canceled) {
-          dispatch({ type: 'STREAM_CANCELED' });
-          return;
-        }
-
-        dispatch({ type: 'STREAM_DONE' });
-        if (resumeQ) dispatch({ type: 'SEND_ASKED', text: resumeQ.text, questionKey: resumeQ.key });
+        const missNow = missBefore.map((k) => String(k));
+        const ans = await claude.chat(am, missNow);
+        const out = resumeQ ? `${String(ans || '').trim()}\n\n${resumeQ.text}` : String(ans || '').trim();
+        dispatch({ type: 'SEND_ASKED', text: out, questionKey: resumeQ?.key });
         return;
       }
 
@@ -327,6 +438,14 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             setEditingLast(true);
             dispatch({ type: 'SET_INPUT', text: t });
           }}
+          nextStepHint={st.baseline ? 'Continue with one step' : null}
+          onNextStep={
+            st.baseline
+              ? () => {
+                  dispatch({ type: 'SEND_ASKED', text: nextStepText(st.fin, st.baseline!) });
+                }
+              : undefined
+          }
           botRef={bot}
           voiceSupported={mounted ? voice.sttSupported : false}
           onVoiceStart={() => {
@@ -368,11 +487,24 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             apiErr={st.apiErr}
             apiStatus={claude.status}
             baseline={st.baseline}
-            onOpenDashboard={() => dispatch({ type: 'NAVIGATE', scr: 'dashboard' })}
+            onOpenDashboard={() => {
+              if (typeof window !== 'undefined') {
+                window.open('/dashboard', '_blank', 'noopener,noreferrer');
+              }
+              dispatch({ type: 'NAVIGATE', scr: 'conversation' });
+              dispatch({ type: 'SEND_ASKED', text: nextStepText(st.fin, st.baseline!) });
+            }}
             onKeepTalking={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })}
             tc={tc}
             fp={fp}
           />
+        )}
+
+      {st.scr === 'dashboard' &&
+        !st.baseline && (
+          <div style={{ minHeight: '100dvh', display: 'flex', alignItems: 'center', justifyContent: 'center', padding: 'var(--padY) var(--padX)', color: 'var(--ink2)' }}>
+            Loading dashboard…
+          </div>
         )}
 
       {st.scr === 'dashboard' &&

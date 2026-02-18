@@ -77,6 +77,16 @@ button, input, textarea{font:inherit}
 .btn:hover{transform:translateY(-1px);box-shadow:var(--sh3)}
 .btn:active{transform:translateY(0px);filter:saturate(1.03)}
 
+.atlasClickCard{display:block;width:100%;padding:0;border:none;background:transparent;text-align:left;cursor:pointer;transition:transform 180ms ease, filter 180ms ease}
+.atlasClickCard:hover{transform:translateY(-1px)}
+.atlasClickCard:active{transform:translateY(0px);filter:saturate(1.02)}
+.atlasClickCard:focus-visible{outline:2px solid color-mix(in srgb, var(--sky) 65%, transparent);outline-offset:4px;border-radius:22px}
+
+.atlasNextStep{transition:transform 180ms ease, box-shadow 180ms ease, border-color 180ms ease}
+.atlasNextStep:hover{transform:translateY(-1px);box-shadow:var(--sh2);border-color:color-mix(in srgb, var(--bdr2) 70%, var(--teal-lt))}
+.atlasNextStep:active{transform:translateY(0px)}
+.atlasNextStep:focus-visible{outline:2px solid color-mix(in srgb, var(--teal) 50%, transparent);outline-offset:3px}
+
 .animIn{animation:atlas-in 420ms cubic-bezier(.2,.9,.2,1) both}
 @keyframes atlas-in{from{opacity:0;transform:translateY(8px)}to{opacity:1;transform:translateY(0)}}
 @media (prefers-reduced-motion: reduce){

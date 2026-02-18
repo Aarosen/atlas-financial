@@ -1,6 +1,101 @@
-import type { KeyboardEvent as ReactKeyboardEvent, RefObject } from 'react';
+import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
 import type { ChatMessage } from '@/lib/state/types';
 import { TopBar } from '@/components/TopBar';
+
+function renderMessageText(text: string): ReactNode {
+  const t = String(text || '').replace(/\r\n/g, '\n');
+  const lines = t.split('\n');
+
+  const blocks: Array<{ kind: 'p' | 'ul' | 'ol'; lines: string[] }> = [];
+  let cur: { kind: 'p' | 'ul' | 'ol'; lines: string[] } | null = null;
+
+  const flush = () => {
+    if (!cur) return;
+    if (cur.kind === 'p') {
+      const joined = cur.lines.join('\n').trim();
+      if (joined) blocks.push({ kind: 'p', lines: [joined] });
+    } else {
+      const items = cur.lines.map((x) => x.trim()).filter(Boolean);
+      if (items.length) blocks.push({ kind: cur.kind, lines: items });
+    }
+    cur = null;
+  };
+
+  const isUl = (s: string) => /^\s*[-*]\s+/.test(s);
+  const isOl = (s: string) => /^\s*(\d+)[.)]\s+/.test(s);
+  const stripUl = (s: string) => s.replace(/^\s*[-*]\s+/, '');
+  const stripOl = (s: string) => s.replace(/^\s*(\d+)[.)]\s+/, '');
+
+  for (const ln of lines) {
+    const line = ln ?? '';
+    const blank = line.trim().length === 0;
+    if (blank) {
+      flush();
+      continue;
+    }
+
+    if (isUl(line)) {
+      const item = stripUl(line);
+      if (!cur || cur.kind !== 'ul') {
+        flush();
+        cur = { kind: 'ul', lines: [] };
+      }
+      cur.lines.push(item);
+      continue;
+    }
+
+    if (isOl(line)) {
+      const item = stripOl(line);
+      if (!cur || cur.kind !== 'ol') {
+        flush();
+        cur = { kind: 'ol', lines: [] };
+      }
+      cur.lines.push(item);
+      continue;
+    }
+
+    if (!cur || cur.kind !== 'p') {
+      flush();
+      cur = { kind: 'p', lines: [] };
+    }
+    cur.lines.push(line);
+  }
+  flush();
+
+  if (blocks.length === 0) return null;
+
+  return (
+    <div style={{ display: 'grid', gap: 10 }}>
+      {blocks.map((b, i) => {
+        if (b.kind === 'p') {
+          return (
+            <div key={i} style={{ whiteSpace: 'pre-wrap' }}>
+              {b.lines[0]}
+            </div>
+          );
+        }
+
+        if (b.kind === 'ul') {
+          return (
+            <ul key={i} style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
+              {b.lines.map((it, j) => (
+                <li key={j}>{it}</li>
+              ))}
+            </ul>
+          );
+        }
+
+        return (
+          <ol key={i} style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
+            {b.lines.map((it, j) => (
+              <li key={j}>{it}</li>
+            ))}
+          </ol>
+        );
+      })}
+    </div>
+  );
+}
 
 export function ConversationScreen({
   theme,
@@ -14,6 +109,8 @@ export function ConversationScreen({
   onKeyDown,
   onSend,
   onEditLastUserMessage,
+  nextStepHint,
+  onNextStep,
   botRef,
   voiceSupported,
   onVoiceStart,
@@ -34,6 +131,8 @@ export function ConversationScreen({
   onKeyDown: (e: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
   onSend: () => void;
   onEditLastUserMessage?: () => void;
+  nextStepHint?: string | null;
+  onNextStep?: () => void;
   botRef: RefObject<HTMLDivElement | null>;
   voiceSupported?: boolean;
   onVoiceStart?: () => void;
@@ -62,7 +161,6 @@ export function ConversationScreen({
                 onClick={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? onEditLastUserMessage : undefined}
                 style={{
                   maxWidth: '78%',
-                  whiteSpace: 'pre-wrap',
                   lineHeight: 1.6,
                   fontSize: 'var(--fsBody)',
                   padding: '12px 14px',
@@ -76,7 +174,7 @@ export function ConversationScreen({
                 }}
                 title={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'Click to edit and resend' : undefined}
               >
-                {m.t}
+                {m.r === 'a' ? renderMessageText(m.t) : <div style={{ whiteSpace: 'pre-wrap' }}>{m.t}</div>}
               </div>
             </div>
           ))}
@@ -91,6 +189,36 @@ export function ConversationScreen({
 
       <div style={{ padding: '14px var(--padX)', paddingBottom: 'max(14px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', position: 'relative', width: '100%' }}>
+          {onNextStep && nextStepHint && (
+            <button
+              onClick={onNextStep}
+              disabled={busy}
+              className="atlasNextStep"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: '10px 12px',
+                borderRadius: 14,
+                border: '1px solid var(--bdr)',
+                background: 'var(--bg2)',
+                boxShadow: 'var(--sh1)',
+                color: 'var(--ink)',
+                cursor: busy ? 'not-allowed' : 'pointer',
+                marginBottom: 10,
+              }}
+              aria-label="Next step"
+              title="Next step"
+            >
+              <div style={{ display: 'grid', gap: 2, textAlign: 'left' }}>
+                <div style={{ fontWeight: 950, fontSize: 12, letterSpacing: '0.06em', color: 'var(--ink2)' }}>NEXT STEP</div>
+                <div style={{ fontWeight: 850, fontSize: 13, lineHeight: 1.35 }}>{nextStepHint}</div>
+              </div>
+              <div style={{ fontWeight: 950, color: 'var(--ink2)' }}>→</div>
+            </button>
+          )}
           <textarea
             value={inp}
             onChange={(e) => onChangeInp(e.target.value)}

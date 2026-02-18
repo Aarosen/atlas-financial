@@ -1,3 +1,4 @@
+import type { ReactNode } from 'react';
 import type { FinancialState, Strategy } from '@/lib/state/types';
 import { Card } from '@/components/Card';
 import { GhostBtn, PrimaryBtn } from '@/components/Buttons';
@@ -29,6 +30,29 @@ export function DashboardScreen({
   fp: (n: number) => string;
 }) {
   const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
+
+  const explain = (metric: string) => {
+    if (typeof window === 'undefined') return;
+    try {
+      window.localStorage.setItem('atlas:explainMetric', JSON.stringify({ metric, at: Date.now() }));
+    } catch {
+      // ignore
+    }
+  };
+
+  const ClickCard = ({ children, metric }: { children: ReactNode; metric: string }) => {
+    return (
+      <button
+        onClick={() => explain(metric)}
+        className="atlasClickCard"
+        aria-label={`Explain ${metric}`}
+        title="Explain"
+      >
+        {children}
+      </button>
+    );
+  };
+
   const focusMap: Record<string, string> = {
     stabilize_cashflow: 'Get to non-negative monthly cashflow',
     eliminate_high_interest_debt: 'Reduce compounding high-interest debt',
@@ -44,22 +68,34 @@ export function DashboardScreen({
       <div style={{ padding: 'var(--padY) var(--padX)' }}>
         <div style={{ maxWidth: 980, margin: '0 auto', display: 'grid', gap: 14, width: '100%' }}>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
-            <Card>
-              <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>NET EACH MONTH</div>
-              <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{fc(net)}</div>
-            </Card>
-            <Card>
-              <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>BUFFER</div>
-              <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{baseline.bufMo.toFixed(1)} mo</div>
-            </Card>
-            <Card>
-              <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>FUTURE ALLOCATION</div>
-              <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{fp(baseline.futPct)}</div>
-            </Card>
-            <Card>
-              <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>DEBT PRESSURE</div>
-              <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{baseline.dExp}</div>
-            </Card>
+            <ClickCard metric="net">
+              <Card>
+                <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>NET EACH MONTH</div>
+                <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{fc(net)}</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Click to explain</div>
+              </Card>
+            </ClickCard>
+            <ClickCard metric="buffer">
+              <Card>
+                <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>BUFFER</div>
+                <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{baseline.bufMo.toFixed(1)} mo</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Click to explain</div>
+              </Card>
+            </ClickCard>
+            <ClickCard metric="future">
+              <Card>
+                <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>FUTURE ALLOCATION</div>
+                <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{fp(baseline.futPct)}</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Click to explain</div>
+              </Card>
+            </ClickCard>
+            <ClickCard metric="debt">
+              <Card>
+                <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>DEBT PRESSURE</div>
+                <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{baseline.dExp}</div>
+                <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Click to explain</div>
+              </Card>
+            </ClickCard>
           </div>
           <Card>
             <div style={{ fontWeight: 950, fontSize: 18 }}>Focus</div>
