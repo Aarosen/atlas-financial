@@ -153,8 +153,7 @@ textarea:focus-visible{
 .atlasMsgAEnter{animation:atlas-msg-in var(--dur-ui) var(--ease-standard) both}
 @keyframes atlas-msg-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
 
-.atlasBubbleWrap{display:flex;align-items:center;gap:8px}
-.atlasEditAff{opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-standard);}
+.atlasEditAff{opacity:0;pointer-events:none;transition:opacity var(--dur-ui) var(--ease-standard);display:flex;align-items:center;justify-content:center;flex-shrink:0}
 .atlasBubbleWrap:hover .atlasEditAff{opacity:1;pointer-events:auto}
 .atlasEditAffShow{opacity:1;pointer-events:auto}
 
