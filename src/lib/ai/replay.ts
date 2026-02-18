@@ -1,5 +1,11 @@
 export type ReplayRole = 'user' | 'assistant';
 
+export type ReasoningTrace = {
+  decision: string;
+  facts: string[];
+  alternative?: string;
+};
+
 export type ReplayEntry = {
   id?: number;
   ts: number;
@@ -11,6 +17,7 @@ export type ReplayEntry = {
   tier?: string;
   emotionTag?: string;
   guardrail?: string;
+  trace?: ReasoningTrace;
 };
 
 export function createReplayEntry(args: Omit<ReplayEntry, 'ts'> & { ts?: number }) {

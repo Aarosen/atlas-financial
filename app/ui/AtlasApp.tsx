@@ -10,6 +10,8 @@ import { conversationReducer, createInitialConversationState, type Screen } from
 import { applyUserTurn, classifyInterruption, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
 import { decideNextAction } from '@/lib/ai/orchestrator';
 import { createReplayEntry, detectReplayEmotion, logReplayEntry } from '@/lib/ai/replay';
+import { detectLiteracyLevel, detectResponsePreference } from '@/lib/ai/personalization';
+import { buildReasoningTrace } from '@/lib/ai/trace';
 import { createVoice } from '@/lib/voice/voice';
 import { ConversationScreen, DashboardScreen, LandingScreen, PlanScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
 import { Button } from '@/components/Buttons';
@@ -47,6 +49,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [voiceListening, setVoiceListening] = useState(false);
   const [speaking, setSpeaking] = useState(false);
   const [replayEnabled, setReplayEnabled] = useState(true);
+  const [responsePref, setResponsePref] = useState<'short' | 'explain' | null>(null);
+  const [literacyLevel, setLiteracyLevel] = useState<'novice' | 'intermediate' | 'advanced' | null>(null);
   const voice = useMemo(
     () =>
       createVoice({
@@ -66,8 +70,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     if (fin.primaryGoal) parts.push(`Primary goal: ${fin.primaryGoal}.`);
     if (fin.riskTolerance) parts.push(`Risk tolerance: ${fin.riskTolerance}.`);
     if (fin.timeHorizonYears) parts.push(`Time horizon: ${fin.timeHorizonYears} years.`);
+    if (responsePref) parts.push(`Response preference: ${responsePref}.`);
+    if (literacyLevel) parts.push(`Financial literacy: ${literacyLevel}.`);
     return parts.join(' ');
-  }, []);
+  }, [literacyLevel, responsePref]);
 
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const [isMobile, setIsMobile] = useState(false);
@@ -272,6 +278,16 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         if (typeof p?.v === 'boolean') setReplayEnabled(p.v);
       })
       .catch(() => {});
+    db.get<{ v: 'short' | 'explain' }>('prefs', 'responsePref')
+      .then((p: { v: 'short' | 'explain' } | undefined) => {
+        if (p?.v) setResponsePref(p.v);
+      })
+      .catch(() => {});
+    db.get<{ v: 'novice' | 'intermediate' | 'advanced' }>('prefs', 'literacyLevel')
+      .then((p: { v: 'novice' | 'intermediate' | 'advanced' } | undefined) => {
+        if (p?.v) setLiteracyLevel(p.v);
+      })
+      .catch(() => {});
     db.get<{ v: string }>('prefs', 'memorySummary')
       .then((p: { v: string } | undefined) => {
         if (typeof p?.v === 'string' && p.v.trim()) {
@@ -370,6 +386,17 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
         void logReplayEntry({ enabled: replayEnabled, entry, set: db.set.bind(db) }).catch(() => {});
       };
 
+      const pref = detectResponsePreference(ut);
+      if (pref && pref !== responsePref) {
+        setResponsePref(pref);
+        void db.set('prefs', { k: 'responsePref', v: pref });
+      }
+      const literacy = detectLiteracyLevel(ut);
+      if (literacy && literacy !== literacyLevel) {
+        setLiteracyLevel(literacy);
+        void db.set('prefs', { k: 'literacyLevel', v: literacy });
+      }
+
       logReplay(createReplayEntry({ role: 'user', text: ut, kind, emotionTag: detectReplayEmotion(ut) }));
 
       const prevMsgs: ChatMessage[] = [...base.msgs, { r: 'u' as const, t: ut }];
@@ -457,6 +484,12 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
               kind: 'ask',
               questionKey: resumeQ.key,
               emotionTag: detectReplayEmotion(resumeQ.text),
+              trace: buildReasoningTrace({
+                decision: 'ask',
+                questionKey: resumeQ.key,
+                missingCount: missBefore.length,
+                answeredCount: Object.keys(base.answered || {}).length,
+              }),
             })
           );
           dispatch({ type: 'SEND_ASKED', text: resumeQ.text, questionKey: resumeQ.key });
@@ -523,6 +556,12 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
             kind: 'ask',
             questionKey: action.questionKey,
             emotionTag: detectReplayEmotion(action.text),
+            trace: buildReasoningTrace({
+              decision: 'ask',
+              questionKey: action.questionKey,
+              missingCount: miss.length,
+              answeredCount: Object.keys(answeredNext || {}).length,
+            }),
           })
         );
         dispatch({ type: 'SEND_ASKED', text: action.text, questionKey: action.questionKey });
