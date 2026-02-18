@@ -39,6 +39,7 @@ function mockExtractForUserText(userText: string) {
 }
 
 async function installApiMocks(page: Page) {
+  let extractFailOnce = true;
   await page.route('**/api/chat', async (route: Route) => {
     const req = route.request();
     if (req.method() !== 'POST') return route.fallback();
@@ -51,6 +52,17 @@ async function installApiMocks(page: Page) {
 
     if (body?.type === 'extract') {
       const userText = String(body?.messages?.[0]?.content || '');
+
+      // Reliability test: fail once to ensure Retry works.
+      if (extractFailOnce && userText.toLowerCase().includes('retrytest')) {
+        extractFailOnce = false;
+        return route.fulfill({
+          status: 502,
+          contentType: 'application/json',
+          body: JSON.stringify({ error: 'proxy_error_502' }),
+        });
+      }
+
       const fields = mockExtractForUserText(userText);
       return route.fulfill({
         status: 200,
@@ -121,6 +133,27 @@ test('2) interruption → resume', async ({ page }: { page: Page }) => {
   await input.press('Enter');
 
   await expect(page.getByText('Messages you type may be sent to our AI provider to generate responses, and your financial state is stored locally in your browser (IndexedDB) which you can delete anytime.')).toBeVisible();
+});
+
+test('6) retry recovers from temporary API error', async ({ page }: { page: Page }) => {
+  await installApiMocks(page);
+  await page.goto('/conversation');
+
+  const input = page.locator('textarea');
+
+  await input.fill('retrytest Income $4000/month.');
+  await input.press('Enter');
+
+  await expect(page.getByRole('button', { name: 'Retry' })).toBeVisible();
+  await expect(page.getByText('Connection issue — retry when you’re ready.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Retry' }).click();
+
+  const essentialsQ = page
+    .locator('div')
+    .filter({ hasText: /essentials.*month|month.*essentials/i })
+    .first();
+  await expect(essentialsQ).toBeVisible();
 });
 
 test('3) edit last message → replay', async ({ page }: { page: Page }) => {

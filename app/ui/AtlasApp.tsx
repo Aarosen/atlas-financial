@@ -261,6 +261,16 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
 
       const prevMsgs: ChatMessage[] = [...base.msgs, { r: 'u' as const, t: ut }];
       try {
+        const normalizeApiErr = (raw0: string) => {
+          const raw = String(raw0 || '').trim();
+          const t = raw.toLowerCase();
+          if (!t) return 'Connection issue — retry when you’re ready.';
+          if (t.includes('api not configured') || t.includes('anthropic_api_key')) return 'AI is not configured yet.';
+          if (t.includes('too many requests') || t.includes('429')) return 'AI is rate-limited right now. Try again in a moment.';
+          if (t.includes('proxy_error_') || t.includes('fetch') || t.includes('network') || t.includes('timeout')) return 'Connection issue — retry when you’re ready.';
+          return raw;
+        };
+
         const kind = classifyInterruption(ut);
         const missBefore = base.missing.length ? base.missing : missing(base.fin);
       const resumeQ = missBefore.length ? nextQuestionForMissing(missBefore[0], prevMsgs.length) : null;
@@ -360,7 +370,15 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
 
       const miss = computeMissing(uf, answeredNext);
 
-      dispatch({ type: 'SEND_EXTRACTED', finNext: uf, missingNext: miss, answeredNext, unknownNext, apiOk: ex.apiOk !== false, err: (ex as any).err });
+      dispatch({
+        type: 'SEND_EXTRACTED',
+        finNext: uf,
+        missingNext: miss,
+        answeredNext,
+        unknownNext,
+        apiOk: ex.apiOk !== false,
+        err: ex.apiOk === false ? normalizeApiErr(String((ex as any).err || '')) : null,
+      });
       await db.set('fin', { k: 'cur', ...uf, ts: Date.now() });
 
       if (miss.length === 0) {
@@ -380,7 +398,15 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
       const q = nextQuestionForMissing(miss[0], prevMsgs.length);
       dispatch({ type: 'SEND_ASKED', text: q.text, questionKey: q.key });
     } catch (e: any) {
-      dispatch({ type: 'SEND_FAILED', err: String(e?.message || 'send_failed') });
+      const raw = String(e?.message || 'send_failed');
+      const friendly = (() => {
+        const t = raw.toLowerCase();
+        if (t.includes('api not configured') || t.includes('anthropic_api_key')) return 'AI is not configured yet.';
+        if (t.includes('too many requests') || t.includes('429')) return 'AI is rate-limited right now. Try again in a moment.';
+        if (t.includes('proxy_error_') || t.includes('fetch') || t.includes('network') || t.includes('timeout')) return 'Connection issue — retry when you’re ready.';
+        return raw;
+      })();
+      dispatch({ type: 'SEND_FAILED', err: friendly });
     }
   },
     [claude, db, engine, missing]
@@ -407,6 +433,17 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
     },
     [st, voice, editingLast, doSend]
   );
+
+  const canRetry = !!st.apiErr && !st.busy && !!lastSendSnapshotRef.current && !!lastUserTextRef.current;
+
+  const retryLast = useCallback(() => {
+    if (!canRetry) return;
+    const snap = lastSendSnapshotRef.current;
+    const ut = lastUserTextRef.current;
+    if (!snap || !ut) return;
+    dispatch({ type: 'RESTORE', state: snap });
+    void doSend(snap, ut);
+  }, [canRetry, doSend]);
 
   useEffect(() => {
     voice.setOnTranscript((t) => {
@@ -440,6 +477,8 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
           onChangeInp={(v) => dispatch({ type: 'SET_INPUT', text: v })}
           onKeyDown={onKeyDown}
           onSend={() => void send()}
+          canRetry={canRetry}
+          onRetry={retryLast}
           onEditLastUserMessage={() => {
             if (st.busy) return;
             const lastUser = [...st.msgs].reverse().find((m) => m.r === 'u');

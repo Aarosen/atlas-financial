@@ -148,6 +148,18 @@ export async function POST(req: Request) {
     return jsonError(400, 'messages array is required');
   }
 
+  if (type === 'chat') {
+    if (!missing || !Array.isArray(missing) || missing.length === 0) {
+      return jsonError(400, 'missing array is required for chat');
+    }
+  }
+
+  if (type === 'answer' || type === 'answer_stream') {
+    if (!question || !String(question).trim()) {
+      return jsonError(400, 'question is required');
+    }
+  }
+
   const extractPrompt = `You are Atlas's financial data extraction engine.
 Your only job is to identify financial facts from conversational text and return them as structured JSON.
 

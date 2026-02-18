@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
 import type { ChatMessage } from '@/lib/state/types';
 import { TopBar } from '@/components/TopBar';
@@ -119,6 +120,8 @@ export function ConversationScreen({
   onStopSpeaking,
   streaming,
   onCancelStream,
+  canRetry,
+  onRetry,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -141,6 +144,8 @@ export function ConversationScreen({
   onStopSpeaking?: () => void;
   streaming?: boolean;
   onCancelStream?: () => void;
+  canRetry?: boolean;
+  onRetry?: () => void;
 }) {
   const lastUserIdx = (() => {
     for (let i = msgs.length - 1; i >= 0; i--) {
@@ -149,26 +154,109 @@ export function ConversationScreen({
     return -1;
   })();
 
+  const scRef = useRef<HTMLDivElement | null>(null);
+  const taRef = useRef<HTMLTextAreaElement | null>(null);
+  const [isNearBottom, setIsNearBottom] = useState(true);
+  const [inpFocused, setInpFocused] = useState(false);
+  const [isDesktop, setIsDesktop] = useState(false);
+
+  const scrollToBottom = () => {
+    try {
+      botRef.current?.scrollIntoView({ behavior: 'smooth' });
+    } catch {
+      // ignore
+    }
+  };
+
+  useEffect(() => {
+    const el = scRef.current;
+    if (!el) return;
+    const onScroll = () => {
+      const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
+      setIsNearBottom(dist < 120);
+    };
+    onScroll();
+    el.addEventListener('scroll', onScroll, { passive: true });
+    return () => el.removeEventListener('scroll', onScroll);
+  }, []);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const mq = window.matchMedia('(min-width: 720px)');
+    const onChange = () => setIsDesktop(!!mq.matches);
+    onChange();
+    try {
+      mq.addEventListener('change', onChange);
+      return () => mq.removeEventListener('change', onChange);
+    } catch {
+      // Safari fallback
+      mq.addListener(onChange);
+      return () => mq.removeListener(onChange);
+    }
+  }, []);
+
+  useEffect(() => {
+    const ta = taRef.current;
+    if (!ta) return;
+    ta.style.height = '0px';
+    ta.style.height = `${Math.min(ta.scrollHeight, 140)}px`;
+  }, [inp]);
+
+  useEffect(() => {
+    if (isNearBottom) scrollToBottom();
+  }, [isNearBottom, msgs.length, busy]);
+
+  const showJump = useMemo(() => !isNearBottom && msgs.length > 3, [isNearBottom, msgs.length]);
+  const lastMsgRole = msgs.length ? msgs[msgs.length - 1]?.r : undefined;
+  const jumpLabel = useMemo(() => {
+    if (!showJump) return '';
+    if (lastMsgRole === 'a') return 'New messages ↓';
+    return 'Jump to latest ↓';
+  }, [lastMsgRole, showJump]);
+
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
       <TopBar title="Conversation" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
 
-      <div style={{ flex: 1, overflowY: 'auto', padding: 'var(--padY) var(--padX)' }}>
+      <div ref={scRef} style={{ flex: 1, overflowY: 'auto', padding: 'var(--padY) var(--padX)' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
+          {showJump && (
+            <div style={{ position: 'sticky', top: 10, zIndex: 5, display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <button
+                onClick={scrollToBottom}
+                className="btn btnSecondary"
+                style={{ padding: '8px 12px', borderRadius: 999, fontWeight: 900, fontSize: 12, boxShadow: 'var(--sh1)' }}
+              >
+                {jumpLabel}
+              </button>
+            </div>
+          )}
           {msgs.map((m, i) => (
-            <div key={i} style={{ display: 'flex', justifyContent: m.r === 'u' ? 'flex-end' : 'flex-start', marginBottom: 14 }}>
+            <div
+              key={i}
+              style={{
+                display: 'flex',
+                justifyContent: m.r === 'u' ? 'flex-end' : 'flex-start',
+                marginBottom: i > 0 && msgs[i - 1]?.r === m.r ? 6 : 10,
+              }}
+            >
               <div
                 onClick={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? onEditLastUserMessage : undefined}
                 style={{
-                  maxWidth: '78%',
+                  maxWidth: '86%',
                   lineHeight: 1.6,
                   fontSize: 'var(--fsBody)',
-                  padding: '12px 14px',
+                  padding: '11px 13px',
                   borderRadius: m.r === 'u' ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
-                  background: m.r === 'u' ? 'linear-gradient(135deg,var(--teal),var(--sky))' : 'var(--card)',
+                  background: m.r === 'u' ? 'linear-gradient(135deg,var(--teal),var(--sky))' : 'var(--bg2)',
                   color: m.r === 'u' ? '#fff' : 'var(--ink)',
                   border: m.r === 'u' ? 'none' : '1px solid var(--bdr)',
-                  boxShadow: 'var(--sh1)',
+                  boxShadow:
+                    m.r === 'u'
+                      ? i === lastUserIdx && onEditLastUserMessage
+                        ? '0 0 0 2px color-mix(in srgb, var(--sky) 26%, transparent)'
+                        : 'none'
+                      : 'var(--sh1)',
                   cursor: m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'pointer' : 'default',
                   opacity: m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 0.98 : 1,
                 }}
@@ -180,7 +268,17 @@ export function ConversationScreen({
           ))}
           {busy && (
             <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
-              <div style={{ padding: '12px 14px', borderRadius: 18, border: '1px solid var(--bdr)', background: 'var(--card)', boxShadow: 'var(--sh1)', color: 'var(--ink2)' }}>Thinking…</div>
+              <div
+                style={{ padding: '12px 14px', borderRadius: 18, border: '1px solid var(--bdr)', background: 'var(--card)', boxShadow: 'var(--sh1)', color: 'var(--ink2)' }}
+                aria-label="Atlas is typing"
+                title="Atlas is typing"
+              >
+                <span className="atlasTyping" aria-hidden>
+                  <span className="atlasDot" />
+                  <span className="atlasDot" />
+                  <span className="atlasDot" />
+                </span>
+              </div>
             </div>
           )}
           <div ref={botRef} />
@@ -189,6 +287,46 @@ export function ConversationScreen({
 
       <div style={{ padding: '14px var(--padX)', paddingBottom: 'max(14px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', position: 'relative', width: '100%' }}>
+          {(apiErr || apiStatus === 'offline' || apiStatus === 'degraded' || apiStatus === 'unknown') && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <div
+                style={{
+                  maxWidth: 680,
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: 14,
+                  border: '1px solid var(--bdr)',
+                  background: 'var(--bg2)',
+                  boxShadow: 'var(--sh1)',
+                  color: 'var(--ink2)',
+                  fontSize: 13,
+                  lineHeight: 1.55,
+                }}
+              >
+                {apiErr
+                  ? apiErr
+                  : apiStatus === 'offline'
+                    ? 'AI is offline right now — Atlas will do its best in local mode. You can retry anytime.'
+                    : apiStatus === 'degraded'
+                      ? 'AI is a bit slow/unreliable at the moment — if a response fails, hit Retry.'
+                      : 'AI status is unknown — if anything feels off, hit Retry.'}
+              </div>
+            </div>
+          )}
+          {apiErr && canRetry && onRetry && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <button
+                onClick={onRetry}
+                disabled={busy}
+                className="btn btnSecondary"
+                style={{ padding: '8px 12px', borderRadius: 999, fontWeight: 950, fontSize: 12, boxShadow: 'var(--sh1)' }}
+                aria-label="Retry last message"
+                title="Retry"
+              >
+                Retry
+              </button>
+            </div>
+          )}
           {onNextStep && nextStepHint && (
             <button
               onClick={onNextStep}
@@ -220,13 +358,19 @@ export function ConversationScreen({
             </button>
           )}
           <textarea
+            ref={taRef}
             value={inp}
             onChange={(e) => onChangeInp(e.target.value)}
             onKeyDown={onKeyDown}
+            onFocus={() => setInpFocused(true)}
+            onBlur={() => setInpFocused(false)}
             placeholder="Tell Atlas anything…"
             rows={1}
             style={{ width: '100%', padding: '12px 50px 12px 14px', borderRadius: 14, border: '1.5px solid var(--bdr2)', background: 'var(--card)', outline: 'none', resize: 'none', color: 'var(--ink)', maxHeight: 140, overflowY: 'auto' }}
           />
+          {inpFocused && isDesktop && !busy && (
+            <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
+          )}
           {voiceListening && (
             <div style={{ position: 'absolute', left: 12, bottom: 44, fontSize: 12, color: 'var(--ink2)', background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 999, padding: '4px 10px', boxShadow: 'var(--sh1)' }}>Listening…</div>
           )}
