@@ -67,6 +67,7 @@ export function createDefaultFin(): FinancialState {
     lowInterestDebt: null,
     monthlyDebtPayments: 0,
     primaryGoal: 'stability',
+    secondaryGoal: undefined,
     riskTolerance: 'balanced',
     timeHorizonYears: 3,
   };

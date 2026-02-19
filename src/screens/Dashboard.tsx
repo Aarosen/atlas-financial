@@ -1,3 +1,4 @@
+import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { FinancialState, Strategy } from '@/lib/state/types';
 import { Card } from '@/components/Card';
@@ -17,6 +18,7 @@ export function DashboardScreen({
   onSettings,
   fc,
   fp,
+  getMetricExplainer,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -29,8 +31,11 @@ export function DashboardScreen({
   onSettings: () => void;
   fc: (n: number) => string;
   fp: (n: number) => string;
+  getMetricExplainer: (metric: string, fin: FinancialState, baseline: Strategy) => string;
 }) {
   const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
+  const [activeMetric, setActiveMetric] = useState<string | null>(null);
+  const [history, setHistory] = useState<Record<string, number[]> | null>(null);
   const completenessScore = (() => {
     const keys: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt', 'lowInterestDebt', 'primaryGoal'];
     const filled = keys.filter((k) => fin[k] !== null && fin[k] !== undefined && fin[k] !== 0).length;
@@ -43,13 +48,20 @@ export function DashboardScreen({
     debt: ['Debt balances', 'Debt payments'],
   };
 
-  const explain = (metric: string) => {
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     try {
-      window.localStorage.setItem('atlas:explainMetric', JSON.stringify({ metric, at: Date.now() }));
+      const raw = window.localStorage.getItem('atlas:metricHistory');
+      if (!raw) return;
+      const parsed = JSON.parse(raw);
+      if (parsed && typeof parsed === 'object') setHistory(parsed as Record<string, number[]>);
     } catch {
       // ignore
     }
+  }, []);
+
+  const explain = (metric: string) => {
+    setActiveMetric(metric);
   };
 
   const ClickCard = ({ children, metric }: { children: ReactNode; metric: string }) => {
@@ -75,6 +87,53 @@ export function DashboardScreen({
   const focus = focusMap[baseline.lever] || 'One clear improvement';
   const trendNote = 'Trends will appear as Atlas learns more about you.';
 
+  const trendFor = useMemo(() => {
+    const normalize = (vals?: number[]) => (Array.isArray(vals) && vals.length > 1 ? vals : null);
+    const historyMap = history || {};
+    return {
+      net: normalize(historyMap.net),
+      buffer: normalize(historyMap.buffer),
+      future: normalize(historyMap.future),
+      debt: normalize(historyMap.debt),
+    } as const;
+  }, [history]);
+
+  const chart = (metric: keyof typeof trendFor, higherIsBetter: boolean) => {
+    const vals = trendFor[metric];
+    if (!vals) {
+      return (
+        <div
+          style={{ marginTop: 10, height: 36, borderRadius: 12, border: '1px dashed var(--bdr)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--ink3)' }}
+        >
+          {trendNote}
+        </div>
+      );
+    }
+    const min = Math.min(...vals);
+    const max = Math.max(...vals);
+    const span = max - min || 1;
+    const points = vals.map((v, i) => {
+      const x = (i / (vals.length - 1)) * 100;
+      const y = 100 - ((v - min) / span) * 100;
+      return `${x},${y}`;
+    });
+    const delta = vals[vals.length - 1] - vals[0];
+    const improving = higherIsBetter ? delta >= 0 : delta <= 0;
+    const flat = Math.abs(delta) < span * 0.05;
+    const tone = flat ? 'var(--amber)' : improving ? 'var(--green)' : 'var(--rose)';
+    const label = `${metric} trend ${flat ? 'flat' : improving ? 'up' : 'down'}`;
+    return (
+      <div
+        style={{ marginTop: 10, height: 36, borderRadius: 12, border: '1px solid var(--bdr)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
+        aria-label={label}
+      >
+        <svg width="100%" height="100%" viewBox="0 0 100 100" role="img" aria-label={label}>
+          <polyline fill="none" stroke={tone} strokeWidth="4" strokeLinecap="round" strokeLinejoin="round" points={points.join(' ')} />
+        </svg>
+      </div>
+    );
+  };
+
   return (
     <ScreenWrap>
       <h1 className="srOnly">Dashboard</h1>
@@ -82,9 +141,12 @@ export function DashboardScreen({
       <PageContainer maxWidth={980} style={{ paddingTop: 'var(--padY)', paddingBottom: 'var(--padY)' }}>
         <Stack gap={14}>
           <Card>
-            <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>PROFILE CLARITY</div>
+            <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }} title="Based on how much we’ve learned so far.">PROFILE CLARITY</div>
             <div style={{ marginTop: 8, fontWeight: 950, fontSize: 20 }}>{completenessScore}%</div>
             <div style={{ marginTop: 6, color: 'var(--ink2)', lineHeight: 1.7 }}>As we keep talking, this picture gets sharper.</div>
+            {completenessScore < 70 && (
+              <div style={{ marginTop: 8, color: 'var(--ink3)', fontSize: 12 }}>Tell me more so I can refine this.</div>
+            )}
           </Card>
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
@@ -93,7 +155,7 @@ export function DashboardScreen({
                 <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>MONEY LEFT EACH MONTH</div>
                 <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{fc(net)}</div>
                 <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Explain • Based on: {basedOn.net.join(', ')}</div>
-                <div style={{ marginTop: 10, height: 36, borderRadius: 12, border: '1px dashed var(--bdr)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--ink3)' }}>{trendNote}</div>
+                {chart('net', true)}
               </Card>
             </ClickCard>
             <ClickCard metric="buffer">
@@ -101,7 +163,7 @@ export function DashboardScreen({
                 <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>EMERGENCY CUSHION</div>
                 <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{baseline.bufMo.toFixed(1)} mo</div>
                 <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Explain • Based on: {basedOn.buffer.join(', ')}</div>
-                <div style={{ marginTop: 10, height: 36, borderRadius: 12, border: '1px dashed var(--bdr)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--ink3)' }}>{trendNote}</div>
+                {chart('buffer', true)}
               </Card>
             </ClickCard>
             <ClickCard metric="future">
@@ -109,18 +171,26 @@ export function DashboardScreen({
                 <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>FUTURE SAVINGS</div>
                 <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{fp(baseline.futPct)}</div>
                 <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Explain • Based on: {basedOn.future.join(', ')}</div>
-                <div style={{ marginTop: 10, height: 36, borderRadius: 12, border: '1px dashed var(--bdr)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--ink3)' }}>{trendNote}</div>
+                {chart('future', true)}
               </Card>
             </ClickCard>
             <ClickCard metric="debt">
               <Card>
-                <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }}>DEBT LOAD</div>
+                <div style={{ color: 'var(--ink2)', fontWeight: 900, fontSize: 12, letterSpacing: '0.08em' }} title="Debt load is how heavy your monthly debt payments feel.">DEBT LOAD</div>
                 <div style={{ marginTop: 8, fontWeight: 980, fontSize: 26 }}>{baseline.dExp}</div>
                 <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>Explain • Based on: {basedOn.debt.join(', ')}</div>
-                <div style={{ marginTop: 10, height: 36, borderRadius: 12, border: '1px dashed var(--bdr)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 11, color: 'var(--ink3)' }}>{trendNote}</div>
+                {chart('debt', false)}
               </Card>
             </ClickCard>
           </div>
+          {activeMetric && (
+            <Card>
+              <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>PLAIN ENGLISH</div>
+              <div style={{ marginTop: 8, lineHeight: 1.7, whiteSpace: 'pre-wrap' }}>
+                {getMetricExplainer(activeMetric, fin, baseline)}
+              </div>
+            </Card>
+          )}
           <Card>
             <div style={{ fontWeight: 950, fontSize: 18 }}>Direction</div>
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>{focus}</div>

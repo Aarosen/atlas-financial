@@ -16,10 +16,11 @@ import { buildCheckinMessage, shouldShowCheckin } from '@/lib/ai/checkins';
 import { createFeedbackEntry, shouldPromptFeedback } from '@/lib/ai/feedback';
 import { createVoice } from '@/lib/voice/voice';
 import { ConversationScreen, DashboardScreen, LandingScreen, PlanScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
+import { buildMetricExplainer } from '@/lib/ui/metricExplainer';
 import { Button } from '@/components/Buttons';
 import { BarChart3, LayoutList, MessageSquare, Settings } from 'lucide-react';
 
-const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt', 'lowInterestDebt'];
+const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
 const defaultFin: FinancialState = createInitialConversationState('landing').fin;
 
@@ -124,86 +125,56 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   }, [db, st.pendingBlock, st.baseline, st.selectedLever, dispatch]);
 
   const metricExplainerText = useCallback(
-    (metric: string, fin: FinancialState, baseline: Strategy) => {
+    (metric: string, fin: FinancialState, baseline: Strategy) => buildMetricExplainer(metric, fin, baseline, { fc, fp }),
+    []
+  );
+
+  const nextStepContent = useCallback(
+    (fin: FinancialState, baseline: Strategy) => {
       const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
-
-      if (metric === 'net') {
-        return `Money left each month
-
-- What it is: the money left over after essentials and minimum debt payments.
-- Why it matters: it determines whether we’re building stability or drifting into debt.
-- Your number: ${fc(net)} / month.
-- What “good” looks like: >= ${fc(0)} is the first milestone; then we aim to grow the surplus.
-- How to improve it: lower essentials, reduce minimum debt payments over time, or increase income.
-
-One next step: tell me one category you can realistically cut by $50–$150 this week (rent, groceries, subscriptions, phone, insurance), and I’ll give you the exact play.`;
+      if (baseline.lever === 'stabilize_cashflow') {
+        return {
+          direction: 'Get to money left each month.',
+          action: 'Pick one bill or category to cut by $50–$150 this week (rent, groceries, subscriptions, phone, insurance).',
+          time: 'Today or this week.',
+        };
       }
-
-      if (metric === 'buffer') {
-        return `Emergency cushion
-
-- What it is: how many months you could cover essentials if income stopped.
-- Why it matters: it buys you time and prevents one surprise from turning into high-interest debt.
-- Your number: ${baseline.bufMo.toFixed(1)} months.
-- What “good” looks like: 1 month is relief, 3 months is stable, 6 months is very strong.
-- How to improve it: a small automatic transfer + reducing one leak in spending.
-
-One next step: pick a weekly auto-transfer amount you’d actually keep (even $10–$25). What number feels safe?`;
+      if (baseline.lever === 'eliminate_high_interest_debt') {
+        return {
+          direction: 'Reduce compounding interest.',
+          action: 'List your credit cards (name + balance + APR, rough is fine).',
+          time: 'Today.',
+        };
       }
-
-      if (metric === 'future') {
-        return `Future savings
-
-- What it is: the % of your income going toward your future (retirement/investing/sinking funds).
-- Why it matters: it’s the engine of long-term wealth — after cashflow is stable.
-- Your number: ${fp(baseline.futPct)}.
-- What “good” looks like: 10% is a start; 15% is strong for most people; higher if you’re catching up.
-- How to improve it: tiny % bumps (1–2%) and automations.
-
-One next step: do you have a 401(k) match or a Roth IRA option?`;
+      if (baseline.lever === 'build_emergency_buffer') {
+        return {
+          direction: 'Build your emergency cushion.',
+          action: 'Choose a weekly auto-transfer amount you can keep (even $10–$25).',
+          time: 'This week.',
+        };
       }
-
-      return `Debt load
-
-- What it is: a simple rating of how much your debt payments constrain your monthly flexibility.
-- Why it matters: high pressure makes every month fragile; low pressure gives you room to build.
-- Your number: ${baseline.dExp}.
-- What “good” looks like: Low (or trending lower over time).
-- How to improve it: prioritize high-interest balances, avoid new revolving debt, and renegotiate rates where possible.
-
-One next step: list your highest-interest debt (card name + balance + APR, rough is fine) and we’ll pick the best first target.`;
+      if (baseline.lever === 'increase_future_allocation') {
+        return {
+          direction: 'Grow future savings.',
+          action: 'Tell me if you have a 401(k) match or a Roth IRA option.',
+          time: 'Today.',
+        };
+      }
+      return {
+        direction: 'Tighten discretionary spend.',
+        action: 'Pick one category to shrink (dining, delivery, subscriptions, shopping).',
+        time: 'This week.',
+      };
     },
     []
   );
 
   const nextStepText = useCallback(
     (fin: FinancialState, baseline: Strategy) => {
-      const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
-      if (baseline.lever === 'stabilize_cashflow') {
-        return `Direction: Get to money left each month.
-Action: pick one bill or category to cut by $50–$150 this week (rent, groceries, subscriptions, phone, insurance).
-Time: today or this week.`;
-      }
-      if (baseline.lever === 'eliminate_high_interest_debt') {
-        return `Direction: Reduce compounding interest.
-Action: list your credit cards (name + balance + APR, rough is fine).
-Time: today.`;
-      }
-      if (baseline.lever === 'build_emergency_buffer') {
-        return `Direction: Build your emergency cushion.
-Action: choose a weekly auto-transfer amount you can keep (even $10–$25).
-Time: this week.`;
-      }
-      if (baseline.lever === 'increase_future_allocation') {
-        return `Direction: Grow future savings.
-Action: tell me if you have a 401(k) match or a Roth IRA option.
-Time: today.`;
-      }
-      return `Direction: Tighten discretionary spend.
-Action: pick one category to shrink (dining, delivery, subscriptions, shopping).
-Time: this week.`;
+      const next = nextStepContent(fin, baseline);
+      return `Direction: ${next.direction}\nAction: ${next.action}\nTime: ${next.time}`;
     },
-    []
+    [nextStepContent]
   );
 
   useEffect(() => {
@@ -705,6 +676,11 @@ Time: this week.`;
           onSend={() => void send()}
           canRetry={canRetry}
           onRetry={retryLast}
+          onQuickReply={(text) => {
+            dispatch({ type: 'SET_INPUT', text });
+            if (text.trim().endsWith(':')) return;
+            void send(text);
+          }}
           onEditLastUserMessage={() => {
             if (st.busy) return;
             const lastUser = [...st.msgs].reverse().find((m) => m.r === 'u');
@@ -714,6 +690,8 @@ Time: this week.`;
             dispatch({ type: 'SET_INPUT', text: t });
           }}
           nextStepHint={st.baseline && st.missing.length === 0 && !st.pendingBlock ? 'Continue with one step' : null}
+          nextStepContent={st.baseline && st.missing.length === 0 ? nextStepContent(st.fin, st.baseline) : null}
+          lastQuestionKey={st.lastQuestionKey}
           onNextStep={
             st.baseline && st.missing.length === 0
               ? () => {
@@ -809,6 +787,7 @@ Time: this week.`;
         onSettings={() => dispatch({ type: 'NAVIGATE', scr: 'settings' })}
         fc={fc}
         fp={fp}
+        getMetricExplainer={metricExplainerText}
       />
     );
 

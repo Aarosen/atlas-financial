@@ -123,7 +123,10 @@ export function ConversationScreen({
   onKeyDown,
   onSend,
   onEditLastUserMessage,
+  onQuickReply,
   nextStepHint,
+  nextStepContent,
+  lastQuestionKey,
   onNextStep,
   botRef,
   voiceSupported,
@@ -154,7 +157,10 @@ export function ConversationScreen({
   onKeyDown: (e: ReactKeyboardEvent<HTMLTextAreaElement>) => void;
   onSend: () => void;
   onEditLastUserMessage?: () => void;
+  onQuickReply?: (text: string) => void;
   nextStepHint?: string | null;
+  nextStepContent?: { direction: string; action: string; time: string } | null;
+  lastQuestionKey?: string | null;
   onNextStep?: () => void;
   botRef: RefObject<HTMLDivElement | null>;
   voiceSupported?: boolean;
@@ -258,6 +264,7 @@ export function ConversationScreen({
     ? Object.keys(baseline.explainability.inputsUsed).filter(Boolean)
     : ['Income', 'Essentials', 'Savings', 'Debt'];
   const showInlineNextStep = !!(onNextStep && nextStepHint && !pendingBlock);
+  const showGoalReplies = !pendingBlock && lastQuestionKey === 'primaryGoal' && !!onQuickReply;
 
   const startLongPress = (idx: number) => {
     if (isDesktop) return;
@@ -387,6 +394,26 @@ export function ConversationScreen({
               </div>
             </div>
           )}
+          {showGoalReplies && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+              <div style={{ maxWidth: '86%', width: '100%' }}>
+                <Card>
+                  <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>PICK A GOAL</div>
+                  <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>What are you aiming for right now?</div>
+                  <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {['Stability', 'Growth', 'Flexibility', 'Wealth building'].map((label) => (
+                      <Button key={label} onClick={() => onQuickReply?.(label)} variant="secondary" size="sm">
+                        {label}
+                      </Button>
+                    ))}
+                    <Button onClick={() => onQuickReply?.('Something else: ')} variant="secondary" size="sm">
+                      Something else
+                    </Button>
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
           {pendingBlock === 'confirm' && pendingFin && (
             <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
               <div style={{ maxWidth: '86%', width: '100%' }}>
@@ -436,7 +463,22 @@ export function ConversationScreen({
               <div style={{ maxWidth: '86%', width: '100%' }}>
                 <Card>
                   <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ONE NEXT STEP</div>
-                  <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>{nextStepHint || 'Confirm and we’ll turn this into a simple action.'}</div>
+                  {nextStepContent ? (
+                    <div style={{ marginTop: 10, display: 'grid', gap: 10 }}>
+                      {[
+                        { label: 'Direction', value: nextStepContent.direction },
+                        { label: 'Action', value: nextStepContent.action },
+                        { label: 'Time', value: nextStepContent.time },
+                      ].map((row) => (
+                        <div key={row.label} style={{ padding: '8px 10px', borderRadius: 12, border: '1px solid var(--bdr)', background: 'var(--bg2)' }}>
+                          <div style={{ fontWeight: 900, fontSize: 11, letterSpacing: '0.08em', color: 'var(--ink3)' }}>{row.label.toUpperCase()}</div>
+                          <div style={{ marginTop: 4, color: 'var(--ink2)', fontWeight: 800 }}>{row.value}</div>
+                        </div>
+                      ))}
+                    </div>
+                  ) : (
+                    <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>{nextStepHint || 'Confirm and we’ll turn this into a simple action.'}</div>
+                  )}
                   <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <Button onClick={onConfirmNextStep} variant="primary" size="sm" disabled={!onConfirmNextStep}>Confirm step</Button>
                     <Button onClick={onEditFin} variant="secondary" size="sm" disabled={!onEditFin}>Refine in Talk</Button>
@@ -451,7 +493,7 @@ export function ConversationScreen({
 
       <div style={{ padding: '14px var(--padX)', paddingBottom: 'max(14px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
-          {(apiErr || apiStatus === 'offline' || apiStatus === 'degraded' || apiStatus === 'unknown') && (
+          {(apiErr || apiStatus === 'offline' || apiStatus === 'degraded') && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
               <div
                 style={{

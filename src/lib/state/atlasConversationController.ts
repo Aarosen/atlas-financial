@@ -15,7 +15,7 @@ export type AtlasConversationState = {
   unknown: Partial<Record<keyof FinancialState, boolean>>;
 };
 
-const REQUIRED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt', 'lowInterestDebt', 'primaryGoal'];
+const REQUIRED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
 export function newSessionId() {
   return `sess_${Math.random().toString(36).slice(2)}_${Date.now()}`;
@@ -48,10 +48,11 @@ export function createInitialAtlasConversationState(args: {
 
 export function computeMissing(collected: FinancialState, answered: AtlasConversationState['answered']): Array<keyof FinancialState> {
   const isKnown = (k: keyof FinancialState) => {
-    if (answered[k] === true) return true;
     const v = collected[k] as any;
     if (k === 'monthlyIncome' || k === 'essentialExpenses') return typeof v === 'number' && v > 0;
-    if (k === 'totalSavings') return false;
+    if (k === 'totalSavings') return typeof v === 'number' && v >= 0 && (answered[k] === true || v > 0);
+    if (k === 'primaryGoal') return answered[k] === true;
+    if (answered[k] === true) return true;
     if (k === 'highInterestDebt' || k === 'lowInterestDebt') return v !== null;
     return v !== null && v !== undefined;
   };
@@ -140,6 +141,28 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
     }
   }
 
+  if (!dontKnow && effectiveQuestionKey === 'primaryGoal') {
+    const t = userText.toLowerCase();
+    const map = (text: string) => {
+      if (/stable|stability|secure|peace\s*of\s*mind/i.test(text)) return 'stability';
+      if (/wealth|retire|financial\s*independence|fire|passive/i.test(text)) return 'wealth_building';
+      if (/grow|invest|returns|portfolio/i.test(text)) return 'growth';
+      if (/flexib|freedom|liquid/i.test(text)) return 'flexibility';
+      return null;
+    };
+    const primary = map(t);
+    if (primary) {
+      (collected as any).primaryGoal = primary;
+      answered.primaryGoal = true;
+      if (unknown.primaryGoal) delete unknown.primaryGoal;
+    }
+    const secondaryMatch = t.split(/\band\b|\balso\b/i).map((s) => s.trim()).filter(Boolean);
+    if (secondaryMatch.length > 1) {
+      const secondary = secondaryMatch.slice(1).join(' and ').trim();
+      if (secondary) (collected as any).secondaryGoal = secondary;
+    }
+  }
+
   if (turn.extractedFields) {
     for (const [k0, v0] of Object.entries(turn.extractedFields)) {
       const k = k0 as keyof FinancialState;
@@ -153,7 +176,7 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
         if (k === 'totalSavings') {
           if (!(typeof v0 === 'number' && v0 >= 0)) return false;
           if (v0 > 0) return true;
-          return effectiveQuestionKey === 'totalSavings' || mentionsSavings;
+          return effectiveQuestionKey === 'totalSavings' || mentionsSavings || k === 'totalSavings';
         }
 
         if (k === 'highInterestDebt' || k === 'lowInterestDebt') {

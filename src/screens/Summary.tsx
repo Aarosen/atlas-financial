@@ -33,7 +33,13 @@ export function SummaryScreen({
     { l: 'Emergency cushion', v: `${baseline.bufMo.toFixed(1)} months`, ok: baseline.bufMo >= 3 },
     { l: 'Future savings %', v: fp(baseline.futPct), ok: baseline.futPct >= 0.15 },
     { l: 'Debt load', v: baseline.dExp, ok: baseline.dExp === 'Low' },
-    { l: 'Goal I’m hearing', v: (fin.primaryGoal || 'stability').replace('_', ' '), ok: true },
+    {
+      l: 'Goal I’m hearing',
+      v: fin.secondaryGoal
+        ? `${(fin.primaryGoal || 'stability').replace('_', ' ')} + ${fin.secondaryGoal}`
+        : (fin.primaryGoal || 'stability').replace('_', ' '),
+      ok: true,
+    },
   ];
 
   return (

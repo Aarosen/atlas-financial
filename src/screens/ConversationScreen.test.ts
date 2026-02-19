@@ -62,4 +62,33 @@ describe('ConversationScreen voice UI', () => {
     const labels = collectAriaLabelsFromTree(tr);
     expect(labels.includes('Voice input')).toBe(true);
   });
+
+  it('renders next step direction/action/time sections', () => {
+    let tr!: TestRenderer.ReactTestRenderer;
+    TestRenderer.act(() => {
+      tr = TestRenderer.create(
+        React.createElement(ConversationScreen as any, {
+          theme: 'light',
+          onToggleTheme: () => {},
+          apiErr: null,
+          apiStatus: 'online',
+          msgs: [],
+          busy: false,
+          pendingBlock: 'next',
+          nextStepContent: { direction: 'Direction text', action: 'Action text', time: 'Time text' },
+          inp: '',
+          onChangeInp: () => {},
+          onKeyDown: () => {},
+          onSend: () => {},
+          botRef: { current: null },
+          onConfirmNextStep: () => {},
+          onEditFin: () => {},
+        })
+      );
+    });
+    const text = JSON.stringify(tr.toJSON());
+    expect(text).toContain('DIRECTION');
+    expect(text).toContain('ACTION');
+    expect(text).toContain('TIME');
+  });
 });

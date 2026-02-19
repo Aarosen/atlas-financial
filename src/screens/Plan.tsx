@@ -42,6 +42,7 @@ export function PlanScreen({
             <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>FOCUS</div>
             <div style={{ marginTop: 6, fontWeight: 980, fontSize: 20 }}>{leverLabel}</div>
             <div style={{ marginTop: 10, color: 'var(--ink2)', lineHeight: 1.7 }}>The most leverage‑positive move for right now.</div>
+            <div style={{ marginTop: 8, color: 'var(--ink3)', fontSize: 12 }}>As we keep talking, this picture gets sharper.</div>
           </Card>
 
           <Card>

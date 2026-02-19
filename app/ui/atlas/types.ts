@@ -13,6 +13,7 @@ export type FinancialState = {
   lowInterestDebt: number | null;
   monthlyDebtPayments: number;
   primaryGoal: 'stability' | 'growth' | 'flexibility' | 'wealth_building';
+  secondaryGoal?: string;
   riskTolerance: 'cautious' | 'balanced' | 'growth';
   timeHorizonYears: number;
 };
