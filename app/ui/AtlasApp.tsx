@@ -436,12 +436,6 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         .filter((t) => t > 0);
       const learningStreak = computeLearningStreak(learningDates);
       const learningPrompt = learningStreak.days >= 2 ? `Learning streak: ${learningStreak.days} days. Keep it going.` : null;
-      const learnedEntries = await db.all('learned');
-      const learned = (learnedEntries as any[]).map((e) => String(e?.concept)).filter(Boolean);
-      const recommendations = recommendNextConcept({ learned, focus: st.fin.primaryGoal || 'stability' });
-      const recommendationText = recommendations.length
-        ? `Want to go one level deeper? We can cover: ${recommendations.join(', ')}.`
-        : null;
 
       const prevMsgs: ChatMessage[] = [...base.msgs, { r: 'u' as const, t: ut }];
       try {
@@ -643,7 +637,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         return;
       }
       if (action.type === 'ask') {
-        const preface = [actionFeedback, nudgeText, learningPrompt, recommendationText].filter(Boolean).join('\n\n');
+        const preface = [actionFeedback, nudgeText, learningPrompt].filter(Boolean).join('\n\n');
         const askText = preface ? `${preface}\n\n${action.text}` : action.text;
         logReplay(
           createReplayEntry({
