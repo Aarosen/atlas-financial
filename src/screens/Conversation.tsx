@@ -585,95 +585,97 @@ export function ConversationScreen({
               <div style={{ fontWeight: 950, color: 'var(--ink2)' }}>→</div>
             </button>
           )}
-          <div style={{ position: 'relative', width: '100%' }}>
-            <Textarea
-              ref={taRef}
-              value={inp}
-              onChange={(e) => onChangeInp(e.target.value)}
-              onKeyDown={onKeyDown}
-              onFocus={() => setInpFocused(true)}
-              onBlur={() => setInpFocused(false)}
-              placeholder="Tell Atlas anything…"
-              rows={1}
-              style={{ padding: '12px 58px 12px 14px', resize: 'none', maxHeight: 140, overflowY: 'auto' }}
-            />
-            {voiceListening && (
-              <div style={{ position: 'absolute', left: 12, bottom: 44, fontSize: 12, color: 'var(--ink2)', background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 999, padding: '4px 10px', boxShadow: 'var(--sh1)' }}>Listening…</div>
-            )}
-            {speaking && onStopSpeaking && (
-              <div style={{ position: 'absolute', right: voiceSupported && onVoiceStart ? 90 : 48, top: '50%', transform: 'translateY(-50%)' }}>
-                <Button
-                  onClick={onStopSpeaking}
-                  disabled={busy}
-                  variant="secondary"
-                  size="sm"
-                  aria-label="Stop speaking"
-                  title="Stop speaking"
-                >
-                  <Square size={16} aria-hidden />
-                  Stop
-                </Button>
-              </div>
-            )}
-            {streaming && onCancelStream && (
-              <div style={{ position: 'absolute', right: voiceSupported && onVoiceStart ? 90 : 48, top: '50%', transform: 'translateY(-50%)' }}>
-                <Button onClick={onCancelStream} variant="secondary" size="sm" aria-label="Cancel response" title="Cancel">
-                  Cancel
-                </Button>
-              </div>
-            )}
-            <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 8, alignItems: 'center' }}>
-              {showMic && (
-                <button
-                  onClick={onVoiceStart}
-                  disabled={busy}
-                  aria-label={voiceListening ? 'Voice input (listening)' : 'Voice input'}
-                  title="Voice input"
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    border: 'none',
-                    background: voiceListening ? 'var(--teal)' : 'var(--bg2)',
-                    color: voiceListening ? 'white' : 'var(--ink)',
-                    cursor: busy ? 'not-allowed' : 'pointer',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s ease',
-                    boxShadow: voiceListening ? 'var(--sh1)' : 'none',
-                    opacity: busy ? 0.5 : 1,
-                  }}
-                >
-                  <Mic size={20} aria-hidden />
-                </button>
-              )}
-              {showSend && (
-                <button
-                  onClick={onSend}
-                  disabled={!hasInput || busy}
-                  aria-label="Send message"
-                  title="Send"
-                  style={{
-                    width: 40,
-                    height: 40,
-                    borderRadius: 10,
-                    border: 'none',
-                    background: hasInput && !busy ? 'linear-gradient(135deg, var(--teal), var(--sky))' : 'var(--bg3)',
-                    color: hasInput && !busy ? 'white' : 'var(--ink3)',
-                    cursor: hasInput && !busy ? 'pointer' : 'not-allowed',
-                    display: 'flex',
-                    alignItems: 'center',
-                    justifyContent: 'center',
-                    transition: 'all 0.2s ease',
-                    boxShadow: hasInput && !busy ? 'var(--sh1)' : 'none',
-                    fontWeight: 600,
-                  }}
-                >
-                  <ArrowUp size={20} aria-hidden />
-                </button>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Textarea
+                ref={taRef}
+                value={inp}
+                onChange={(e) => onChangeInp(e.target.value)}
+                onKeyDown={onKeyDown}
+                onFocus={() => setInpFocused(true)}
+                onBlur={() => setInpFocused(false)}
+                placeholder="Tell Atlas anything…"
+                rows={1}
+                style={{ padding: '12px 14px', resize: 'none', maxHeight: 140, overflowY: 'auto', width: '100%' }}
+              />
+              {voiceListening && (
+                <div style={{ position: 'absolute', left: 12, bottom: 50, fontSize: 12, color: 'var(--ink2)', background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 999, padding: '4px 10px', boxShadow: 'var(--sh1)' }}>Listening…</div>
               )}
             </div>
+            {speaking && onStopSpeaking && (
+              <Button
+                onClick={onStopSpeaking}
+                disabled={busy}
+                variant="secondary"
+                size="sm"
+                aria-label="Stop speaking"
+                title="Stop speaking"
+              >
+                <Square size={16} aria-hidden />
+                Stop
+              </Button>
+            )}
+            {streaming && onCancelStream && (
+              <Button onClick={onCancelStream} variant="secondary" size="sm" aria-label="Cancel response" title="Cancel">
+                Cancel
+              </Button>
+            )}
+            {!speaking && !streaming && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+                {showMic && (
+                  <button
+                    onClick={onVoiceStart}
+                    disabled={busy}
+                    aria-label={voiceListening ? 'Voice input (listening)' : 'Voice input'}
+                    title="Voice input"
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      border: 'none',
+                      background: voiceListening ? 'var(--teal)' : 'var(--bg2)',
+                      color: voiceListening ? 'white' : 'var(--ink)',
+                      cursor: busy ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                      boxShadow: voiceListening ? 'var(--sh1)' : '0 1px 2px rgba(0,0,0,0.05)',
+                      opacity: busy ? 0.5 : 1,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Mic size={20} aria-hidden />
+                  </button>
+                )}
+                {showSend && (
+                  <button
+                    onClick={onSend}
+                    disabled={!hasInput || busy}
+                    aria-label="Send message"
+                    title="Send"
+                    style={{
+                      width: 44,
+                      height: 44,
+                      borderRadius: 12,
+                      border: 'none',
+                      background: hasInput && !busy ? 'linear-gradient(135deg, var(--teal), var(--sky))' : 'var(--bg3)',
+                      color: hasInput && !busy ? 'white' : 'var(--ink3)',
+                      cursor: hasInput && !busy ? 'pointer' : 'not-allowed',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                      boxShadow: hasInput && !busy ? 'var(--sh1)' : '0 1px 2px rgba(0,0,0,0.05)',
+                      fontWeight: 600,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ArrowUp size={20} aria-hidden />
+                  </button>
+                )}
+              </div>
+            )}
           </div>
           {inpFocused && isDesktop && !busy && (
             <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
