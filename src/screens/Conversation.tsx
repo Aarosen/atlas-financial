@@ -126,6 +126,7 @@ export function ConversationScreen({
   onQuickReply,
   nextStepHint,
   nextStepContent,
+  actionSuggestions,
   lastQuestionKey,
   onNextStep,
   botRef,
@@ -160,6 +161,7 @@ export function ConversationScreen({
   onQuickReply?: (text: string) => void;
   nextStepHint?: string | null;
   nextStepContent?: { direction: string; action: string; time: string } | null;
+  actionSuggestions?: Array<{ title: string; prompt: string }> | null;
   lastQuestionKey?: string | null;
   onNextStep?: () => void;
   botRef: RefObject<HTMLDivElement | null>;
@@ -265,6 +267,7 @@ export function ConversationScreen({
     : ['Income', 'Essentials', 'Savings', 'Debt'];
   const showInlineNextStep = !!(onNextStep && nextStepHint && !pendingBlock);
   const showGoalReplies = !pendingBlock && lastQuestionKey === 'primaryGoal' && !!onQuickReply;
+  const showActionSuggestions = !pendingBlock && !!actionSuggestions?.length && !!onQuickReply;
 
   const startLongPress = (idx: number) => {
     if (isDesktop) return;
@@ -391,6 +394,23 @@ export function ConversationScreen({
                   <span className="atlasDot" />
                   <span className="atlasDot" />
                 </span>
+              </div>
+            </div>
+          )}
+          {showActionSuggestions && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+              <div style={{ maxWidth: '86%', width: '100%' }}>
+                <Card>
+                  <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ACTION IDEAS</div>
+                  <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>Pick one small step to build momentum.</div>
+                  <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                    {actionSuggestions?.map((s) => (
+                      <Button key={s.title} onClick={() => onQuickReply?.(s.prompt)} variant="secondary" size="sm">
+                        {s.title}
+                      </Button>
+                    ))}
+                  </div>
+                </Card>
               </div>
             </div>
           )}

@@ -11,6 +11,9 @@ import { applyUserTurn, classifyInterruption, clarificationForMissing, metaRespo
 import { decideNextAction } from '@/lib/ai/orchestrator';
 import { createReplayEntry, detectReplayEmotion, logReplayEntry } from '@/lib/ai/replay';
 import { buildActionFeedback, detectAction, estimateActionImpact } from '@/lib/ai/actions';
+import { suggestActions } from '@/lib/ai/actionSuggestions';
+import { buildNudge } from '@/lib/ai/nudges';
+import { buildStreakMessage, computeActionStreak } from '@/lib/ai/streaks';
 import { detectLiteracyLevel, detectResponsePreference } from '@/lib/ai/personalization';
 import { buildReasoningTrace } from '@/lib/ai/trace';
 import { buildCheckinMessage, shouldShowCheckin } from '@/lib/ai/checkins';
@@ -396,13 +399,24 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
       const detectedAction = detectAction(ut);
       const actionImpact = estimateActionImpact(detectedAction);
-      const actionFeedback = buildActionFeedback(detectedAction, actionImpact);
+      let actionFeedback = buildActionFeedback(detectedAction, actionImpact);
       if (detectedAction) {
         await db.set('actions', {
           id: `act_${Date.now()}`,
           ...detectedAction,
           impact: actionImpact,
         });
+        const history = await db.all('actions');
+        const streak = computeActionStreak(history as any[]);
+        const streakMsg = buildStreakMessage(streak);
+        if (streakMsg) actionFeedback = [actionFeedback, streakMsg].filter(Boolean).join('\n\n');
+      }
+
+      let nudgeText: string | null = null;
+      if (!detectedAction) {
+        const history = await db.all('actions');
+        const last = (history as any[]).sort((a, b) => (b?.createdAt || 0) - (a?.createdAt || 0))[0];
+        nudgeText = buildNudge({ lastActionAt: last?.createdAt ?? null, primaryGoal: st.fin.primaryGoal });
       }
 
       const prevMsgs: ChatMessage[] = [...base.msgs, { r: 'u' as const, t: ut }];
@@ -594,7 +608,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         return;
       }
       if (action.type === 'ask') {
-        const askText = actionFeedback ? `${actionFeedback}\n\n${action.text}` : action.text;
+        const preface = [actionFeedback, nudgeText].filter(Boolean).join('\n\n');
+        const askText = preface ? `${preface}\n\n${action.text}` : action.text;
         logReplay(
           createReplayEntry({
             role: 'assistant',
@@ -715,6 +730,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           }}
           nextStepHint={st.baseline && st.missing.length === 0 && !st.pendingBlock ? 'Continue with one step' : null}
           nextStepContent={st.baseline && st.missing.length === 0 ? nextStepContent(st.fin, st.baseline) : null}
+          actionSuggestions={st.baseline && st.missing.length === 0 ? suggestActions({ fin: st.fin, baseline: st.baseline }) : null}
           lastQuestionKey={st.lastQuestionKey}
           onNextStep={
             st.baseline && st.missing.length === 0
