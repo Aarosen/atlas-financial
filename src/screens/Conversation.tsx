@@ -8,6 +8,7 @@ import { Button } from '@/components/Buttons';
 import { Card } from '@/components/Card';
 import { PageContainer } from '@/components/Layout';
 import { ArrowUp, Mic, Pencil, Square } from 'lucide-react';
+import { humanizeFieldList } from '@/lib/ui/fieldLabels';
 
 function renderMessageText(text: string): ReactNode {
   const t = String(text || '').replace(/\r\n/g, '\n');
@@ -263,8 +264,8 @@ export function ConversationScreen({
   const recommendedLever = baseline?.lever || selectedLever || 'stabilize_cashflow';
   const leverLabel = leverLabels[recommendedLever] || recommendedLever;
   const leverBasedOn = baseline?.explainability?.inputsUsed
-    ? Object.keys(baseline.explainability.inputsUsed).filter(Boolean)
-    : ['Income', 'Essentials', 'Savings', 'Debt'];
+    ? humanizeFieldList(Object.keys(baseline.explainability.inputsUsed).filter(Boolean))
+    : ['income', 'essentials', 'savings', 'debt'];
   const showInlineNextStep = !!(onNextStep && nextStepHint && !pendingBlock);
   const showGoalReplies = !pendingBlock && lastQuestionKey === 'primaryGoal' && !!onQuickReply;
   const showActionSuggestions = !pendingBlock && !!actionSuggestions?.length && !!onQuickReply;
@@ -468,7 +469,7 @@ export function ConversationScreen({
                   <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ATLAS RECOMMENDS</div>
                   <div style={{ marginTop: 8, fontWeight: 950, fontSize: 16 }}>{leverLabel}</div>
                   <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>
-                    Based on what I’m hearing so far: {leverBasedOn.join(', ')}.
+                    From what you've shared about your {leverBasedOn.join(', ')}, here's what I think makes sense.
                   </div>
                   <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <Button onClick={onConfirmNextStep} variant="primary" size="sm" disabled={!onConfirmNextStep}>Yes, use this lever</Button>
