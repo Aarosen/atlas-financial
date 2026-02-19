@@ -77,6 +77,9 @@ describe('DashboardScreen', () => {
     expect(text).toContain('FUTURE SAVINGS');
     expect(text).toContain('DEBT LOAD');
     expect(text).toContain('PROFILE CLARITY');
+    expect(text).toContain('KNOWLEDGE MAP');
+    expect(text).toContain('WHAT-IF PREVIEW');
+    expect(text).toContain('AUDIO LESSON');
   });
 
   it('shows early-session refinement callout when completeness is low', () => {

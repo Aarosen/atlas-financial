@@ -5,6 +5,10 @@ import { Card } from '@/components/Card';
 import { GhostBtn, PrimaryBtn } from '@/components/Buttons';
 import { TopBar, ScreenWrap } from '@/components/TopBar';
 import { PageContainer, Stack } from '@/components/Layout';
+import { conceptsForLever } from '@/lib/ai/conceptMap';
+import { simulateSavingsGrowth } from '@/lib/ai/scenarioSimulator';
+import { buildSparkline } from '@/lib/ai/visualExplainer';
+import { buildAudioLesson } from '@/lib/ai/audioLessons';
 
 export function DashboardScreen({
   theme,
@@ -86,6 +90,10 @@ export function DashboardScreen({
   };
   const focus = focusMap[baseline.lever] || 'One clear improvement';
   const trendNote = 'Trends will appear as Atlas learns more about you.';
+  const concepts = conceptsForLever(baseline.lever).slice(0, 4);
+  const scenario = simulateSavingsGrowth({ monthlyContribution: 50, months: 6, annualRate: 0.03 });
+  const spark = buildSparkline(scenario.map((p) => p.value));
+  const audioLesson = buildAudioLesson(`Quick lesson: ${focus}. We'll keep this simple and actionable.`);
 
   const trendFor = useMemo(() => {
     const normalize = (vals?: number[]) => (Array.isArray(vals) && vals.length > 1 ? vals : null);
@@ -198,9 +206,51 @@ export function DashboardScreen({
             <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <PrimaryBtn onClick={onTalk}>Refine in Talk</PrimaryBtn>
               <GhostBtn onClick={onStrategy}>How tiers work</GhostBtn>
-              <GhostBtn onClick={onSettings}>Settings</GhostBtn>
             </div>
           </Card>
+
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
+            <Card>
+              <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>KNOWLEDGE MAP</div>
+              <div style={{ marginTop: 8, fontWeight: 700 }}>Connected concepts</div>
+              <div style={{ marginTop: 8, display: 'flex', flexWrap: 'wrap', gap: 8 }}>
+                {concepts.map((c) => (
+                  <span key={c} style={{ padding: '6px 10px', borderRadius: 999, background: 'var(--bg2)', border: '1px solid var(--bdr)', fontSize: 12 }}>
+                    {c}
+                  </span>
+                ))}
+              </div>
+              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--ink3)' }}>These build on each other as you progress.</div>
+            </Card>
+
+            <Card>
+              <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>WHAT-IF PREVIEW</div>
+              <div style={{ marginTop: 8, fontWeight: 700 }}>Save $50/month</div>
+              <div style={{ marginTop: 8, fontSize: 12, color: 'var(--ink3)' }}>6-month projection (illustrative)</div>
+              <div style={{ marginTop: 10, height: 36, borderRadius: 12, border: '1px solid var(--bdr)', background: 'var(--bg2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="100%" height="100%" viewBox="0 0 100 100" role="img" aria-label="scenario sparkline">
+                  <polyline
+                    fill="none"
+                    stroke="var(--sky)"
+                    strokeWidth="4"
+                    strokeLinecap="round"
+                    strokeLinejoin="round"
+                    points={spark.map((p) => `${(p.x / Math.max(1, spark.length - 1)) * 100},${100 - p.y * 100}`).join(' ')}
+                  />
+                </svg>
+              </div>
+            </Card>
+
+            <Card>
+              <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>AUDIO LESSON</div>
+              <div style={{ marginTop: 8, fontWeight: 700 }}>Listen instead of read</div>
+              <div style={{ marginTop: 6, color: 'var(--ink3)', fontSize: 12 }}>~{audioLesson.estimatedDurationSec}s</div>
+              <div style={{ marginTop: 10, fontSize: 12, color: 'var(--ink2)', lineHeight: 1.6 }}>{audioLesson.text}</div>
+            </Card>
+          </div>
+          <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+            <GhostBtn onClick={onSettings}>Settings</GhostBtn>
+          </div>
         </Stack>
       </PageContainer>
     </ScreenWrap>
