@@ -6,6 +6,8 @@ import { getPlaybookResponse } from '@/lib/ai/playbooks';
 import { complianceResponse, detectComplianceRisk, fallbackAnswer, violatesGuardrails } from '@/lib/server/guardrails';
 import { buildAdvancedTopicContext } from '@/lib/ai/advancedTopics';
 import { detectComprehensionSignal } from '@/lib/ai/comprehension';
+import { culturallyRelevantExample } from '@/lib/ai/culturalExamples';
+import { detectLanguage } from '@/lib/ai/multiLanguage';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -343,6 +345,9 @@ WHAT ATLAS IS NOT:
   const agentContext = lastUserText
     ? `\n\nPRIMARY AGENT: ${routeAgentForText(lastUserText).label}. Use this domain expertise unless another agent is required.`
     : '';
+  const language = detectLanguage(lastUserText);
+  const languageContext = `\n\nLANGUAGE: ${language}. Use the simplest possible wording.`;
+  const exampleContext = `\n\nCULTURAL EXAMPLE: ${culturallyRelevantExample(lastUserText)}`;
   const advancedContext = buildAdvancedTopicContext((body as any)?.fin || {})
     ? `\n\nADVANCED TOPIC CONTEXT: ${buildAdvancedTopicContext((body as any)?.fin || {})}`
     : '';
@@ -354,7 +359,7 @@ WHAT ATLAS IS NOT:
   const emotionContext = `\n\nUSER EMOTION TAG: ${emotionTag}.`;
   const systemPrompt = type === 'extract'
     ? extractPrompt
-    : `${chatPrompt}${memoryContext}${emotionContext}${agentContext}${advancedContext}${comprehensionContext}`;
+    : `${chatPrompt}${memoryContext}${emotionContext}${agentContext}${advancedContext}${comprehensionContext}${languageContext}${exampleContext}`;
   const maxTokens =
     type === 'extract'
       ? 500
