@@ -14,6 +14,8 @@ import { buildActionFeedback, detectAction, estimateActionImpact } from '@/lib/a
 import { suggestActions } from '@/lib/ai/actionSuggestions';
 import { buildNudge } from '@/lib/ai/nudges';
 import { buildStreakMessage, computeActionStreak } from '@/lib/ai/streaks';
+import { computeLearningStreak } from '@/lib/ai/learningStreaks';
+import { recommendNextConcept } from '@/lib/ai/learningRecommendations';
 import { detectLiteracyLevel, detectResponsePreference } from '@/lib/ai/personalization';
 import { buildReasoningTrace } from '@/lib/ai/trace';
 import { buildCheckinMessage, shouldShowCheckin } from '@/lib/ai/checkins';
@@ -419,6 +421,19 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         nudgeText = buildNudge({ lastActionAt: last?.createdAt ?? null, primaryGoal: st.fin.primaryGoal });
       }
 
+      const learningHistory = await db.all('replay');
+      const learningDates = (learningHistory as any[])
+        .filter((e) => e?.role === 'assistant')
+        .map((e) => Number(e?.ts || e?.createdAt || 0))
+        .filter((t) => t > 0);
+      const learningStreak = computeLearningStreak(learningDates);
+      const learningPrompt = learningStreak.days >= 2 ? `Learning streak: ${learningStreak.days} days. Keep it going.` : null;
+      const learned = [] as string[];
+      const recommendations = recommendNextConcept({ learned, focus: st.fin.primaryGoal || 'stability' });
+      const recommendationText = recommendations.length
+        ? `Want to go one level deeper? We can cover: ${recommendations.join(', ')}.`
+        : null;
+
       const prevMsgs: ChatMessage[] = [...base.msgs, { r: 'u' as const, t: ut }];
       try {
         const normalizeApiErr = (raw0: string) => {
@@ -609,7 +624,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         return;
       }
       if (action.type === 'ask') {
-        const preface = [actionFeedback, nudgeText].filter(Boolean).join('\n\n');
+        const preface = [actionFeedback, nudgeText, learningPrompt, recommendationText].filter(Boolean).join('\n\n');
         const askText = preface ? `${preface}\n\n${action.text}` : action.text;
         logReplay(
           createReplayEntry({
