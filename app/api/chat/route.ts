@@ -9,6 +9,7 @@ import { detectComprehensionSignal } from '@/lib/ai/comprehension';
 import { culturallyRelevantExample } from '@/lib/ai/culturalExamples';
 import { detectLanguage } from '@/lib/ai/multiLanguage';
 import { trimPromptSections } from '@/lib/ai/promptTrim';
+import { normalizeSlang, type SupportedLanguage } from '@/lib/ai/slangMapper';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -244,6 +245,9 @@ export async function POST(req: Request) {
     }
   }
 
+  const detectedLang = detectLanguage(String(question || '')) as SupportedLanguage;
+  const normalizedQuestion = normalizeSlang(String(question || ''), detectedLang);
+
   const extractPrompt = `You are Atlas's financial data extraction engine.
 Your only job is to identify financial facts from conversational text and return them as structured JSON.
 
@@ -256,6 +260,7 @@ EXTRACTION RULES:
 - "Take-home" / "after tax" / "net" → use as monthlyIncome.
 - Value ranges ("$3,000–$3,500") → use the midpoint.
 - "k" or "thousand" suffix → multiply by 1000.
+- Understand casual/slang language: "broke" = no money, "stash" = savings, "gig" = side income, etc.
 
 FIELDS TO EXTRACT (omit any you cannot confidently extract):
 - monthlyIncome: number (monthly take-home / net income, in dollars)

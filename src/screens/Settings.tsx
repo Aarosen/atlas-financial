@@ -2,6 +2,8 @@ import { Card } from '@/components/Card';
 import { GhostBtn, PrimaryBtn } from '@/components/Buttons';
 import { TopBar, ScreenWrap } from '@/components/TopBar';
 import { PageContainer, Stack } from '@/components/Layout';
+import { LanguageSelector } from '@/components/LanguageSelector';
+import type { SupportedLanguage } from '@/lib/ai/slangMapper';
 
 export function SettingsScreen({
   theme,
@@ -19,6 +21,8 @@ export function SettingsScreen({
   onDeleteLocalData,
   onBackToDashboard,
   canBackToDashboard,
+  language,
+  onLanguageChange,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -35,6 +39,8 @@ export function SettingsScreen({
   onDeleteLocalData: () => void;
   onBackToDashboard: () => void;
   canBackToDashboard: boolean;
+  language: SupportedLanguage;
+  onLanguageChange: (lang: SupportedLanguage) => void;
 }) {
   return (
     <ScreenWrap>
@@ -46,6 +52,13 @@ export function SettingsScreen({
             <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <GhostBtn onClick={onThemeLight}>Light</GhostBtn>
               <GhostBtn onClick={onThemeDark}>Dark</GhostBtn>
+            </div>
+          </Card>
+
+          <Card>
+            <div style={{ fontWeight: 950, fontSize: 16 }}>Language</div>
+            <div style={{ marginTop: 12 }}>
+              <LanguageSelector currentLanguage={language} onLanguageChange={onLanguageChange} />
             </div>
           </Card>
           <Card>

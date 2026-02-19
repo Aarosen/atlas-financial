@@ -26,6 +26,7 @@ import { ConversationScreen, DashboardScreen, LandingScreen, PlanScreen, Setting
 import { buildMetricExplainer } from '@/lib/ui/metricExplainer';
 import { Button } from '@/components/Buttons';
 import { BarChart3, LayoutList, MessageSquare, Settings } from 'lucide-react';
+import type { SupportedLanguage } from '@/lib/ai/slangMapper';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -97,6 +98,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [speakReplies, setSpeakReplies] = useState(false);
   const [voiceAutoSend, setVoiceAutoSend] = useState(false);
   const [editingLast, setEditingLast] = useState(false);
+  const [language, setLanguage] = useState<SupportedLanguage>('en');
   const lastSendSnapshotRef = useRef<typeof st | null>(null);
   const lastUserTextRef = useRef<string | null>(null);
   const streamAbortRef = useRef<AbortController | null>(null);
@@ -289,6 +291,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         if (typeof p?.v === 'string' && p.v.trim()) {
           dispatch({ type: 'SET_MEMORY_SUMMARY', summary: p.v.trim() });
         }
+      })
+      .catch(() => {});
+    db.get<{ v: SupportedLanguage }>('prefs', 'language')
+      .then((p: { v: SupportedLanguage } | undefined) => {
+        if (p?.v && ['en', 'es', 'fr', 'zh'].includes(p.v)) setLanguage(p.v);
       })
       .catch(() => {});
   }, [db]);
@@ -939,6 +946,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       }}
       onBackToDashboard={() => dispatch({ type: 'NAVIGATE', scr: 'dashboard' })}
       canBackToDashboard={!!st.baseline}
+      language={language}
+      onLanguageChange={(lang: SupportedLanguage) => {
+        setLanguage(lang);
+        void db.set('prefs', { k: 'language', v: lang });
+      }}
     />
   );
 
