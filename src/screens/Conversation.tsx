@@ -595,7 +595,7 @@ export function ConversationScreen({
               onBlur={() => setInpFocused(false)}
               placeholder="Tell Atlas anything…"
               rows={1}
-              style={{ padding: `12px ${showMic ? 104 : 56}px 12px 14px`, resize: 'none', maxHeight: 140, overflowY: 'auto' }}
+              style={{ padding: '12px 58px 12px 14px', resize: 'none', maxHeight: 140, overflowY: 'auto' }}
             />
             {voiceListening && (
               <div style={{ position: 'absolute', left: 12, bottom: 44, fontSize: 12, color: 'var(--ink2)', background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 999, padding: '4px 10px', boxShadow: 'var(--sh1)' }}>Listening…</div>
@@ -622,31 +622,58 @@ export function ConversationScreen({
                 </Button>
               </div>
             )}
-            {showMic && (
-              <div style={{ position: 'absolute', right: 54, top: '50%', transform: 'translateY(-50%)' }}>
-                <IconButton
+            <div style={{ position: 'absolute', right: 10, top: '50%', transform: 'translateY(-50%)', display: 'flex', gap: 8, alignItems: 'center' }}>
+              {showMic && (
+                <button
                   onClick={onVoiceStart}
                   disabled={busy}
                   aria-label={voiceListening ? 'Voice input (listening)' : 'Voice input'}
                   title="Voice input"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    border: 'none',
+                    background: voiceListening ? 'var(--teal)' : 'var(--bg2)',
+                    color: voiceListening ? 'white' : 'var(--ink)',
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease',
+                    boxShadow: voiceListening ? 'var(--sh1)' : 'none',
+                    opacity: busy ? 0.5 : 1,
+                  }}
                 >
-                  <Mic size={18} aria-hidden />
-                </IconButton>
-              </div>
-            )}
-            {showSend && (
-              <div style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)' }}>
-                <IconButton
+                  <Mic size={20} aria-hidden />
+                </button>
+              )}
+              {showSend && (
+                <button
                   onClick={onSend}
                   disabled={!hasInput || busy}
-                  variant="primary"
                   aria-label="Send message"
                   title="Send"
+                  style={{
+                    width: 40,
+                    height: 40,
+                    borderRadius: 10,
+                    border: 'none',
+                    background: hasInput && !busy ? 'linear-gradient(135deg, var(--teal), var(--sky))' : 'var(--bg3)',
+                    color: hasInput && !busy ? 'white' : 'var(--ink3)',
+                    cursor: hasInput && !busy ? 'pointer' : 'not-allowed',
+                    display: 'flex',
+                    alignItems: 'center',
+                    justifyContent: 'center',
+                    transition: 'all 0.2s ease',
+                    boxShadow: hasInput && !busy ? 'var(--sh1)' : 'none',
+                    fontWeight: 600,
+                  }}
                 >
-                  <ArrowUp size={18} aria-hidden />
-                </IconButton>
-              </div>
-            )}
+                  <ArrowUp size={20} aria-hidden />
+                </button>
+              )}
+            </div>
           </div>
           {inpFocused && isDesktop && !busy && (
             <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
