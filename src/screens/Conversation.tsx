@@ -585,7 +585,7 @@ export function ConversationScreen({
               <div style={{ fontWeight: 950, color: 'var(--ink2)' }}>→</div>
             </button>
           )}
-          <div style={{ display: 'flex', gap: 10, alignItems: 'flex-end' }}>
+          <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
             <div style={{ position: 'relative', flex: 1 }}>
               <Textarea
                 ref={taRef}
@@ -596,7 +596,7 @@ export function ConversationScreen({
                 onBlur={() => setInpFocused(false)}
                 placeholder="Tell Atlas anything…"
                 rows={1}
-                style={{ padding: '12px 14px', resize: 'none', maxHeight: 140, overflowY: 'auto', width: '100%' }}
+                style={{ padding: '12px 14px', resize: 'none', maxHeight: 140, overflowY: 'auto', width: '100%', borderRadius: 14 }}
               />
               {voiceListening && (
                 <div style={{ position: 'absolute', left: 12, bottom: 50, fontSize: 12, color: 'var(--ink2)', background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 999, padding: '4px 10px', boxShadow: 'var(--sh1)' }}>Listening…</div>
@@ -621,7 +621,7 @@ export function ConversationScreen({
               </Button>
             )}
             {!speaking && !streaming && (
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
                 {showMic && (
                   <button
                     onClick={onVoiceStart}
@@ -630,7 +630,7 @@ export function ConversationScreen({
                     title="Voice input"
                     style={{
                       width: 44,
-                      height: 44,
+                      minWidth: 44,
                       borderRadius: 12,
                       border: 'none',
                       background: voiceListening ? 'var(--teal)' : 'var(--bg2)',
@@ -656,7 +656,7 @@ export function ConversationScreen({
                     title="Send"
                     style={{
                       width: 44,
-                      height: 44,
+                      minWidth: 44,
                       borderRadius: 12,
                       border: 'none',
                       background: hasInput && !busy ? 'linear-gradient(135deg, var(--teal), var(--sky))' : 'var(--bg3)',
