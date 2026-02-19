@@ -78,15 +78,16 @@ export class ClaudeClient {
     signal?: AbortSignal;
     mode?: 'short' | 'explain';
     memorySummary?: string | null;
+    fin?: Partial<FinancialState> | null;
   }): Promise<{ ok: boolean; canceled: boolean }> {
-    const { question, onDelta, signal, mode, memorySummary } = args;
+    const { question, onDelta, signal, mode, memorySummary, fin } = args;
     const slow = String(question || '').toLowerCase().includes('slowstream');
     const type = mode === 'explain' ? 'answer_explain_stream' : 'answer_stream';
     try {
       const r = await fetch(this.ep, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, messages: args.msgs, question, memorySummary }),
+        body: JSON.stringify({ type, messages: args.msgs, question, memorySummary, fin: fin ?? null }),
         signal,
       });
 
@@ -191,14 +192,20 @@ export class ClaudeClient {
   async answer(
     msgs: Array<{ role: 'user' | 'assistant'; content: string }>,
     question: string,
-    args?: { mode?: 'short' | 'explain'; memorySummary?: string | null }
+    args?: { mode?: 'short' | 'explain'; memorySummary?: string | null; fin?: Partial<FinancialState> | null }
   ) {
     try {
       const type = args?.mode === 'explain' ? 'answer_explain' : 'answer';
       const r = await fetch(this.ep, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, messages: msgs, question, memorySummary: args?.memorySummary ?? null }),
+        body: JSON.stringify({
+          type,
+          messages: msgs,
+          question,
+          memorySummary: args?.memorySummary ?? null,
+          fin: args?.fin ?? null,
+        }),
       });
       if (!r.ok) {
         const t = await r.text().catch(() => '');

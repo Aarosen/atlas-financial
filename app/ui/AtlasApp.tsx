@@ -466,6 +466,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           question: ut,
           mode: 'explain',
           memorySummary: st.memorySummary,
+          fin: st.fin,
           onDelta: (t) => {
             if (streamIdRef.current !== myStreamId) return;
             if (ctrl.signal.aborted) return;
