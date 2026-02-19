@@ -110,16 +110,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     dispatch({ type: 'SET_PENDING_BLOCK', block: null });
   }, [dispatch]);
 
-  const handleSelectLever = useCallback((lever: Strategy['lever']) => {
-    dispatch({ type: 'SET_SELECTED_LEVER', lever });
-  }, [dispatch]);
-
   const handleConfirmNextStep = useCallback(async () => {
     if (st.pendingBlock === 'lever') {
-      if (!st.baseline || !st.selectedLever) return;
-      const nextBaseline = { ...st.baseline, lever: st.selectedLever };
-      await db.set('strat', { k: 'baseline', ...nextBaseline });
-      dispatch({ type: 'HYDRATE_BASELINE', baseline: nextBaseline });
+      if (!st.baseline) return;
       dispatch({ type: 'SET_PENDING_BLOCK', block: 'next' });
       return;
     }
@@ -135,7 +128,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
 
       if (metric === 'net') {
-        return `Net each month (net cashflow)
+        return `Money left each month
 
 - What it is: the money left over after essentials and minimum debt payments.
 - Why it matters: it determines whether we’re building stability or drifting into debt.
@@ -147,7 +140,7 @@ One next step: tell me one category you can realistically cut by $50–$150 this
       }
 
       if (metric === 'buffer') {
-        return `Buffer (emergency runway)
+        return `Emergency cushion
 
 - What it is: how many months you could cover essentials if income stopped.
 - Why it matters: it buys you time and prevents one surprise from turning into high-interest debt.
@@ -159,7 +152,7 @@ One next step: pick a weekly auto-transfer amount you’d actually keep (even $1
       }
 
       if (metric === 'future') {
-        return `Future allocation
+        return `Future savings
 
 - What it is: the % of your income going toward your future (retirement/investing/sinking funds).
 - Why it matters: it’s the engine of long-term wealth — after cashflow is stable.
@@ -170,7 +163,7 @@ One next step: pick a weekly auto-transfer amount you’d actually keep (even $1
 One next step: do you have a 401(k) match or a Roth IRA option?`;
       }
 
-      return `Debt pressure
+      return `Debt load
 
 - What it is: a simple rating of how much your debt payments constrain your monthly flexibility.
 - Why it matters: high pressure makes every month fragile; low pressure gives you room to build.
@@ -187,28 +180,28 @@ One next step: list your highest-interest debt (card name + balance + APR, rough
     (fin: FinancialState, baseline: Strategy) => {
       const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
       if (baseline.lever === 'stabilize_cashflow') {
-        return `Dashboard’s open — let’s take one step.
-
-Your net each month is ${fc(net)}. One clean move: pick one bill or category we can cut by $50–$150 this week, and set a 10-minute timer to find the cheapest alternative. When you tell me the category (rent, groceries, subscriptions, phone, insurance), I’ll give you the exact play.`;
+        return `Direction: Get to money left each month.
+Action: pick one bill or category to cut by $50–$150 this week (rent, groceries, subscriptions, phone, insurance).
+Time: today or this week.`;
       }
       if (baseline.lever === 'eliminate_high_interest_debt') {
-        return `Dashboard’s open — one step.
-
-The fastest win is to stop interest from compounding: list your credit cards (name + balance + APR, rough is fine). Then we’ll choose one card to target first and I’ll tell you exactly what to pay and what to keep as minimums.`;
+        return `Direction: Reduce compounding interest.
+Action: list your credit cards (name + balance + APR, rough is fine).
+Time: today.`;
       }
       if (baseline.lever === 'build_emergency_buffer') {
-        return `Dashboard’s open — one step.
-
-Let’s start your buffer with something automatic: choose a weekly auto-transfer amount that won’t break anything (even $10–$25). Tell me a number you’d actually keep, and we’ll set a target date for your first $500.`;
+        return `Direction: Build your emergency cushion.
+Action: choose a weekly auto-transfer amount you can keep (even $10–$25).
+Time: this week.`;
       }
       if (baseline.lever === 'increase_future_allocation') {
-        return `Dashboard’s open — one step.
-
-We’ll raise your “future allocation” without pain: tell me whether you have a 401(k) match or Roth IRA option. Then we’ll pick a small bump (1%–2%) and I’ll translate it into dollars per paycheck.`;
+        return `Direction: Grow future savings.
+Action: tell me if you have a 401(k) match or a Roth IRA option.
+Time: today.`;
       }
-      return `Dashboard’s open — one step.
-
-Pick one discretionary category you want to shrink (dining, delivery, subscriptions, shopping). I’ll help you set a simple rule for the next 7 days that actually sticks.`;
+      return `Direction: Tighten discretionary spend.
+Action: pick one category to shrink (dining, delivery, subscriptions, shopping).
+Time: this week.`;
     },
     []
   );
@@ -702,9 +695,9 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
           pendingBlock={st.pendingBlock}
           pendingFin={st.pendingFin}
           selectedLever={st.selectedLever}
+          baseline={st.baseline}
           onConfirmFin={handleConfirmFin}
           onEditFin={handleEditFin}
-          onSelectLever={handleSelectLever}
           onConfirmNextStep={handleConfirmNextStep}
           inp={st.inp}
           onChangeInp={(v) => dispatch({ type: 'SET_INPUT', text: v })}
@@ -720,7 +713,7 @@ Pick one discretionary category you want to shrink (dining, delivery, subscripti
             setEditingLast(true);
             dispatch({ type: 'SET_INPUT', text: t });
           }}
-          nextStepHint={st.baseline && st.missing.length === 0 ? 'Continue with one step' : null}
+          nextStepHint={st.baseline && st.missing.length === 0 && !st.pendingBlock ? 'Continue with one step' : null}
           onNextStep={
             st.baseline && st.missing.length === 0
               ? () => {

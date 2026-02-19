@@ -66,13 +66,13 @@ export class StrategyEngine {
         suggestedAmount: Math.max(25, Math.round(Math.max(0, futAmt) * 0.5)),
       },
       build_emergency_buffer: {
-        title: 'Build an emergency buffer',
+        title: 'Build an emergency cushion',
         prompt: 'What amount can you auto-save monthly until you reach 3 months of essentials?',
         suggestedAmount: Math.max(25, Math.round(Math.max(0, futAmt) * 0.4)),
       },
       increase_future_allocation: {
-        title: 'Increase future allocation',
-        prompt: 'What is one recurring cost you can trim to lift your future allocation toward 15%?',
+        title: 'Grow future savings',
+        prompt: 'What is one recurring cost you can trim to lift your future savings toward 15%?',
         suggestedAmount: Math.max(25, Math.round(Math.max(0, inc * 0.15 - futAmt))),
       },
       optimize_discretionary_spend: {
@@ -91,14 +91,14 @@ export class StrategyEngine {
       },
       {
         key: 'compute_buffer',
-        title: 'Compute emergency buffer',
+        title: 'Compute emergency cushion',
         detail: 'Buffer months = total savings / essential expenses',
         data: { totalSavings: sav, essentialExpenses: ess, bufMo: Number(bufMo.toFixed(2)) },
       },
       {
         key: 'compute_future',
-        title: 'Compute future allocation',
-        detail: 'Future allocation uses remaining net after discretionary estimate',
+        title: 'Compute future savings',
+        detail: 'Future savings uses remaining net after discretionary estimate',
         data: { disc: Number(disc.toFixed(2)), futAmt: Number(futAmt.toFixed(2)), futPct: Number(futPct.toFixed(4)) },
       },
       {

@@ -15,7 +15,7 @@ export type AtlasConversationState = {
   unknown: Partial<Record<keyof FinancialState, boolean>>;
 };
 
-const REQUIRED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt', 'lowInterestDebt'];
+const REQUIRED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt', 'lowInterestDebt', 'primaryGoal'];
 
 export function newSessionId() {
   return `sess_${Math.random().toString(36).slice(2)}_${Date.now()}`;
@@ -221,6 +221,11 @@ export function nextQuestionForMissing(
       withWhy('Do you have any other debt like student loans, car loans, or a mortgage — roughly how much total?', 'It helps us plan without overcommitting.'),
       withWhy('Any lower-interest loans we should account for — roughly what’s the total?', 'It rounds out your full picture.'),
     ],
+    primaryGoal: [
+      withWhy('What matters most right now — stability, growth, flexibility, or building wealth?', 'Your goal shapes the next step we choose.'),
+      withWhy('Which goal feels most urgent: stability, growth, flexibility, or wealth building?', 'It tells me how to prioritize your plan.'),
+      withWhy('If Atlas could help with one outcome right now, what would it be?', 'This anchors the advice to your reality.'),
+    ],
   };
 
   const v = variants[k];
@@ -236,6 +241,7 @@ export function clarificationForMissing(k: keyof FinancialState) {
     totalSavings: 'About how much do you have in savings/cash? Round numbers are great.',
     highInterestDebt: 'Do you have any credit card or high-interest debt, and roughly how much?',
     lowInterestDebt: 'Any other loans (student, car, mortgage) — roughly how much total?',
+    primaryGoal: 'What goal should I optimize for first — stability, growth, flexibility, or wealth building?',
   };
   return base[k] || 'Could you share a rough number? Even a ballpark helps.';
 }

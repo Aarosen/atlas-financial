@@ -27,13 +27,13 @@ export function TierRevealScreen({
 }) {
   const t = tc(baseline.tier);
   const leverLabels: Record<string, string> = {
-    stabilize_cashflow: 'Stabilise your cashflow',
-    eliminate_high_interest_debt: 'Tackle high-interest debt',
-    build_emergency_buffer: 'Build your emergency buffer',
-    increase_future_allocation: 'Grow your future allocation',
-    optimize_discretionary_spend: 'Optimise one spending category',
+    stabilize_cashflow: 'Stabilize cashflow',
+    eliminate_high_interest_debt: 'Lower high-interest debt',
+    build_emergency_buffer: 'Build an emergency cushion',
+    increase_future_allocation: 'Grow future savings',
+    optimize_discretionary_spend: 'Tighten one spending category',
   };
-  const basedOn = ['Monthly income', 'Essentials', 'Savings', 'Debt balances'];
+  const basedOn = ['Income', 'Essential costs', 'Savings', 'Debt balances', 'Your goal'];
 
   return (
     <ScreenWrap>
@@ -45,21 +45,21 @@ export function TierRevealScreen({
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.6 }}>{t.desc}</div>
             <div style={{ marginTop: 14, display: 'grid', gap: 10 }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ color: 'var(--ink2)', fontWeight: 800 }}>Emergency buffer</div>
+                <div style={{ color: 'var(--ink2)', fontWeight: 800 }}>Emergency cushion</div>
                 <div style={{ fontWeight: 950 }}>{baseline.bufMo.toFixed(1)} months</div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ color: 'var(--ink2)', fontWeight: 800 }}>Future allocation</div>
+                <div style={{ color: 'var(--ink2)', fontWeight: 800 }}>Future savings</div>
                 <div style={{ fontWeight: 950 }}>{fp(baseline.futPct)}</div>
               </div>
               <div style={{ display: 'flex', justifyContent: 'space-between', gap: 10, flexWrap: 'wrap' }}>
-                <div style={{ color: 'var(--ink2)', fontWeight: 800 }}>Debt pressure</div>
+                <div style={{ color: 'var(--ink2)', fontWeight: 800 }}>Debt load</div>
                 <div style={{ fontWeight: 950 }}>{baseline.dExp}</div>
               </div>
             </div>
           </Card>
           <Card>
-            <div style={{ fontWeight: 950, fontSize: 16 }}>Your best next lever</div>
+            <div style={{ fontWeight: 950, fontSize: 16 }}>What I’ll focus on first</div>
             <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.6 }}>{leverLabels[baseline.lever] || baseline.lever}</div>
             <div style={{ marginTop: 6, color: 'var(--ink3)', fontSize: 12 }}>Based on: {basedOn.join(', ')}</div>
             <div style={{ marginTop: 14, display: 'flex', gap: 10, flexWrap: 'wrap' }}>

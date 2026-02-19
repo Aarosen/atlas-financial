@@ -33,7 +33,7 @@ export default function Landing() {
               </ButtonLink>
             </Inline>
 
-            <Inline style={{ marginTop: 18, color: 'var(--ink2)', fontSize: 13, fontWeight: 700 }} gap={14}>
+            <Inline style={{ marginTop: 18, color: 'var(--ink)', fontSize: 13, fontWeight: 700 }} gap={14}>
               <Inline gap={8} wrap={false}>
                 <Lock size={16} aria-hidden />
                 No bank sync

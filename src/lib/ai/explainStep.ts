@@ -20,13 +20,13 @@ export function explainNextStep(lever: string): StepExplanation {
       riskIfSkipped: 'Interest compounds, erasing progress on savings and future goals.',
     },
     build_emergency_buffer: {
-      step: 'Build an emergency buffer',
-      whyThisStep: "A buffer protects you from unexpected costs turning into debt. It's your financial safety net.",
+      step: 'Build an emergency cushion',
+      whyThisStep: "A cushion protects you from unexpected costs turning into debt. It's your financial safety net.",
       expectedOutcome: '3-6 months of essentials in savings.',
       riskIfSkipped: 'One surprise expense can force you back into debt.',
     },
     increase_future_allocation: {
-      step: 'Increase future allocation',
+      step: 'Grow future savings',
       whyThisStep: 'Once stable, directing more toward long-term goals (retirement, investing) compounds your wealth.',
       expectedOutcome: '15%+ of income going toward future goals.',
       riskIfSkipped: "You'll miss years of compound growth.",

@@ -35,6 +35,10 @@ function mockExtractForUserText(userText: string) {
     if (v !== null) fields.lowInterestDebt = v;
   }
 
+  if (Object.keys(fields).length > 0 && !('primaryGoal' in fields)) {
+    fields.primaryGoal = 'stability';
+  }
+
   return fields;
 }
 
@@ -119,14 +123,14 @@ test('1) happy path onboarding → tier reveal', async ({ page }, testInfo) => {
   await input.press('Enter');
 
   await page.getByRole('button', { name: 'Yes, looks right' }).click();
-  await page.getByRole('button', { name: 'Confirm lever' }).click();
+  await page.getByRole('button', { name: 'Yes, use this lever' }).click();
   await expect(page.getByRole('button', { name: 'Confirm step' })).toBeVisible();
   await page.getByRole('button', { name: 'Confirm step' }).click();
 
-  await expect(page.getByText('Here’s what I heard')).toBeVisible();
+  await expect(page.getByText('Here’s what I’m hearing so far')).toBeVisible();
   await expect(page.getByRole('button', { name: 'Show my tier →' })).toBeVisible();
   await page.getByRole('button', { name: 'Show my tier →' }).click();
-  await expect(page.getByText('Your best next lever')).toBeVisible();
+  await expect(page.getByText('What I’ll focus on first')).toBeVisible();
 });
 
 test('2) interruption → resume', async ({ page }, testInfo) => {
@@ -183,7 +187,7 @@ test('3) edit last message → replay', async ({ page }, testInfo) => {
   await input.press('Enter');
 
   await page.getByRole('button', { name: 'Yes, looks right' }).click();
-  await page.getByRole('button', { name: 'Confirm lever' }).click();
+  await page.getByRole('button', { name: 'Yes, use this lever' }).click();
   await expect(page.getByRole('button', { name: 'Confirm step' })).toBeVisible();
   await page.getByRole('button', { name: 'Confirm step' }).click();
 
@@ -202,7 +206,7 @@ test('3) edit last message → replay', async ({ page }, testInfo) => {
   await input.press('Enter');
 
   await page.getByRole('button', { name: 'Yes, looks right' }).click();
-  await page.getByRole('button', { name: 'Confirm lever' }).click();
+  await page.getByRole('button', { name: 'Yes, use this lever' }).click();
   await expect(page.getByRole('button', { name: 'Confirm step' })).toBeVisible();
   await page.getByRole('button', { name: 'Confirm step' }).click();
 

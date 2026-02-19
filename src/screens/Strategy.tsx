@@ -24,10 +24,10 @@ export function StrategyScreen({
   tc: (t: Strategy['tier']) => { name: string; desc: string };
 }) {
   const criteria: Record<Strategy['tier'], string[]> = {
-    Foundation: ['Monthly outflow ≥ inflow (negative cashflow)', 'Emergency buffer < 1 month'],
-    Stabilizing: ['Buffer between 1–3 months', 'High-interest debt > 2× monthly income'],
-    Strategic: ['Buffer between 3–6 months', 'Debt-to-income ratio > 30%'],
-    GrowthReady: ['Buffer ≥ 6 months', 'Debt-to-income ≤ 30%', 'Positive monthly cashflow'],
+    Foundation: ['Monthly outflow ≥ inflow (negative cashflow)', 'Emergency cushion < 1 month'],
+    Stabilizing: ['Cushion between 1–3 months', 'High-interest debt > 2× monthly income'],
+    Strategic: ['Cushion between 3–6 months', 'Debt-to-income ratio > 30%'],
+    GrowthReady: ['Cushion ≥ 6 months', 'Debt-to-income ≤ 30%', 'Positive monthly cashflow'],
   };
   const t = tc(baseline.tier);
   const ex = baseline.explainability;

@@ -8,7 +8,7 @@ async function createBaseline(page: any) {
     return route.fulfill({
       status: 200,
       contentType: 'application/json',
-      body: JSON.stringify({ fields: { monthlyIncome: 4000, essentialExpenses: 2500, totalSavings: 1000, highInterestDebt: 500, lowInterestDebt: 0 } }),
+      body: JSON.stringify({ fields: { monthlyIncome: 4000, essentialExpenses: 2500, totalSavings: 1000, highInterestDebt: 500, lowInterestDebt: 0, primaryGoal: 'stability' } }),
     });
   });
 
@@ -16,7 +16,7 @@ async function createBaseline(page: any) {
   await page.locator('textarea').fill('Income 4000, essentials 2500, savings 1000, debt 500.');
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: 'Yes, looks right' }).click();
-  await page.getByRole('button', { name: 'Confirm lever' }).click();
+  await page.getByRole('button', { name: 'Yes, use this lever' }).click();
   await page.getByRole('button', { name: 'Confirm step' }).click();
 }
 

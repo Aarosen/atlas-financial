@@ -11,7 +11,7 @@ describe('explainStep', () => {
 
   it('explains build_emergency_buffer lever', () => {
     const ex = explainNextStep('build_emergency_buffer');
-    expect(ex.whyThisStep.toLowerCase()).toContain('buffer');
+    expect(ex.whyThisStep.toLowerCase()).toContain('cushion');
   });
 
   it('provides fallback for unknown lever', () => {

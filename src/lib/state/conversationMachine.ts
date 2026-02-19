@@ -197,7 +197,7 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
         baseline: ev.baseline,
         busy: false,
         streaming: false,
-        msgs: [...state.msgs, { r: 'a', t: 'Perfect — I have enough to start.\n\nLet me reflect this back and we’ll pick one clear next step.' }],
+        msgs: [...state.msgs, { r: 'a', t: 'Perfect — I have enough to start.\n\nI’m reflecting this back so we stay aligned, then I’ll pick one clear next step.' }],
       };
 
     case 'SEND_FAILED':

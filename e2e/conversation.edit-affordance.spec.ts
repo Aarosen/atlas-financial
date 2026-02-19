@@ -15,7 +15,7 @@ async function installApiMocks(page: any) {
       return route.fulfill({
         status: 200,
         contentType: 'application/json',
-        body: JSON.stringify({ fields: { monthlyIncome: 8000, essentialExpenses: 2500, totalSavings: 20000, highInterestDebt: 0, lowInterestDebt: 0 }, source: 'mock', model: 'mock' }),
+        body: JSON.stringify({ fields: { monthlyIncome: 8000, essentialExpenses: 2500, totalSavings: 20000, highInterestDebt: 0, lowInterestDebt: 0, primaryGoal: 'stability' }, source: 'mock', model: 'mock' }),
       });
     }
 
@@ -63,7 +63,7 @@ test('R4: edit-last affordance appears on hover (desktop) and triggers edit flow
 
   // Move through summary/tier so the last user bubble is editable in conversation.
   await page.getByRole('button', { name: 'Yes, looks right' }).click();
-  await page.getByRole('button', { name: 'Confirm lever' }).click();
+  await page.getByRole('button', { name: 'Yes, use this lever' }).click();
   await expect(page.getByRole('button', { name: 'Confirm step' })).toBeVisible();
   await page.getByRole('button', { name: 'Confirm step' }).click();
   await expect(page.getByRole('button', { name: 'Show my tier →' })).toBeVisible();

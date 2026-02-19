@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
-import type { ChatMessage, Lever } from '@/lib/state/types';
+import type { ChatMessage } from '@/lib/state/types';
 import { TopBar } from '@/components/TopBar';
 import { IconButton } from '@/components/IconButton';
 import { Textarea } from '@/components/TextInput';
@@ -114,9 +114,9 @@ export function ConversationScreen({
   pendingBlock,
   pendingFin,
   selectedLever,
+  baseline,
   onConfirmFin,
   onEditFin,
-  onSelectLever,
   onConfirmNextStep,
   inp,
   onChangeInp,
@@ -145,9 +145,9 @@ export function ConversationScreen({
   pendingBlock?: 'confirm' | 'lever' | 'next' | null;
   pendingFin?: { monthlyIncome: number; essentialExpenses: number; totalSavings: number; highInterestDebt: number | null; lowInterestDebt: number | null } | null;
   selectedLever?: string | null;
+  baseline?: { lever: string; explainability?: { inputsUsed?: Record<string, string> } } | null;
   onConfirmFin?: () => void;
   onEditFin?: () => void;
-  onSelectLever?: (lever: Lever) => void;
   onConfirmNextStep?: () => void;
   inp: string;
   onChangeInp: (v: string) => void;
@@ -245,13 +245,19 @@ export function ConversationScreen({
     return 'Jump to latest ↓';
   }, [lastMsgRole, showJump]);
 
-  const leverOptions = [
-    { id: 'stabilize_cashflow', label: 'Stabilize cashflow' },
-    { id: 'eliminate_high_interest_debt', label: 'Eliminate high-interest debt' },
-    { id: 'build_emergency_buffer', label: 'Build emergency buffer' },
-    { id: 'increase_future_allocation', label: 'Increase future allocation' },
-    { id: 'optimize_discretionary_spend', label: 'Optimize discretionary spend' },
-  ];
+  const leverLabels: Record<string, string> = {
+    stabilize_cashflow: 'Stabilize cashflow',
+    eliminate_high_interest_debt: 'Eliminate high-interest debt',
+    build_emergency_buffer: 'Build emergency cushion',
+    increase_future_allocation: 'Grow future savings',
+    optimize_discretionary_spend: 'Optimize discretionary spend',
+  };
+  const recommendedLever = baseline?.lever || selectedLever || 'stabilize_cashflow';
+  const leverLabel = leverLabels[recommendedLever] || recommendedLever;
+  const leverBasedOn = baseline?.explainability?.inputsUsed
+    ? Object.keys(baseline.explainability.inputsUsed).filter(Boolean)
+    : ['Income', 'Essentials', 'Savings', 'Debt'];
+  const showInlineNextStep = !!(onNextStep && nextStepHint && !pendingBlock);
 
   const startLongPress = (idx: number) => {
     if (isDesktop) return;
@@ -412,34 +418,14 @@ export function ConversationScreen({
             <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
               <div style={{ maxWidth: '86%', width: '100%' }}>
                 <Card>
-                  <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>PICK ONE LEVER</div>
-                  <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
-                    {leverOptions.map((opt) => {
-                      const active = selectedLever === opt.id;
-                      return (
-                        <button
-                          key={opt.id}
-                          type="button"
-                          onClick={() => onSelectLever?.(opt.id as Lever)}
-                          className="atlasNextStep"
-                          aria-pressed={active}
-                          style={{
-                            textAlign: 'left',
-                            padding: '10px 12px',
-                            borderRadius: 12,
-                            border: '1px solid var(--bdr)',
-                            background: active ? 'color-mix(in srgb, var(--teal) 12%, var(--bg2))' : 'var(--bg2)',
-                            fontWeight: 850,
-                          }}
-                        >
-                          {opt.label}
-                        </button>
-                      );
-                    })}
+                  <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ATLAS RECOMMENDS</div>
+                  <div style={{ marginTop: 8, fontWeight: 950, fontSize: 16 }}>{leverLabel}</div>
+                  <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>
+                    Based on what I’m hearing so far: {leverBasedOn.join(', ')}.
                   </div>
                   <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                    <Button onClick={onConfirmNextStep} variant="primary" size="sm" disabled={!selectedLever || !onConfirmNextStep}>Confirm lever</Button>
-                    <Button onClick={onEditFin} variant="secondary" size="sm" disabled={!onEditFin}>Edit numbers</Button>
+                    <Button onClick={onConfirmNextStep} variant="primary" size="sm" disabled={!onConfirmNextStep}>Yes, use this lever</Button>
+                    <Button onClick={onEditFin} variant="secondary" size="sm" disabled={!onEditFin}>Discuss other options</Button>
                   </div>
                 </Card>
               </div>
@@ -506,7 +492,7 @@ export function ConversationScreen({
               </Button>
             </div>
           )}
-          {onNextStep && nextStepHint && (
+          {showInlineNextStep && (
             <button
               onClick={onNextStep}
               disabled={busy}
