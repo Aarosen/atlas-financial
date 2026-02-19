@@ -1,14 +1,14 @@
-type StoreName = 'fin' | 'conv' | 'strat' | 'plan' | 'prefs' | 'replay' | 'feedback' | 'actions';
+type StoreName = 'fin' | 'conv' | 'strat' | 'plan' | 'prefs' | 'replay' | 'feedback' | 'actions' | 'learned';
 
 export class AtlasDb {
-  private name = 'AtlasDB_v5';
+  private name = 'AtlasDB_v6';
   private db: IDBDatabase | null = null;
 
   async open() {
     if (this.db) return;
 
     await new Promise<void>((resolve, reject) => {
-      const req = indexedDB.open(this.name, 5);
+      const req = indexedDB.open(this.name, 6);
       req.onerror = () => reject(req.error);
       req.onsuccess = () => {
         this.db = req.result;
@@ -16,7 +16,7 @@ export class AtlasDb {
       };
       req.onupgradeneeded = (e) => {
         const db = (e.target as IDBOpenDBRequest).result;
-        (['fin', 'conv', 'strat', 'plan', 'prefs', 'replay', 'feedback', 'actions'] as StoreName[]).forEach((n) => {
+        (['fin', 'conv', 'strat', 'plan', 'prefs', 'replay', 'feedback', 'actions', 'learned'] as StoreName[]).forEach((n) => {
           if (!db.objectStoreNames.contains(n)) {
             db.createObjectStore(
               n,
@@ -72,7 +72,7 @@ export class AtlasDb {
     if (!this.db) throw new Error('db_not_open');
 
     await Promise.all(
-      (['fin', 'conv', 'strat', 'plan', 'replay', 'feedback', 'actions'] as StoreName[]).map(
+      (['fin', 'conv', 'strat', 'plan', 'replay', 'feedback', 'actions', 'learned'] as StoreName[]).map(
         (s) =>
           new Promise<void>((resolve, reject) => {
             const tx = this.db!.transaction([s], 'readwrite');

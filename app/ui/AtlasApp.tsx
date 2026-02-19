@@ -16,6 +16,7 @@ import { buildNudge } from '@/lib/ai/nudges';
 import { buildStreakMessage, computeActionStreak } from '@/lib/ai/streaks';
 import { computeLearningStreak } from '@/lib/ai/learningStreaks';
 import { recommendNextConcept } from '@/lib/ai/learningRecommendations';
+import { detectLearnedConcepts } from '@/lib/ai/learningProgress';
 import { detectLiteracyLevel, detectResponsePreference } from '@/lib/ai/personalization';
 import { buildReasoningTrace } from '@/lib/ai/trace';
 import { buildCheckinMessage, shouldShowCheckin } from '@/lib/ai/checkins';
@@ -428,7 +429,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         .filter((t) => t > 0);
       const learningStreak = computeLearningStreak(learningDates);
       const learningPrompt = learningStreak.days >= 2 ? `Learning streak: ${learningStreak.days} days. Keep it going.` : null;
-      const learned = [] as string[];
+      const learnedEntries = await db.all('learned');
+      const learned = (learnedEntries as any[]).map((e) => String(e?.concept)).filter(Boolean);
       const recommendations = recommendNextConcept({ learned, focus: st.fin.primaryGoal || 'stability' });
       const recommendationText = recommendations.length
         ? `Want to go one level deeper? We can cover: ${recommendations.join(', ')}.`
@@ -510,6 +512,16 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               kind: 'followup_question',
               emotionTag: detectReplayEmotion(streamed),
             })
+          );
+          const learnedNow = detectLearnedConcepts(streamed);
+          await Promise.all(
+            learnedNow.map((concept) =>
+              db.set('learned', {
+                k: concept.toLowerCase(),
+                concept,
+                ts: Date.now(),
+              })
+            )
           );
         }
         if (resumeQ) {
