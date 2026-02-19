@@ -10,6 +10,7 @@ import { conversationReducer, createInitialConversationState, type Screen } from
 import { applyUserTurn, classifyInterruption, clarificationForMissing, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
 import { decideNextAction } from '@/lib/ai/orchestrator';
 import { createReplayEntry, detectReplayEmotion, logReplayEntry } from '@/lib/ai/replay';
+import { buildActionFeedback, detectAction, estimateActionImpact } from '@/lib/ai/actions';
 import { detectLiteracyLevel, detectResponsePreference } from '@/lib/ai/personalization';
 import { buildReasoningTrace } from '@/lib/ai/trace';
 import { buildCheckinMessage, shouldShowCheckin } from '@/lib/ai/checkins';
@@ -393,6 +394,17 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
       logReplay(createReplayEntry({ role: 'user', text: ut, kind, emotionTag: detectReplayEmotion(ut) }));
 
+      const detectedAction = detectAction(ut);
+      const actionImpact = estimateActionImpact(detectedAction);
+      const actionFeedback = buildActionFeedback(detectedAction, actionImpact);
+      if (detectedAction) {
+        await db.set('actions', {
+          id: `act_${Date.now()}`,
+          ...detectedAction,
+          impact: actionImpact,
+        });
+      }
+
       const prevMsgs: ChatMessage[] = [...base.msgs, { r: 'u' as const, t: ut }];
       try {
         const normalizeApiErr = (raw0: string) => {
@@ -566,18 +578,30 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
       const action = decideNextAction({ kind, missing: miss, turnIndex: prevMsgs.length });
       if (action.type === 'complete') {
+        if (actionFeedback) {
+          logReplay(
+            createReplayEntry({
+              role: 'assistant',
+              text: actionFeedback,
+              kind: 'answer_to_question',
+              emotionTag: detectReplayEmotion(actionFeedback),
+            })
+          );
+          dispatch({ type: 'SEND_ASKED', text: actionFeedback });
+        }
         dispatch({ type: 'SET_PENDING_FIN', fin: uf });
         dispatch({ type: 'SET_PENDING_BLOCK', block: 'confirm' });
         return;
       }
       if (action.type === 'ask') {
+        const askText = actionFeedback ? `${actionFeedback}\n\n${action.text}` : action.text;
         logReplay(
           createReplayEntry({
             role: 'assistant',
-            text: action.text,
+            text: askText,
             kind: 'ask',
             questionKey: action.questionKey,
-            emotionTag: detectReplayEmotion(action.text),
+            emotionTag: detectReplayEmotion(askText),
             trace: buildReasoningTrace({
               decision: 'ask',
               questionKey: action.questionKey,
@@ -586,7 +610,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             }),
           })
         );
-        dispatch({ type: 'SEND_ASKED', text: action.text, questionKey: action.questionKey });
+        dispatch({ type: 'SEND_ASKED', text: askText, questionKey: action.questionKey });
       }
     } catch (e: any) {
       const raw = String(e?.message || 'send_failed');

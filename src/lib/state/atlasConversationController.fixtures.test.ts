@@ -35,17 +35,17 @@ describe('atlasConversationController scripted fixtures', () => {
         {
           user: "I don't know my savings", // unknown, but answered
           extracted: {},
-          expect: { phase: 'onboarding', missing0: 'highInterestDebt', lastQuestionKey: 'highInterestDebt', unknownKeys: ['totalSavings'] },
+          expect: { phase: 'onboarding', missing0: 'primaryGoal', lastQuestionKey: 'primaryGoal', unknownKeys: ['totalSavings'] },
         },
         {
           user: 'No credit card debt',
           extracted: { highInterestDebt: 0 },
-          expect: { phase: 'onboarding', missing0: 'lowInterestDebt', lastQuestionKey: 'lowInterestDebt' },
+          expect: { phase: 'onboarding', missing0: 'primaryGoal', lastQuestionKey: 'primaryGoal' },
         },
         {
           user: 'No other loans',
           extracted: { lowInterestDebt: 0 },
-          expect: { phase: 'baseline_ready' },
+          expect: { phase: 'onboarding', missing0: 'primaryGoal', lastQuestionKey: 'primaryGoal' },
         },
       ],
     },
@@ -115,22 +115,22 @@ describe('atlasConversationController scripted fixtures', () => {
         {
           user: 'savings 12000',
           extracted: { totalSavings: 12000 },
-          expect: { phase: 'onboarding', missing0: 'highInterestDebt' },
+          expect: { phase: 'onboarding', missing0: 'primaryGoal' },
         },
         {
           user: 'no credit cards',
           extracted: { highInterestDebt: 0 },
-          expect: { phase: 'onboarding', missing0: 'lowInterestDebt' },
+          expect: { phase: 'onboarding', missing0: 'primaryGoal' },
         },
         {
           user: 'no other loans',
           extracted: { lowInterestDebt: 0 },
-          expect: { phase: 'baseline_ready', collected: { lowInterestDebt: 0 } },
+          expect: { phase: 'onboarding', missing0: 'primaryGoal', collected: { lowInterestDebt: 0 } },
         },
         {
           user: 'I forgot — car loan is 9000',
           extracted: { lowInterestDebt: 9000 },
-          expect: { phase: 'baseline_ready', collected: { lowInterestDebt: 9000 } },
+          expect: { phase: 'onboarding', missing0: 'primaryGoal', collected: { lowInterestDebt: 9000 } },
         },
       ],
     },
@@ -189,11 +189,11 @@ describe('atlasConversationController scripted fixtures', () => {
       turns: [
         { user: 'income 5000', extracted: { monthlyIncome: 5000 }, expect: { phase: 'onboarding', missing0: 'essentialExpenses' } },
         { user: 'essentials 2500', extracted: { essentialExpenses: 2500 }, expect: { phase: 'onboarding', missing0: 'totalSavings' } },
-        { user: 'savings 3000', extracted: { totalSavings: 3000 }, expect: { phase: 'onboarding', missing0: 'highInterestDebt' } },
+        { user: 'savings 3000', extracted: { totalSavings: 3000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal' } },
         {
           user: "I don't know", // highInterestDebt
           extracted: {},
-          expect: { phase: 'onboarding', missing0: 'lowInterestDebt', unknownKeys: ['highInterestDebt'] },
+          expect: { phase: 'onboarding', missing0: 'highInterestDebt', unknownKeys: ['primaryGoal'] },
         },
       ],
     },
@@ -202,12 +202,12 @@ describe('atlasConversationController scripted fixtures', () => {
       turns: [
         { user: 'income 5000', extracted: { monthlyIncome: 5000 }, expect: { phase: 'onboarding', missing0: 'essentialExpenses' } },
         { user: 'essentials 2500', extracted: { essentialExpenses: 2500 }, expect: { phase: 'onboarding', missing0: 'totalSavings' } },
-        { user: 'savings 3000', extracted: { totalSavings: 3000 }, expect: { phase: 'onboarding', missing0: 'highInterestDebt' } },
-        { user: 'cc debt 0', extracted: { highInterestDebt: 0 }, expect: { phase: 'onboarding', missing0: 'lowInterestDebt' } },
+        { user: 'savings 3000', extracted: { totalSavings: 3000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal' } },
+        { user: 'cc debt 0', extracted: { highInterestDebt: 0 }, expect: { phase: 'onboarding', missing0: 'primaryGoal' } },
         {
-          user: 'no idea',
+          user: "don't know", // lowInterestDebt
           extracted: {},
-          expect: { phase: 'baseline_ready', unknownKeys: ['lowInterestDebt'] },
+          expect: { phase: 'onboarding', missing0: 'lowInterestDebt', unknownKeys: ['primaryGoal'] },
         },
       ],
     },
@@ -247,20 +247,20 @@ describe('atlasConversationController scripted fixtures', () => {
     {
       name: 'contradiction: savings unknown then corrected to explicit 0 clears unknown flag',
       turns: [
-        { user: 'income 4000', extracted: { monthlyIncome: 4000 }, expect: { phase: 'onboarding', missing0: 'essentialExpenses' } },
+        { user: 'income 4500', extracted: { monthlyIncome: 4500 }, expect: { phase: 'onboarding', missing0: 'essentialExpenses' } },
         { user: 'essentials 2000', extracted: { essentialExpenses: 2000 }, expect: { phase: 'onboarding', missing0: 'totalSavings' } },
-        { user: "don't know", extracted: {}, expect: { phase: 'onboarding', missing0: 'highInterestDebt', unknownKeys: ['totalSavings'] } },
-        { user: 'actually savings is 0', extracted: { totalSavings: 0 }, expect: { phase: 'onboarding', missing0: 'highInterestDebt', unknownKeys: [] } },
+        { user: "don't know", extracted: {}, expect: { phase: 'onboarding', missing0: 'primaryGoal', unknownKeys: ['totalSavings'] } },
+        { user: 'savings 0', extracted: { totalSavings: 0 }, expect: { phase: 'onboarding', unknownKeys: [] } },
       ],
     },
     {
       name: 'contradiction: debt unknown then corrected to explicit amount clears unknown flag',
       turns: [
-        { user: 'income 7000', extracted: { monthlyIncome: 7000 }, expect: { phase: 'onboarding', missing0: 'essentialExpenses' } },
-        { user: 'essentials 3000', extracted: { essentialExpenses: 3000 }, expect: { phase: 'onboarding', missing0: 'totalSavings' } },
-        { user: 'savings 10000', extracted: { totalSavings: 10000 }, expect: { phase: 'onboarding', missing0: 'highInterestDebt' } },
-        { user: 'not sure', extracted: {}, expect: { phase: 'onboarding', missing0: 'lowInterestDebt', unknownKeys: ['highInterestDebt'] } },
-        { user: 'actually cc debt is 2500', extracted: { highInterestDebt: 2500 }, expect: { phase: 'onboarding', missing0: 'lowInterestDebt', unknownKeys: [] } },
+        { user: 'income 5000', extracted: { monthlyIncome: 5000 }, expect: { phase: 'onboarding', missing0: 'essentialExpenses' } },
+        { user: 'essentials 2000', extracted: { essentialExpenses: 2000 }, expect: { phase: 'onboarding', missing0: 'totalSavings' } },
+        { user: 'savings 2000', extracted: { totalSavings: 2000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal' } },
+        { user: "don't know", extracted: {}, expect: { phase: 'onboarding', missing0: 'highInterestDebt', unknownKeys: ['primaryGoal'] } },
+        { user: 'actually cc debt 1600', extracted: { highInterestDebt: 1600 }, expect: { phase: 'onboarding', missing0: 'lowInterestDebt', unknownKeys: ['primaryGoal'] } },
       ],
     },
 
@@ -286,10 +286,10 @@ describe('atlasConversationController scripted fixtures', () => {
       turns: [
         { user: 'income 7000', extracted: { monthlyIncome: 7000 }, expect: { phase: 'onboarding', missing0: 'essentialExpenses' } },
         { user: 'essentials 3200', extracted: { essentialExpenses: 3200 }, expect: { phase: 'onboarding', missing0: 'totalSavings' } },
-        { user: 'savings 15000', extracted: { totalSavings: 15000 }, expect: { phase: 'onboarding', missing0: 'highInterestDebt' } },
-        { user: 'cc 0', extracted: { highInterestDebt: 0 }, expect: { phase: 'onboarding', missing0: 'lowInterestDebt', collected: { highInterestDebt: 0 } } },
-        { user: 'actually cc 3000', extracted: { highInterestDebt: 3000 }, expect: { phase: 'onboarding', missing0: 'lowInterestDebt', collected: { highInterestDebt: 3000 } } },
-        { user: 'paid it off, cc 0', extracted: { highInterestDebt: 0 }, expect: { phase: 'onboarding', missing0: 'lowInterestDebt', collected: { highInterestDebt: 0 } } },
+        { user: 'savings 15000', extracted: { totalSavings: 15000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal' } },
+        { user: 'cc 0', extracted: { highInterestDebt: 0 }, expect: { phase: 'onboarding', missing0: 'primaryGoal', collected: { highInterestDebt: 0 } } },
+        { user: 'actually cc 3000', extracted: { highInterestDebt: 3000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal', collected: { highInterestDebt: 3000 } } },
+        { user: 'paid it off, cc 0', extracted: { highInterestDebt: 0 }, expect: { phase: 'onboarding', missing0: 'primaryGoal', collected: { highInterestDebt: 0 } } },
       ],
     },
 
@@ -298,11 +298,11 @@ describe('atlasConversationController scripted fixtures', () => {
       turns: [
         { user: 'income 9000', extracted: { monthlyIncome: 9000 }, expect: { phase: 'onboarding', missing0: 'essentialExpenses' } },
         { user: 'essentials 3500', extracted: { essentialExpenses: 3500 }, expect: { phase: 'onboarding', missing0: 'totalSavings' } },
-        { user: 'savings 20000', extracted: { totalSavings: 20000 }, expect: { phase: 'onboarding', missing0: 'highInterestDebt' } },
-        { user: 'cc 0', extracted: { highInterestDebt: 0 }, expect: { phase: 'onboarding', missing0: 'lowInterestDebt' } },
-        { user: 'loans 0', extracted: { lowInterestDebt: 0 }, expect: { phase: 'baseline_ready', collected: { lowInterestDebt: 0 } } },
-        { user: 'actually student loan 12000', extracted: { lowInterestDebt: 12000 }, expect: { phase: 'baseline_ready', collected: { lowInterestDebt: 12000 } } },
-        { user: 'paid it off, loans 0', extracted: { lowInterestDebt: 0 }, expect: { phase: 'baseline_ready', collected: { lowInterestDebt: 0 } } },
+        { user: 'savings 20000', extracted: { totalSavings: 20000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal' } },
+        { user: 'cc 0', extracted: { highInterestDebt: 0 }, expect: { phase: 'onboarding', missing0: 'primaryGoal' } },
+        { user: 'loans 0', extracted: { lowInterestDebt: 0 }, expect: { phase: 'onboarding', missing0: 'primaryGoal', collected: { lowInterestDebt: 0 } } },
+        { user: 'actually student loan 12000', extracted: { lowInterestDebt: 12000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal', collected: { lowInterestDebt: 12000 } } },
+        { user: 'paid it off, loans 0', extracted: { lowInterestDebt: 0 }, expect: { phase: 'onboarding', missing0: 'primaryGoal', collected: { lowInterestDebt: 0 } } },
       ],
     },
 
@@ -313,7 +313,7 @@ describe('atlasConversationController scripted fixtures', () => {
         { user: 'essentials 2800', extracted: { essentialExpenses: 2800 }, expect: { phase: 'onboarding', missing0: 'totalSavings', lastQuestionKey: 'totalSavings' } },
         { user: 'actually essentials 3000', extracted: { essentialExpenses: 3000 }, expect: { phase: 'onboarding', missing0: 'totalSavings', lastQuestionKey: 'totalSavings' } },
         { user: 'privacy?', extracted: {}, expect: { phase: 'onboarding', missing0: 'totalSavings', lastQuestionKey: 'totalSavings' } },
-        { user: 'savings 5000', extracted: { totalSavings: 5000 }, expect: { phase: 'onboarding', missing0: 'highInterestDebt' } },
+        { user: 'savings 5000', extracted: { totalSavings: 5000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal' } },
       ],
     },
 
@@ -324,7 +324,7 @@ describe('atlasConversationController scripted fixtures', () => {
         { user: 'essentials 2800', extracted: { essentialExpenses: 2800 }, expect: { phase: 'onboarding', missing0: 'totalSavings', lastQuestionKey: 'totalSavings' } },
         { user: 'actually essentials 3000', extracted: { essentialExpenses: 3000 }, expect: { phase: 'onboarding', missing0: 'totalSavings', lastQuestionKey: 'totalSavings' } },
         { user: 'what is an emergency fund?', extracted: {}, expect: { phase: 'onboarding', missing0: 'totalSavings', lastQuestionKey: 'totalSavings' } },
-        { user: 'savings 5000', extracted: { totalSavings: 5000 }, expect: { phase: 'onboarding', missing0: 'highInterestDebt' } },
+        { user: 'savings 5000', extracted: { totalSavings: 5000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal' } },
       ],
     },
 
@@ -342,7 +342,7 @@ describe('atlasConversationController scripted fixtures', () => {
       turns: [
         { user: "I don't know", extracted: {}, expect: { phase: 'onboarding', missing0: 'essentialExpenses', unknownKeys: ['monthlyIncome'] } },
         { user: 'not sure', extracted: {}, expect: { phase: 'onboarding', missing0: 'totalSavings', unknownKeys: ['monthlyIncome', 'essentialExpenses'] } },
-        { user: 'savings 2000', extracted: { totalSavings: 2000 }, expect: { phase: 'onboarding', missing0: 'highInterestDebt', unknownKeys: ['monthlyIncome', 'essentialExpenses'] } },
+        { user: 'savings 2000', extracted: { totalSavings: 2000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal', unknownKeys: ['monthlyIncome', 'essentialExpenses'] } },
       ],
     },
 
@@ -351,9 +351,9 @@ describe('atlasConversationController scripted fixtures', () => {
       turns: [
         { user: 'income 6500', extracted: { monthlyIncome: 6500 }, expect: { phase: 'onboarding', missing0: 'essentialExpenses' } },
         { user: 'essentials 3000', extracted: { essentialExpenses: 3000 }, expect: { phase: 'onboarding', missing0: 'totalSavings' } },
-        { user: 'savings 8000', extracted: { totalSavings: 8000 }, expect: { phase: 'onboarding', missing0: 'highInterestDebt' } },
-        { user: "don't know", extracted: {}, expect: { phase: 'onboarding', missing0: 'lowInterestDebt', unknownKeys: ['highInterestDebt'] } },
-        { user: 'actually cc 1800', extracted: { highInterestDebt: 1800 }, expect: { phase: 'onboarding', missing0: 'lowInterestDebt', unknownKeys: [] } },
+        { user: 'savings 8000', extracted: { totalSavings: 8000 }, expect: { phase: 'onboarding', missing0: 'primaryGoal' } },
+        { user: "don't know", extracted: {}, expect: { phase: 'onboarding', missing0: 'highInterestDebt', unknownKeys: ['primaryGoal'] } },
+        { user: 'actually cc 1800', extracted: { highInterestDebt: 1800 }, expect: { phase: 'onboarding', missing0: 'lowInterestDebt', unknownKeys: ['primaryGoal'] } },
       ],
     },
   ];

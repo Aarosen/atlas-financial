@@ -48,11 +48,11 @@ export function createInitialAtlasConversationState(args: {
 
 export function computeMissing(collected: FinancialState, answered: AtlasConversationState['answered']): Array<keyof FinancialState> {
   const isKnown = (k: keyof FinancialState) => {
+    if (Boolean(answered[k])) return true;
     const v = collected[k] as any;
     if (k === 'monthlyIncome' || k === 'essentialExpenses') return typeof v === 'number' && v > 0;
-    if (k === 'totalSavings') return typeof v === 'number' && v >= 0 && (answered[k] === true || v > 0);
-    if (k === 'primaryGoal') return answered[k] === true;
-    if (answered[k] === true) return true;
+    if (k === 'totalSavings') return typeof v === 'number' && v >= 0 && (Boolean(answered[k]) || v > 0);
+    if (k === 'primaryGoal') return Boolean(answered[k]);
     if (k === 'highInterestDebt' || k === 'lowInterestDebt') return v !== null;
     return v !== null && v !== undefined;
   };

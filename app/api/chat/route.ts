@@ -1,6 +1,7 @@
 export const runtime = 'edge';
 
 import { inferModelTier } from '@/lib/ai/modelRouting';
+import { routeAgentForText } from '@/lib/ai/agentRouter';
 import { getPlaybookResponse } from '@/lib/ai/playbooks';
 import { complianceResponse, detectComplianceRisk, fallbackAnswer, violatesGuardrails } from '@/lib/server/guardrails';
 
@@ -305,6 +306,7 @@ CONVERSATION APPROACH:
 - Accept approximate numbers immediately and warmly: "A rough number is completely fine — precision isn't the goal here."
 - Never re-ask for information already provided. Build on what exists.
 - Default to concise, but when the user asks a question or wants an explanation, be thorough and educational.
+- Contextual teaching: when the user asks for clarity or signals uncertainty, add ONE short teaching moment (what it is, why it matters, one action). Skip teaching if they’re already confident or just confirming details.
 - When explaining any financial/accounting number or concept, use this structure when helpful:
   1) What it is (simple definition)
   2) Why it matters (the decision it affects)
@@ -335,9 +337,13 @@ WHAT ATLAS IS NOT:
   (If directly asked whether you're a financial advisor, answer honestly and simply, once)`;
 
   const memoryContext = memorySummary ? `\n\nUSER MEMORY SUMMARY:\n${String(memorySummary).trim()}` : '';
+  const lastUserText = String((messages || []).slice(-1)[0]?.content || question || '').trim();
+  const agentContext = lastUserText
+    ? `\n\nPRIMARY AGENT: ${routeAgentForText(lastUserText).label}. Use this domain expertise unless another agent is required.`
+    : '';
   const emotionTag = detectEmotion(messages);
   const emotionContext = `\n\nUSER EMOTION TAG: ${emotionTag}.`;
-  const systemPrompt = type === 'extract' ? extractPrompt : `${chatPrompt}${memoryContext}${emotionContext}`;
+  const systemPrompt = type === 'extract' ? extractPrompt : `${chatPrompt}${memoryContext}${emotionContext}${agentContext}`;
   const maxTokens =
     type === 'extract'
       ? 500
