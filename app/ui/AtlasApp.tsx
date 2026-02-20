@@ -7,7 +7,7 @@ import { AtlasDb } from '@/lib/db/atlasDb';
 import { StrategyEngine } from '@/lib/engine/strategyEngine';
 import type { ChatMessage, FinancialState, Strategy } from '@/lib/state/types';
 import { conversationReducer, createInitialConversationState, type Screen } from '@/lib/state/conversationMachine';
-import { applyUserTurn, classifyInterruption, clarificationForMissing, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
+import { applyUserTurn, classifyInterruption, metaResponse, nextQuestionForMissing } from '@/lib/state/atlasConversationController';
 import { decideNextAction } from '@/lib/ai/orchestrator';
 import { createReplayEntry, detectReplayEmotion, logReplayEntry } from '@/lib/ai/replay';
 import { buildActionFeedback, detectAction, estimateActionImpact } from '@/lib/ai/actions';
@@ -599,7 +599,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         miss[0] === missBefore[0] &&
         extractedCount === 0
       ) {
-        const clar = clarificationForMissing(missBefore[0]);
+        const clarQuestion = nextQuestionForMissing(missBefore[0], base.msgs.length);
+        const clar = clarQuestion.text;
         logReplay(
           createReplayEntry({
             role: 'assistant',
