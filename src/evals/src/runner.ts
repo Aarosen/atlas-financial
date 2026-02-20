@@ -9,7 +9,14 @@ import { EvalContext, EvalReport, EvalResult, EvalMode } from "./types";
 import { runKeywordGuardrail }  from "./evals/code/keywordGuardrail";
 import { runLimitsValidator }   from "./evals/code/limitsValidator";
 import { runSessionChecker }    from "./evals/code/sessionChecker";
+import { runPIIGuardrail }      from "./evals/code/piiGuardrail";
+import { runCryptoRiskFraming } from "./evals/code/cryptoRiskFraming";
+import { runDisclaimerValidator } from "./evals/code/disclaimerValidator";
 import { runSafetyJudge, runAccuracyJudge, runTeachingJudge, runToneJudge } from "./evals/llm/judgeRunner";
+import { runPersonalFinanceJudge } from "./evals/llm/judgePersonalFinance";
+import { runTaxJudge }          from "./evals/llm/judgeTax";
+import { runInvestmentJudge }   from "./evals/llm/judgeInvestment";
+import { runRetirementJudge }   from "./evals/llm/judgeRetirement";
 import { printReport }          from "./reports/report";
 
 // ── Test dataset — replace with your real Atlas I/O ─────────────────────────
@@ -129,6 +136,9 @@ function runCodeEvals(ctx: EvalContext): EvalResult[] {
     ...runKeywordGuardrail(ctx),
     ...runLimitsValidator(ctx),
     ...runSessionChecker(ctx),
+    runPIIGuardrail(ctx),
+    runCryptoRiskFraming(ctx),
+    runDisclaimerValidator(ctx),
   ];
 }
 
@@ -144,13 +154,17 @@ async function runLLMEvals(ctx: EvalContext): Promise<EvalResult[]> {
   }
 
   // Run remaining judges in parallel for speed
-  const [accuracyResults, teachingResults, toneResults] = await Promise.all([
+  const [accuracyResults, teachingResults, toneResults, pfResults, taxResults, investResults, retireResults] = await Promise.all([
     runAccuracyJudge(ctx),
     runTeachingJudge(ctx),
     runToneJudge(ctx),
+    runPersonalFinanceJudge(ctx),
+    runTaxJudge(ctx),
+    runInvestmentJudge(ctx),
+    runRetirementJudge(ctx),
   ]);
 
-  return [...safetyResults, ...accuracyResults, ...teachingResults, ...toneResults];
+  return [...safetyResults, ...accuracyResults, ...teachingResults, ...toneResults, ...pfResults, ...taxResults, ...investResults, ...retireResults];
 }
 
 // ── Main orchestrator ────────────────────────────────────────────────────────
