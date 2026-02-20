@@ -21,34 +21,33 @@ export interface GreetingContext {
  */
 export function generateInitialGreeting(context: GreetingContext = {}): string {
   const greetings = [
-    // Warm, mentor-like openings
-    "I'm here as your financial mentor — not a form, not a robo-advisor. Let's talk about what's actually on your mind.",
+    "What's going on with your money right now?",
     
-    "Think of me as a friend who knows money. I'm here to help you understand your situation and find the next clear step forward.",
+    "Let's talk about what's actually on your mind.",
     
-    "You don't need to have it all figured out. Let's start with what's real for you right now — no judgment, no forms.",
+    "Tell me what's real for you financially.",
     
-    "I'm here to help you make smarter money decisions. But first, I want to understand your world — in your own words.",
+    "What's the biggest thing you're thinking about with money?",
     
-    "Financial advice should feel like talking to someone who gets it. That's what I'm here for.",
+    "What brought you here? What do you want to figure out?",
   ];
 
   const timeBasedGreetings: Record<string, string[]> = {
     morning: [
-      "Good morning. Let's start your day by getting clarity on your money situation.",
-      "Morning. I'm here to help you think through your finances with a clear head.",
+      "What's on your mind this morning?",
+      "Let's figure this out.",
     ],
     afternoon: [
-      "Afternoon. Let's dig into what's really going on with your money.",
-      "Hey. I'm here to help you navigate your financial situation.",
+      "What's going on?",
+      "Tell me what's up.",
     ],
     evening: [
-      "Evening. This is a good time to think through your money situation clearly.",
-      "Good evening. Let's talk about what matters most to you financially.",
+      "What's on your mind?",
+      "Let's talk through it.",
     ],
     night: [
-      "Late night money thoughts? I'm here to help you think them through.",
-      "Can't sleep thinking about money? Let's work through it together.",
+      "Late night money thoughts? I'm here.",
+      "Can't sleep thinking about this? Let's work through it.",
     ],
   };
 
@@ -60,24 +59,24 @@ export function generateInitialGreeting(context: GreetingContext = {}): string {
 
   const lifeStageGreetings: Record<string, string[]> = {
     student: [
-      "Building your financial foundation is smart. Let's start with what's real for you right now.",
-      "Getting ahead early on money is powerful. I'm here to help you think it through.",
+      "What's on your mind with money right now?",
+      "What do you want to figure out?",
     ],
     early_career: [
-      "Early in your career is the perfect time to build good money habits. Let's start with your situation.",
-      "These early years matter for your long-term success. Let's understand where you are.",
+      "What's the biggest money thing on your mind?",
+      "What brought you here today?",
     ],
     mid_career: [
-      "You've built momentum. Now let's make sure your money is working as hard as you are.",
-      "Mid-career is when strategy really pays off. Let's talk about your situation.",
+      "What's going on with your finances?",
+      "What do you want to get clarity on?",
     ],
     pre_retirement: [
-      "These years are critical for your retirement readiness. Let's make sure you're on track.",
-      "Getting close to retirement? Let's make sure you're positioned well.",
+      "What's the money question you want to tackle?",
+      "What's on your mind about retirement?",
     ],
     retired: [
-      "Retirement brings new money questions. I'm here to help you navigate them.",
-      "In retirement, it's about making your money last and work for you. Let's talk.",
+      "What's the money thing you want to work through?",
+      "What's on your mind right now?",
     ],
   };
 
@@ -99,16 +98,10 @@ export function generateInitialGreeting(context: GreetingContext = {}): string {
 
 /**
  * Generate the full opening message with context-aware framing
+ * Feels like a real conversation, not a script
  */
 export function generateFullOpeningMessage(context: GreetingContext = {}): string {
   const greeting = generateInitialGreeting(context);
-
-  const contextualFraming = [
-    "I'm not going to ask you to connect your bank or fill out a form. I just want to understand your situation — in your own words.",
-    "No forms, no friction. Just a real conversation about your money and what matters to you.",
-    "No data connections needed. Just tell me what's going on, and I'll help you think it through.",
-    "I'm here to listen, understand, and help you find the next clear step. That's it.",
-  ];
 
   const openingQuestions = [
     "What's on your mind when it comes to money right now?",
@@ -118,10 +111,9 @@ export function generateFullOpeningMessage(context: GreetingContext = {}): strin
     "What's the one money thing you'd like to get clarity on?",
   ];
 
-  const framing = contextualFraming[Math.floor(Math.random() * contextualFraming.length)];
   const question = openingQuestions[Math.floor(Math.random() * openingQuestions.length)];
 
-  return `${greeting}\n\n${framing}\n\n${question}`;
+  return `${greeting}\n\n${question}`;
 }
 
 /**
