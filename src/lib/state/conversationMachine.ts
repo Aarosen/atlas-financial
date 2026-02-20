@@ -57,10 +57,10 @@ export type ConversationEvent =
 function createInitialAssistantMessage(): ChatMessage {
   const timeOfDay = (() => {
     const hour = new Date().getHours();
-    if (hour < 12) return 'morning';
-    if (hour < 17) return 'afternoon';
-    if (hour < 21) return 'evening';
-    return 'night';
+    if (hour >= 5 && hour < 12) return 'morning';
+    if (hour >= 12 && hour < 17) return 'afternoon';
+    if (hour >= 17 && hour < 21) return 'evening';
+    return 'night'; // 21:00 - 04:59 (9 PM - 4:59 AM)
   })();
 
   return {
