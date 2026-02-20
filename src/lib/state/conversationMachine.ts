@@ -1,5 +1,6 @@
 import type { ChatMessage, FinancialState, Strategy } from './types';
 import type { AtlasMode } from './atlasConversationController';
+import { generateFullOpeningMessage } from '../ai/initialGreetingEngine';
 
 export type Screen = 'landing' | 'conversation' | 'summary' | 'tier' | 'dashboard' | 'strategy' | 'plan' | 'settings';
 
@@ -53,10 +54,20 @@ export type ConversationEvent =
   | { type: 'SEND_FAILED'; err: string }
   | { type: 'RESET' };
 
-const initialAssistantMessage: ChatMessage = {
-  r: 'a',
-  t: "Hey, I'm glad you're here.\n\nI'm not going to ask you to connect your bank or fill out a form. I just want to understand your situation — in your own words.\n\nWhat's on your mind when it comes to money right now?",
-};
+function createInitialAssistantMessage(): ChatMessage {
+  const timeOfDay = (() => {
+    const hour = new Date().getHours();
+    if (hour < 12) return 'morning';
+    if (hour < 17) return 'afternoon';
+    if (hour < 21) return 'evening';
+    return 'night';
+  })();
+
+  return {
+    r: 'a',
+    t: generateFullOpeningMessage({ timeOfDay }),
+  };
+}
 
 export function createDefaultFin(): FinancialState {
   return {
@@ -77,7 +88,7 @@ export function createInitialConversationState(initialScreen: Screen = 'landing'
   return {
     scr: initialScreen,
     baseline: null,
-    msgs: [initialAssistantMessage],
+    msgs: [createInitialAssistantMessage()],
     inp: '',
     fin: createDefaultFin(),
     pendingFin: null,
@@ -213,7 +224,7 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
       return {
         scr: 'landing',
         baseline: null,
-        msgs: [initialAssistantMessage],
+        msgs: [createInitialAssistantMessage()],
         inp: '',
         fin: createDefaultFin(),
         pendingFin: null,
