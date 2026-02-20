@@ -1,0 +1,65 @@
+name: Atlas Eval Gate
+
+on:
+  push:
+    branches: [main, staging]
+  pull_request:
+    branches: [main, staging]
+
+jobs:
+  eval-gate:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v3
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v3
+        with:
+          node-version: '18'
+      
+      - name: Install atlas-evals dependencies
+        run: |
+          cd src/evals
+          npm install
+      
+      - name: Run offline eval suite
+        run: |
+          cd src/evals
+          npm run eval:offline
+        env:
+          NODE_ENV: ci
+      
+      - name: Run gate eval suite (blocks on critical failures)
+        run: |
+          cd src/evals
+          npm run eval:gate
+        env:
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+          NODE_ENV: ci
+      
+      - name: Upload eval report
+        if: always()
+        uses: actions/upload-artifact@v3
+        with:
+          name: eval-reports
+          path: src/evals/eval-report-*.json
+      
+      - name: Comment PR with eval results
+        if: github.event_name == 'pull_request'
+        uses: actions/github-script@v6
+        with:
+          script: |
+            const fs = require('fs');
+            const files = fs.readdirSync('src/evals').filter(f => f.startsWith('eval-report-'));
+            if (files.length > 0) {
+              const report = JSON.parse(fs.readFileSync(`src/evals/${files[0]}`, 'utf8'));
+              const dimSummary = report.summary.map(d => `- **${d.name}:** ${(d.passRate * 100).toFixed(0)}% pass`).join('\n');
+              const summary = `## ✅ Atlas Eval Report\n- **Total Evals:** ${report.totalEvals}\n- **Passed:** ${report.passed}\n- **Failed:** ${report.failed}\n- **Warnings:** ${report.warnings}\n- **Gate Status:** ${report.gatePass ? '✅ PASS' : '❌ FAIL'}\n\n### Dimension Summary\n${dimSummary}`;
+              github.rest.issues.createComment({
+                issue_number: context.issue.number,
+                owner: context.repo.owner,
+                repo: context.repo.repo,
+                body: summary
+              });
+            }
