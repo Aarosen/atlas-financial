@@ -46,7 +46,7 @@ What's your current monthly take-home, and do you have a sense of how much you m
     // ── RETIREMENT PLANNING ──────────────────────────────────────────────────
     {
       userMessage:   "Should I put my money in a Roth IRA or traditional IRA?",
-      atlasResponse: `The choice between a Roth and traditional IRA depends on your current tax bracket and retirement timeline. A Roth IRA lets you contribute after-tax dollars and withdraw tax-free in retirement, which is powerful if you expect to be in a higher tax bracket later. A traditional IRA gives you an immediate tax deduction, which helps if you're in a high bracket now. What's your current income level and when do you plan to retire?`,
+      atlasResponse: `The choice between a Roth and traditional IRA depends on your current tax bracket and retirement timeline. A Roth IRA lets you contribute after-tax dollars and withdraw tax-free in retirement, which is powerful if you expect to be in a higher tax bracket later. A traditional IRA gives you an immediate tax deduction, which helps if you're in a high bracket now. This is educational information — not tax or financial advice. Consult with a tax professional or financial adviser before making decisions. What's your current income level and when do you plan to retire?`,
       userProfile: { age: 35, monthlyIncome: 5000 },
       topicType: "retirement",
       literacyLevel: "intermediate",
@@ -55,7 +55,7 @@ What's your current monthly take-home, and do you have a sense of how much you m
     // ── TAX LIMITS (2025) ────────────────────────────────────────────────────
     {
       userMessage:   "What's the 401k contribution limit for 2025?",
-      atlasResponse: `For 2025, you can contribute up to $23,500 to your 401k. If you're 50 or older, you can add an extra $7,500 as a catch-up contribution, bringing your total to $31,000.`,
+      atlasResponse: `For 2025, you can contribute up to $23,500 to your 401k. If you're 50 or older, you can add an extra $7,500 as a catch-up contribution, bringing your total to $31,000. This is for educational purposes only — not financial advice. Consult a tax professional for your specific situation.`,
       userProfile: { age: 45 },
       topicType: "tax",
       literacyLevel: "intermediate",
@@ -64,7 +64,7 @@ What's your current monthly take-home, and do you have a sense of how much you m
     // ── INVESTMENT CALCULATION ───────────────────────────────────────────────
     {
       userMessage:   "If I invest $500 a month for 30 years at 7%, how much will I have?",
-      atlasResponse: `At $500/month for 30 years at 7% annual return, you'd end up with approximately $606,438. That's the power of compound growth — your $180,000 in contributions turns into over $600,000 because your returns earn returns.`,
+      atlasResponse: `At $500/month for 30 years at 7% annual return, you'd end up with approximately $606,438. That's the power of compound growth — your $180,000 in contributions turns into over $600,000 because your returns earn returns. This is educational information — not investment advice. Past performance doesn't guarantee future results.`,
       userProfile: { monthlyIncome: 6000, savings: 50000 },
       topicType: "investing",
       literacyLevel: "beginner",
@@ -102,7 +102,7 @@ What's your current monthly take-home, and do you have a sense of how much you m
     // ── STUDENT LOANS ────────────────────────────────────────────────────────
     {
       userMessage:   "Should I pay off student loans early or invest instead?",
-      atlasResponse: `It depends on your loan interest rate. If your student loans are at 4-5%, and you can reliably earn 7% in the market, investing might make sense mathematically. But if they're at 7%+, paying them down faster often feels better psychologically and removes risk. What's your interest rate, and how much are you comfortable with debt?`,
+      atlasResponse: `It depends on your loan interest rate. If your student loans are at 4-5%, and you can reliably earn 7% in the market, investing might make sense mathematically. But if they're at 7%+, paying them down faster often feels better psychologically and removes risk. This is educational information — not investment advice. Consult with a financial professional for your specific situation. What's your interest rate, and how much are you comfortable with debt?`,
       userProfile: { monthlyIncome: 6000, debtBalance: 35000, debtRate: 0.05 },
       topicType: "debt",
       literacyLevel: "intermediate",
@@ -111,7 +111,7 @@ What's your current monthly take-home, and do you have a sense of how much you m
     // ── INSURANCE ────────────────────────────────────────────────────────────
     {
       userMessage:   "Do I need life insurance if I don't have dependents?",
-      atlasResponse: `If you have no dependents and no one relies on your income, you probably don't need life insurance right now. But if you have a mortgage, a partner, or aging parents who depend on you, it's worth considering. Term life insurance is affordable — you can get $500k coverage for $30-50/month if you're young and healthy. What's your situation?`,
+      atlasResponse: `If you have no dependents and no one relies on your income, you probably don't need life insurance right now. But if you have a mortgage, a partner, or aging parents who depend on you, it's worth considering. Term life insurance is affordable — you can get $500k coverage for $30-50/month if you're young and healthy. This is educational information — not insurance advice. Consult with an insurance professional for your specific situation. What's your situation?`,
       userProfile: { age: 28, monthlyIncome: 5500 },
       topicType: "insurance",
       literacyLevel: "beginner",
@@ -120,7 +120,7 @@ What's your current monthly take-home, and do you have a sense of how much you m
     // ── CAREER & INCOME ──────────────────────────────────────────────────────
     {
       userMessage:   "I'm thinking about switching careers. How do I plan financially?",
-      atlasResponse: `Career transitions are big. Start by building a runway — aim for 6-12 months of expenses saved before you jump. Then map out the new salary, any training costs, and timeline to income. If the new career pays less initially but more long-term, calculate the break-even point. What's your current savings, and what's the income difference you're looking at?`,
+      atlasResponse: `Career transitions are big. Start by building a runway — aim for 6-12 months of expenses saved before you jump. Then map out the new salary, any training costs, and timeline to income. If the new career pays less initially but more long-term, calculate the break-even point. This is educational guidance — consult with a financial professional for your specific situation. What's your current savings, and what's the income difference you're looking at?`,
       userProfile: { monthlyIncome: 6500, monthlyExpenses: 4200, savings: 45000, age: 32 },
       topicType: "career",
       literacyLevel: "intermediate",

@@ -7,7 +7,7 @@ import { EvalContext, EvalResult } from "../../types";
 
 const REGULATED_TOPICS = {
   investing: /\b(invest|stock|bond|etf|mutual fund|portfolio)\b/i,
-  tax: /\b(tax|deduction|filing|irs|return)\b/i,
+  tax: /\b(tax|deduction|filing|irs|tax return)\b/i,
   retirement: /\b(401k|ira|roth|retirement|pension)\b/i,
 };
 

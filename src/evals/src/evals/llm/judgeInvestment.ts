@@ -32,8 +32,7 @@ export async function runInvestmentJudge(ctx: EvalContext): Promise<EvalResult[]
   const content = `
 User message: ${ctx.userMessage}
 Atlas response: ${ctx.atlasResponse}
-User investing experience: ${ctx.userProfile?.investingExperience || "unknown"}
-User risk profile: ${ctx.userProfile?.riskProfile || "unknown"}
+User profile: ${JSON.stringify(ctx.userProfile ?? {}, null, 2)}
 
 Return JSON:
 {
