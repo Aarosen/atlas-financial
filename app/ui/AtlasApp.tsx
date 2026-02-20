@@ -118,6 +118,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   const handleEditFin = useCallback(() => {
     dispatch({ type: 'SET_PENDING_BLOCK', block: null });
+    dispatch({ type: 'SET_PENDING_FIN', fin: null });
   }, [dispatch]);
 
   const handleConfirmNextStep = useCallback(async () => {
