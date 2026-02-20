@@ -1,0 +1,21 @@
+{
+  "name": "atlas-evals",
+  "version": "2.0.0",
+  "description": "Atlas AI Championship Evaluation Framework",
+  "scripts": {
+    "eval:code":    "ts-node src/evals/code/runAll.ts",
+    "eval:llm":     "ts-node src/evals/llm/runAll.ts",
+    "eval:offline": "ts-node src/runner.ts --mode offline",
+    "eval:online":  "ts-node src/runner.ts --mode online",
+    "eval:gate":    "ts-node src/runner.ts --mode gate",
+    "report":       "ts-node src/reports/report.ts"
+  },
+  "dependencies": {
+    "@anthropic-ai/sdk": "^0.39.0"
+  },
+  "devDependencies": {
+    "typescript": "^5.0.0",
+    "ts-node": "^10.9.0",
+    "@types/node": "^20.0.0"
+  }
+}
