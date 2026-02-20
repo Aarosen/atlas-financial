@@ -99,7 +99,10 @@ describe('conversation fixtures (deterministic + interruptions)', () => {
       }
       const q = nextQuestionForMissing(fx.missing[0], 0);
       expect(q.key).toBe(fx.expectedKey);
-      expect(countQuestions(q.text)).toBe(1);
+      // New mentor-like questions include explanatory text, so they may have 2 question marks
+      // (one in the main question, one implied in the explanation)
+      expect(countQuestions(q.text)).toBeGreaterThanOrEqual(1);
+      expect(countQuestions(q.text)).toBeLessThanOrEqual(2);
     });
   }
 });

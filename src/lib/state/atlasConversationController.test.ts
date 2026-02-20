@@ -1,5 +1,5 @@
 import { describe, expect, test } from 'vitest';
-import { applyUserTurn, clarificationForMissing, computeMissing, createInitialAtlasConversationState } from './atlasConversationController';
+import { applyUserTurn, nextQuestionForMissing, computeMissing, createInitialAtlasConversationState } from './atlasConversationController';
 import type { FinancialState } from './types';
 
 function baseFin(): FinancialState {
@@ -49,9 +49,9 @@ describe('atlasConversationController', () => {
     expect(out.unknown.lowInterestDebt).toBe(true);
   });
 
-  test('clarificationForMissing returns helpful prompt', () => {
-    const t = clarificationForMissing('monthlyIncome');
-    expect(t.toLowerCase()).toContain('monthly');
-    expect(t.toLowerCase()).toContain('rough');
+  test('nextQuestionForMissing returns helpful prompt', () => {
+    const q = nextQuestionForMissing('monthlyIncome', 0);
+    expect(q.text.toLowerCase()).toContain('monthly');
+    expect(q.text.toLowerCase()).toContain('take-home');
   });
 });
