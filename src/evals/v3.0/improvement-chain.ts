@@ -279,11 +279,11 @@ export function trackResponseQuality(
 } {
   const dimensionResults: Record<string, EvalResult[]> = {};
 
-  for (const eval of evalResults) {
-    if (!dimensionResults[eval.dimensionId]) {
-      dimensionResults[eval.dimensionId] = [];
+  for (const evalResult of evalResults) {
+    if (!dimensionResults[evalResult.dimensionId]) {
+      dimensionResults[evalResult.dimensionId] = [];
     }
-    dimensionResults[eval.dimensionId].push(eval);
+    dimensionResults[evalResult.dimensionId].push(evalResult);
   }
 
   const passingDimensions: string[] = [];
