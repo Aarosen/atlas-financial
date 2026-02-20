@@ -217,56 +217,101 @@ export function nextQuestionForMissing(
   key: keyof FinancialState;
   text: string;
 } {
-  const withWhy = (q: string, why: string) => `${q} (${why} A rough number is totally fine.)`;
+  // Mentor-like questions that explain WHY we're asking
+  // This builds trust and helps users understand the financial logic
+  const withWhy = (q: string, why: string) => `${q}\n\n_${why}_`;
+  
   const variants: Record<string, string[]> = {
     monthlyIncome: [
-      withWhy("What's your monthly take-home income?", 'This tells us what we can safely work with.'),
-      withWhy('About how much hits your account each month, after tax?', 'It anchors every other decision we make.'),
-      withWhy('What would you say your monthly take-home is?', 'It sets the scale for goals and tradeoffs.'),
+      withWhy(
+        "What's your monthly take-home income — the amount that actually hits your account after taxes?",
+        "This is the foundation. Everything else we plan depends on knowing what you're actually working with."
+      ),
+      withWhy(
+        'About how much comes in each month, after tax?',
+        'Your income is the anchor. It determines what\'s possible and what trade-offs we need to make.'
+      ),
+      withWhy(
+        'What would you say your monthly take-home is?',
+        'This sets the scale for everything — your goals, your safety net, your flexibility.'
+      ),
     ],
     essentialExpenses: [
-      withWhy('About how much goes to essentials each month — rent, groceries, utilities?', 'We need to know your non-negotiables first.'),
-      withWhy('Roughly what do your essentials cost per month?', 'This shows how much flexibility we actually have.'),
-      withWhy('What do you spend on essentials in a typical month?', 'It tells us how much buffer you really have.'),
+      withWhy(
+        'What do your essentials cost each month — rent, groceries, utilities, insurance, that kind of thing?',
+        'Your essentials are your non-negotiables. Everything else we plan comes from what\'s left over.'
+      ),
+      withWhy(
+        'Roughly what do your essentials total each month?',
+        'This shows us how much flexibility you actually have. The gap between income and essentials is where the real options are.'
+      ),
+      withWhy(
+        'What do you spend on the must-haves each month?',
+        'Knowing your essentials helps us see how much breathing room you have for goals and debt payoff.'
+      ),
     ],
     totalSavings: [
-      withWhy('How much do you have in savings/cash right now?', 'This helps me gauge your safety net.'),
-      withWhy('About how much is in savings today?', 'It tells us how resilient you are to surprises.'),
-      withWhy('What’s your current savings balance, roughly?', 'It defines your emergency buffer.'),
+      withWhy(
+        'How much do you have in savings or cash right now?',
+        'This is your safety net. It tells us how resilient you are to surprises and what we can safely do next.'
+      ),
+      withWhy(
+        'About how much is in savings today?',
+        'Your current savings show us your starting point. It helps me gauge how much emergency buffer you have.'
+      ),
+      withWhy(
+        'What\'s your current savings balance, roughly?',
+        'This defines your emergency fund. It\'s the foundation of financial security.'
+      ),
     ],
     highInterestDebt: [
-      withWhy('Do you have any high-interest debt like credit cards — and if so, about how much total?', 'This tells us what’s compounding against you.'),
-      withWhy('Any credit card balances (or other high-interest debt) — roughly how much total?', 'High-interest debt can erase progress quickly.'),
-      withWhy('Do you carry any high-interest debt right now — roughly how much?', 'It helps us decide the safest first move.'),
+      withWhy(
+        'Do you have any high-interest debt — like credit cards? If so, roughly how much total?',
+        'High-interest debt is the enemy of progress. It compounds against you every month. Understanding it is the first step to beating it.'
+      ),
+      withWhy(
+        'Any credit card balances or other high-interest debt?',
+        'High-interest debt can erase your progress faster than anything else. We need to know what we\'re dealing with.'
+      ),
+      withWhy(
+        'Do you carry any high-interest debt right now?',
+        'This matters because it directly affects your monthly cashflow and your path forward.'
+      ),
     ],
     lowInterestDebt: [
-      withWhy('Any other loans (student, car, mortgage) — and if so, about how much total?', 'This affects cashflow and long-term options.'),
-      withWhy('Do you have any other debt like student loans, car loans, or a mortgage — roughly how much total?', 'It helps us plan without overcommitting.'),
-      withWhy('Any lower-interest loans we should account for — roughly what’s the total?', 'It rounds out your full picture.'),
+      withWhy(
+        'Do you have any other loans — student loans, car loans, mortgage? Roughly how much total?',
+        'Lower-interest debt is different. It affects your cashflow and options, but it\'s not the same emergency as high-interest debt.'
+      ),
+      withWhy(
+        'Any student loans, car loans, or a mortgage we should account for?',
+        'These loans shape your long-term picture. They affect what you can do and what you should prioritize.'
+      ),
+      withWhy(
+        'Any other debt we should know about?',
+        'This rounds out your full financial picture so we can make a real plan.'
+      ),
     ],
     primaryGoal: [
-      withWhy('What matters most right now — stability, growth, flexibility, or building wealth?', 'Your goal shapes the next step we choose.'),
-      withWhy('Which goal feels most urgent: stability, growth, flexibility, or wealth building?', 'It tells me how to prioritize your plan.'),
-      withWhy('If Atlas could help with one outcome right now, what would it be?', 'This anchors the advice to your reality.'),
+      withWhy(
+        'What matters most to you right now — stability (peace of mind), growth (building wealth), flexibility (freedom), or something else?',
+        'Your goal is the north star. Everything we recommend flows from what you actually want.'
+      ),
+      withWhy(
+        'Which goal feels most urgent to you: stability, growth, flexibility, or building wealth?',
+        'Your priority tells me how to sequence your next steps. Different goals need different strategies.'
+      ),
+      withWhy(
+        'If I could help you with one financial outcome, what would matter most?',
+        'This anchors everything. Your goal shapes the advice I give you.'
+      ),
     ],
   };
 
   const v = variants[k];
-  if (!v || v.length === 0) return { key: k, text: 'Tell me one number that feels most important right now.' };
+  if (!v || v.length === 0) return { key: k, text: 'What number feels most important to share right now?' };
   const idx = Math.abs(turnIndex) % v.length;
   return { key: k, text: v[idx] };
-}
-
-export function clarificationForMissing(k: keyof FinancialState) {
-  const base: Record<string, string> = {
-    monthlyIncome: "Could you share a rough monthly take-home number? A ballpark is totally fine.",
-    essentialExpenses: 'Roughly what do your essentials total each month? Even a quick estimate helps.',
-    totalSavings: 'About how much do you have in savings/cash? Round numbers are great.',
-    highInterestDebt: 'Do you have any credit card or high-interest debt, and roughly how much?',
-    lowInterestDebt: 'Any other loans (student, car, mortgage) — roughly how much total?',
-    primaryGoal: 'What goal should I optimize for first — stability, growth, flexibility, or wealth building?',
-  };
-  return base[k] || 'Could you share a rough number? Even a ballpark helps.';
 }
 
 export type InterruptionType = 'answer_to_question' | 'followup_question' | 'correction' | 'meta';
