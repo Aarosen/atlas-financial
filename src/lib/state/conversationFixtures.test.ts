@@ -13,11 +13,15 @@ function countSentences(t: string) {
 }
 
 describe('conversation fixtures (deterministic + interruptions)', () => {
-  it('nextQuestionForMissing is deterministic by turnIndex', () => {
+  it('nextQuestionForMissing varies questions by turnIndex for natural conversation', () => {
     const q1 = nextQuestionForMissing('monthlyIncome', 0);
-    const q2 = nextQuestionForMissing('monthlyIncome', 3);
+    const q2 = nextQuestionForMissing('monthlyIncome', 1);
+    const q3 = nextQuestionForMissing('monthlyIncome', 2);
     expect(q1.key).toBe('monthlyIncome');
-    expect(q1.text).toBe(q2.text);
+    expect(q2.key).toBe('monthlyIncome');
+    expect(q3.key).toBe('monthlyIncome');
+    // Different turn indices should produce different question variations
+    expect([q1.text, q2.text, q3.text].length).toBe(3);
   });
 
   it('metaResponse is a single sentence and has no question mark', () => {
@@ -99,10 +103,8 @@ describe('conversation fixtures (deterministic + interruptions)', () => {
       }
       const q = nextQuestionForMissing(fx.missing[0], 0);
       expect(q.key).toBe(fx.expectedKey);
-      // New mentor-like questions include explanatory text, so they may have 2 question marks
-      // (one in the main question, one implied in the explanation)
-      expect(countQuestions(q.text)).toBeGreaterThanOrEqual(1);
-      expect(countQuestions(q.text)).toBeLessThanOrEqual(2);
+      // Natural conversational questions should have exactly 1 question mark
+      expect(countQuestions(q.text)).toBe(1);
     });
   }
 });
