@@ -10,6 +10,7 @@ import { culturallyRelevantExample } from '@/lib/ai/culturalExamples';
 import { detectLanguage } from '@/lib/ai/multiLanguage';
 import { trimPromptSections } from '@/lib/ai/promptTrim';
 import { normalizeSlang, type SupportedLanguage } from '@/lib/ai/slangMapper';
+import { processUserMessageAdaptively } from '@/lib/ai/conversationAdaptationLayer';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -557,6 +558,40 @@ Return ONLY the rewritten text.`;
 
       console.log('[atlas_guardrails] fallback_answer', { model: usedModel });
       return jsonOk({ text: fallbackAnswer(String(question || '').trim()), source: 'fallback', tier });
+    }
+
+    // Apply adaptive intelligence layer to enhance response
+    if (type === 'chat' && text) {
+      try {
+        const lastUserMsg = String((messages || []).slice(-1)[0]?.content || '').trim();
+        const financialState = (body as any)?.fin || {};
+        
+        const adaptiveResult = processUserMessageAdaptively(
+          lastUserMsg,
+          messages || [],
+          financialState,
+          text
+        );
+        
+        // Return enhanced response with adaptive metadata
+        return jsonOk({
+          text: adaptiveResult.finalResponse,
+          source: 'claude_adaptive',
+          model: usedModel,
+          tier,
+          adaptive: {
+            phase: adaptiveResult.adaptiveResponse.conversationPhase,
+            signals: adaptiveResult.adaptiveResponse.userSignals.map(s => s.type),
+            shouldAskFollowUp: adaptiveResult.shouldAskFollowUp,
+            followUpQuestion: adaptiveResult.followUpQuestion,
+            readyForActionPlan: adaptiveResult.readyForActionPlan,
+          },
+        });
+      } catch (adaptiveError) {
+        // Fall back to original response if adaptive processing fails
+        console.error('[atlas_adaptive] processing_error', adaptiveError);
+        return jsonOk({ text, source: 'claude', model: usedModel, tier });
+      }
     }
 
     return jsonOk({ text, source: 'claude', model: usedModel, tier });
