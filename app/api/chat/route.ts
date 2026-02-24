@@ -12,6 +12,7 @@ import { trimPromptSections } from '@/lib/ai/promptTrim';
 import { normalizeSlang, type SupportedLanguage } from '@/lib/ai/slangMapper';
 import { processUserMessageAdaptively } from '@/lib/ai/conversationAdaptationLayer';
 import { isDirectFollowUpQuestion, generateDirectAnswer, shouldReplaceWithDirectAnswer } from '@/lib/ai/directAnswerEngine';
+import { extractConversationContext, enhanceWithContextAwareness, assessUrgency, generateContextAwareActions } from '@/lib/ai/contextAwarenessEngine';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -579,14 +580,19 @@ Return ONLY the rewritten text.`;
 
           // If we have a direct answer, use it instead of generic response
           if (directAnswer && directAnswer.trim().length > 0) {
+            // Enhance with context awareness (reference specific numbers)
+            const context = extractConversationContext(conversationHistory);
+            const urgency = assessUrgency(context);
+            const enhancedAnswer = enhanceWithContextAwareness(directAnswer, context, lastUserMsg);
+            
             return jsonOk({
-              text: directAnswer,
+              text: enhancedAnswer,
               source: 'atlas_direct',
               model: usedModel,
               tier,
               adaptive: {
                 phase: 'strategy',
-                signals: [],
+                signals: urgency.urgencyLevel === 'critical' ? ['urgency'] : [],
                 shouldAskFollowUp: false,
                 followUpQuestion: null,
                 readyForActionPlan: false,
