@@ -11,6 +11,8 @@ export default defineConfig({
     screenshot: 'only-on-failure',
     video: 'retain-on-failure',
   },
+  snapshotPathTemplate: '{testFileDir}/{testFileNameWithoutExt}.spec.ts-snapshots/{arg}-{platform}{ext}',
+  snapshotDir: 'e2e',
   projects: [
     {
       name: 'chromium',

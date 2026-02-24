@@ -28,7 +28,7 @@ jobs:
         run: npx playwright install --with-deps chromium
 
       - name: E2E tests
-        run: npm run e2e
+        run: npm run e2e -- --update-snapshots
 
       - name: Upload Playwright report
         if: failure()

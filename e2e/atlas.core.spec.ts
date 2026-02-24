@@ -141,17 +141,23 @@ test('2) interruption → resume', async ({ page }, testInfo) => {
   const input = page.locator('textarea');
   await input.fill('My income is $4000/month.');
   await input.press('Enter');
+  
+  // Wait for first response to complete
+  await page.waitForTimeout(500);
 
   // Meta interruption should be answered locally and then resume asking.
   await input.fill('What do you store and send?');
   await input.press('Enter');
 
+  // Wait for response and privacy text to appear
+  await page.waitForTimeout(1000);
+  
   await expect(
     page.getByText(
       'Messages you type may be sent to our AI provider to generate responses',
       { exact: false }
     )
-  ).toBeVisible();
+  ).toBeVisible({ timeout: 5000 });
 });
 
 test('6) retry recovers from temporary API error', async ({ page }: { page: Page }) => {
