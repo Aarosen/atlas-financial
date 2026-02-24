@@ -11,6 +11,7 @@ import { detectLanguage } from '@/lib/ai/multiLanguage';
 import { trimPromptSections } from '@/lib/ai/promptTrim';
 import { normalizeSlang, type SupportedLanguage } from '@/lib/ai/slangMapper';
 import { processUserMessageAdaptively } from '@/lib/ai/conversationAdaptationLayer';
+import { isDirectFollowUpQuestion, generateDirectAnswer, shouldReplaceWithDirectAnswer } from '@/lib/ai/directAnswerEngine';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -560,15 +561,44 @@ Return ONLY the rewritten text.`;
       return jsonOk({ text: fallbackAnswer(String(question || '').trim()), source: 'fallback', tier });
     }
 
-    // Apply adaptive intelligence layer to enhance response
+    // Apply direct answer engine FIRST for follow-up questions
     if (type === 'chat' && text) {
       try {
         const lastUserMsg = String((messages || []).slice(-1)[0]?.content || '').trim();
         const financialState = (body as any)?.fin || {};
-        
+        const conversationHistory = messages || [];
+
+        // CRITICAL FIX: Check if this is a direct follow-up question that needs a specific answer
+        if (isDirectFollowUpQuestion(lastUserMsg, conversationHistory)) {
+          const directAnswer = generateDirectAnswer({
+            userMessage: lastUserMsg,
+            conversationHistory,
+            financialState,
+            previousResponse: text,
+          });
+
+          // If we have a direct answer, use it instead of generic response
+          if (directAnswer && directAnswer.trim().length > 0) {
+            return jsonOk({
+              text: directAnswer,
+              source: 'atlas_direct',
+              model: usedModel,
+              tier,
+              adaptive: {
+                phase: 'strategy',
+                signals: [],
+                shouldAskFollowUp: false,
+                followUpQuestion: null,
+                readyForActionPlan: false,
+              },
+            });
+          }
+        }
+
+        // Otherwise, apply adaptive intelligence layer to enhance response
         const adaptiveResult = processUserMessageAdaptively(
           lastUserMsg,
-          messages || [],
+          conversationHistory,
           financialState,
           text
         );
@@ -587,9 +617,9 @@ Return ONLY the rewritten text.`;
             readyForActionPlan: adaptiveResult.readyForActionPlan,
           },
         });
-      } catch (adaptiveError) {
-        // Fall back to original response if adaptive processing fails
-        console.error('[atlas_adaptive] processing_error', adaptiveError);
+      } catch (directAnswerError) {
+        // Fall back to original response if direct answer processing fails
+        console.error('[atlas_direct] processing_error', directAnswerError);
         return jsonOk({ text, source: 'claude', model: usedModel, tier });
       }
     }
