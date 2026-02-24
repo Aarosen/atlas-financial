@@ -25,7 +25,13 @@ test('R4: scroll away shows Jump to latest, clicking returns to bottom', async (
   });
 });
 
-test('R4: conversation visual states are renderable (debug route)', async ({ page }) => {
+test('R4: conversation visual states are renderable (debug route)', async ({ page }, testInfo) => {
+  // Skip snapshot tests on CI (Linux platform) - only run on local (Darwin)
+  if (process.env.CI) {
+    testInfo.skip();
+    return;
+  }
+
   const cases = ['idle', 'typing', 'error', 'streaming'] as const;
 
   // Stabilize screenshots across platforms (avoid blinking caret / focus ring differences).
