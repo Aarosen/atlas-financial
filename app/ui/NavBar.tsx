@@ -64,7 +64,7 @@ export default function NavBar() {
         {isMobile && (
           <button
             onClick={toggleMenu}
-            className="px-4 py-2 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-all duration-200 flex items-center justify-center gap-2"
+            className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2"
             aria-label="Toggle menu"
             aria-expanded={isMenuOpen}
           >
