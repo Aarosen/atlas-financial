@@ -1,14 +1,9 @@
-'use client';
-
-import { useRouter } from 'next/navigation';
-
 export const metadata = {
   title: 'About Atlas — Your Financial Intelligence Companion',
   description: 'Learn about Atlas, a privacy-first financial education AI companion.',
 };
 
 export default function AboutPage() {
-  const router = useRouter();
 
   return (
     <div className="container py-12">
@@ -75,7 +70,7 @@ export default function AboutPage() {
             Have questions or feedback? We'd love to hear from you.
           </p>
           <button
-            onClick={() => window.location.href = '/contact'}
+            onClick={() => { window.location.href = '/contact'; }}
             className="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
           >
             Get in Touch

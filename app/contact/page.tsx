@@ -1,5 +1,3 @@
-'use client';
-
 export const metadata = {
   title: 'Contact Us — Atlas',
   description: 'Get in touch with the Atlas team.',
