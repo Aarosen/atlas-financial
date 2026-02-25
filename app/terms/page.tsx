@@ -1,3 +1,5 @@
+'use client';
+
 export const metadata = {
   title: 'Terms & Conditions — Atlas',
   description: 'Terms and conditions for using Atlas financial education platform.',

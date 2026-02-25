@@ -1,9 +1,15 @@
+'use client';
+
+import { useRouter } from 'next/navigation';
+
 export const metadata = {
   title: 'About Atlas — Your Financial Intelligence Companion',
   description: 'Learn about Atlas, a privacy-first financial education AI companion.',
 };
 
 export default function AboutPage() {
+  const router = useRouter();
+
   return (
     <div className="container py-12">
       <div className="max-w-3xl mx-auto">
@@ -65,13 +71,15 @@ export default function AboutPage() {
 
         <section>
           <h2 className="text-2xl font-semibold mb-4">Contact Us</h2>
-          <p className="text-lg text-slate-700 dark:text-slate-300">
-            Have questions or feedback? We'd love to hear from you.{' '}
-            <a href="/contact" className="text-blue-600 hover:underline font-semibold">
-              Get in touch
-            </a>
-            .
+          <p className="text-lg text-slate-700 dark:text-slate-300 mb-4">
+            Have questions or feedback? We'd love to hear from you.
           </p>
+          <button
+            onClick={() => window.location.href = '/contact'}
+            className="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+          >
+            Get in Touch
+          </button>
         </section>
       </div>
     </div>
