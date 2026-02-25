@@ -11,6 +11,9 @@ const sora = Sora({ subsets: ['latin'], variable: '--font-sora', display: 'swap'
 export const metadata: Metadata = {
   title: 'Atlas — Your Financial Companion',
   description: 'Atlas — Your Financial Intelligence Companion',
+  icons: {
+    icon: '/favicon.svg',
+  },
 };
 
 export default function RootLayout({ children }: { children: ReactNode }) {
