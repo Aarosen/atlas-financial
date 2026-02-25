@@ -13,6 +13,11 @@ import { normalizeSlang, type SupportedLanguage } from '@/lib/ai/slangMapper';
 import { processUserMessageAdaptively } from '@/lib/ai/conversationAdaptationLayer';
 import { isDirectFollowUpQuestion, generateDirectAnswer, shouldReplaceWithDirectAnswer } from '@/lib/ai/directAnswerEngine';
 import { extractConversationContext, enhanceWithContextAwareness, assessUrgency, generateContextAwareActions } from '@/lib/ai/contextAwarenessEngine';
+import { buildConversationArc, generateSessionSynthesis, isReadyForSynthesis } from '@/lib/ai/conversationArcEngine';
+import { detectCrisisSignals, generateCrisisResponse } from '@/lib/ai/crisisDetectionEngine';
+import { extractCulturalContext, adjustBudgetForObligations, generateCulturalAcknowledgment } from '@/lib/ai/culturalFinanceEngine';
+import { detectObjections, buildObjectionAwareRecommendation } from '@/lib/ai/objectionHandlingEngine';
+import { detectAppropriateTone, generatePersonalityPrompt, injectPersonality } from '@/lib/ai/tonePersonalityEngine';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -562,14 +567,34 @@ Return ONLY the rewritten text.`;
       return jsonOk({ text: fallbackAnswer(String(question || '').trim()), source: 'fallback', tier });
     }
 
-    // Apply direct answer engine FIRST for follow-up questions
+    // Apply comprehensive AI engine suite for chat responses
     if (type === 'chat' && text) {
       try {
         const lastUserMsg = String((messages || []).slice(-1)[0]?.content || '').trim();
         const financialState = (body as any)?.fin || {};
         const conversationHistory = messages || [];
 
-        // CRITICAL FIX: Check if this is a direct follow-up question that needs a specific answer
+        // STEP 1: Crisis Detection - HIGHEST PRIORITY
+        const crisisSignal = detectCrisisSignals(lastUserMsg, conversationHistory, financialState);
+        if (crisisSignal) {
+          const crisisResponse = generateCrisisResponse(crisisSignal);
+          return jsonOk({
+            text: crisisResponse,
+            source: 'atlas_crisis',
+            model: usedModel,
+            tier,
+            adaptive: {
+              phase: 'crisis',
+              signals: ['crisis', crisisSignal.type],
+              shouldAskFollowUp: false,
+              followUpQuestion: null,
+              readyForActionPlan: false,
+              escalateToHuman: crisisSignal.escalateToHuman,
+            },
+          });
+        }
+
+        // STEP 2: Direct Answer Engine - Answer specific follow-up questions
         if (isDirectFollowUpQuestion(lastUserMsg, conversationHistory)) {
           const directAnswer = generateDirectAnswer({
             userMessage: lastUserMsg,
@@ -578,13 +603,27 @@ Return ONLY the rewritten text.`;
             previousResponse: text,
           });
 
-          // If we have a direct answer, use it instead of generic response
           if (directAnswer && directAnswer.trim().length > 0) {
-            // Enhance with context awareness (reference specific numbers)
+            // STEP 3: Enhance with Context Awareness
             const context = extractConversationContext(conversationHistory);
             const urgency = assessUrgency(context);
-            const enhancedAnswer = enhanceWithContextAwareness(directAnswer, context, lastUserMsg);
-            
+            let enhancedAnswer = enhanceWithContextAwareness(directAnswer, context, lastUserMsg);
+
+            // STEP 4: Add Objection Handling
+            const objections = detectObjections(lastUserMsg);
+            if (objections.length > 0) {
+              enhancedAnswer = buildObjectionAwareRecommendation(enhancedAnswer, lastUserMsg);
+            }
+
+            // STEP 5: Detect and Apply Appropriate Tone
+            const tone = detectAppropriateTone(lastUserMsg, {
+              isCrisis: false,
+              hasProgress: false,
+              isFirstMessage: false,
+              emotionalState: detectEmotion(conversationHistory) === 'anxious' ? 'stressed' : 'neutral',
+            });
+            enhancedAnswer = injectPersonality(enhancedAnswer, tone);
+
             return jsonOk({
               text: enhancedAnswer,
               source: 'atlas_direct',
@@ -601,18 +640,52 @@ Return ONLY the rewritten text.`;
           }
         }
 
-        // Otherwise, apply adaptive intelligence layer to enhance response
+        // STEP 6: Cultural Context Recognition
+        const culturalContext = extractCulturalContext(conversationHistory);
+        let enhancedResponse = text;
+
+        // Add cultural acknowledgment if applicable
+        if (culturalContext.obligations.length > 0 || culturalContext.constraints.noInterest) {
+          const culturalAck = generateCulturalAcknowledgment(culturalContext);
+          enhancedResponse += culturalAck;
+        }
+
+        // STEP 7: Conversation Arc & Synthesis
+        const arc = buildConversationArc(conversationHistory, financialState);
+        if (isReadyForSynthesis(conversationHistory)) {
+          const synthesis = generateSessionSynthesis(arc, financialState, conversationHistory);
+          // Add synthesis message if conversation is ready
+          if (synthesis.summary) {
+            enhancedResponse += `\n\n---\n\n**Session Summary:**\n${synthesis.summary}`;
+          }
+        }
+
+        // STEP 8: Objection Handling
+        const objections = detectObjections(lastUserMsg);
+        if (objections.length > 0) {
+          enhancedResponse = buildObjectionAwareRecommendation(enhancedResponse, lastUserMsg);
+        }
+
+        // STEP 9: Tone & Personality
+        const tone = detectAppropriateTone(lastUserMsg, {
+          isCrisis: false,
+          hasProgress: arc.questionsAsked.length > 5,
+          isFirstMessage: conversationHistory.length <= 2,
+          emotionalState: detectEmotion(conversationHistory) === 'anxious' ? 'stressed' : 'neutral',
+        });
+        enhancedResponse = injectPersonality(enhancedResponse, tone);
+
+        // STEP 10: Apply adaptive intelligence layer
         const adaptiveResult = processUserMessageAdaptively(
           lastUserMsg,
           conversationHistory,
           financialState,
-          text
+          enhancedResponse
         );
-        
-        // Return enhanced response with adaptive metadata
+
         return jsonOk({
           text: adaptiveResult.finalResponse,
-          source: 'claude_adaptive',
+          source: 'atlas_comprehensive',
           model: usedModel,
           tier,
           adaptive: {
@@ -623,9 +696,8 @@ Return ONLY the rewritten text.`;
             readyForActionPlan: adaptiveResult.readyForActionPlan,
           },
         });
-      } catch (directAnswerError) {
-        // Fall back to original response if direct answer processing fails
-        console.error('[atlas_direct] processing_error', directAnswerError);
+      } catch (engineError) {
+        console.error('[atlas_comprehensive] processing_error', engineError);
         return jsonOk({ text, source: 'claude', model: usedModel, tier });
       }
     }
