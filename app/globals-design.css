@@ -1,0 +1,430 @@
+/* Atlas Design System - Global Button & Interaction Styles */
+
+/* ============================================
+   PRIMARY BUTTON STYLES
+   ============================================ */
+.btn-primary {
+  background-color: #14b8a6;
+  color: #ffffff;
+  border: none;
+  border-radius: 24px;
+  padding: 12px 24px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.btn-primary:hover {
+  background-color: #0d9488;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+}
+
+.btn-primary:active {
+  background-color: #115e59;
+  transform: translateY(0px) scale(0.98);
+  box-shadow: 0 2px 4px rgba(20, 184, 166, 0.2);
+  transition: all 100ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.btn-primary:focus {
+  outline: 2px solid #14b8a6;
+  outline-offset: 2px;
+}
+
+.btn-primary:disabled {
+  background-color: #cbd5e1;
+  color: #94a3b8;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Dark mode primary button */
+.dark .btn-primary {
+  background-color: #14b8a6;
+}
+
+.dark .btn-primary:hover {
+  background-color: #0d9488;
+}
+
+.dark .btn-primary:active {
+  background-color: #115e59;
+}
+
+/* ============================================
+   SECONDARY BUTTON STYLES
+   ============================================ */
+.btn-secondary {
+  background-color: transparent;
+  color: #0f172a;
+  border: 2px solid #cbd5e1;
+  border-radius: 24px;
+  padding: 10px 22px;
+  font-weight: 600;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.btn-secondary:hover {
+  background-color: #f1f5f9;
+  border-color: #94a3b8;
+  transform: translateY(-2px);
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.btn-secondary:active {
+  background-color: #e2e8f0;
+  transform: translateY(0px) scale(0.98);
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.05);
+  transition: all 100ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.btn-secondary:focus {
+  outline: 2px solid #14b8a6;
+  outline-offset: 2px;
+}
+
+.btn-secondary:disabled {
+  background-color: #f1f5f9;
+  color: #94a3b8;
+  border-color: #e2e8f0;
+  cursor: not-allowed;
+  opacity: 0.6;
+  transform: none;
+  box-shadow: none;
+}
+
+/* Dark mode secondary button */
+.dark .btn-secondary {
+  color: #ffffff;
+  border-color: #475569;
+}
+
+.dark .btn-secondary:hover {
+  background-color: #1e293b;
+  border-color: #64748b;
+}
+
+.dark .btn-secondary:active {
+  background-color: #0f172a;
+}
+
+/* ============================================
+   TEXT LINK BUTTON STYLES
+   ============================================ */
+.btn-text {
+  background-color: transparent;
+  color: #475569;
+  border: none;
+  padding: 0;
+  font-weight: 500;
+  font-size: 14px;
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+  text-decoration: none;
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+}
+
+.btn-text:hover {
+  color: #0f172a;
+  text-decoration: underline;
+  transform: translateX(2px);
+}
+
+.btn-text:active {
+  color: #14b8a6;
+}
+
+.btn-text:focus {
+  outline: 2px solid #14b8a6;
+  outline-offset: 2px;
+}
+
+/* Dark mode text button */
+.dark .btn-text {
+  color: #94a3b8;
+}
+
+.dark .btn-text:hover {
+  color: #ffffff;
+}
+
+.dark .btn-text:active {
+  color: #2dd4bf;
+}
+
+/* ============================================
+   HAMBURGER BUTTON STYLES
+   ============================================ */
+.hamburger-btn {
+  background-color: #14b8a6;
+  color: #ffffff;
+  border: none;
+  border-radius: 24px;
+  padding: 12px 16px;
+  cursor: pointer;
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  min-height: 44px;
+  min-width: 44px;
+}
+
+.hamburger-btn:hover {
+  background-color: #0d9488;
+  transform: scale(1.05);
+}
+
+.hamburger-btn:active {
+  background-color: #115e59;
+  transform: scale(0.98);
+  transition: all 100ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.hamburger-btn:focus {
+  outline: 2px solid #14b8a6;
+  outline-offset: 2px;
+}
+
+.hamburger-btn svg {
+  transition: transform 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+/* ============================================
+   MOBILE MENU STYLES
+   ============================================ */
+.mobile-menu {
+  position: fixed;
+  right: 0;
+  top: 0;
+  height: 100vh;
+  width: 280px;
+  background-color: #ffffff;
+  box-shadow: -4px 0 12px rgba(0, 0, 0, 0.15);
+  z-index: 50;
+  overflow-y: auto;
+  border-left: 1px solid #e2e8f0;
+  animation: slideInRight 300ms cubic-bezier(0.4, 0, 0.2, 1);
+  will-change: transform;
+}
+
+.dark .mobile-menu {
+  background-color: #030712;
+  border-left-color: #1e293b;
+}
+
+.mobile-menu-overlay {
+  position: fixed;
+  inset: 0;
+  background-color: rgba(0, 0, 0, 0.5);
+  z-index: 40;
+  animation: fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-menu-item {
+  display: block;
+  width: 100%;
+  text-align: left;
+  padding: 12px 16px;
+  border-radius: 8px;
+  color: #0f172a;
+  background-color: transparent;
+  border: none;
+  font-weight: 500;
+  font-size: 16px;
+  cursor: pointer;
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.mobile-menu-item:hover {
+  background-color: #f1f5f9;
+  transform: translateX(4px);
+}
+
+.mobile-menu-item:active {
+  background-color: #e2e8f0;
+  transform: translateX(4px) scale(0.98);
+}
+
+.mobile-menu-item:focus {
+  outline: 2px solid #14b8a6;
+  outline-offset: 2px;
+}
+
+.dark .mobile-menu-item {
+  color: #ffffff;
+}
+
+.dark .mobile-menu-item:hover {
+  background-color: #1e293b;
+}
+
+.dark .mobile-menu-item:active {
+  background-color: #0f172a;
+}
+
+.mobile-menu-item.active {
+  background-color: #fef3c7;
+  color: #b45309;
+  border-left: 3px solid #14b8a6;
+  padding-left: 13px;
+}
+
+.dark .mobile-menu-item.active {
+  background-color: rgba(20, 184, 166, 0.1);
+  color: #2dd4bf;
+}
+
+/* ============================================
+   ANIMATIONS
+   ============================================ */
+@keyframes slideInRight {
+  from {
+    transform: translateX(100%);
+  }
+  to {
+    transform: translateX(0);
+  }
+}
+
+@keyframes slideOutRight {
+  from {
+    transform: translateX(0);
+  }
+  to {
+    transform: translateX(100%);
+  }
+}
+
+@keyframes fadeIn {
+  from {
+    opacity: 0;
+  }
+  to {
+    opacity: 1;
+  }
+}
+
+@keyframes fadeOut {
+  from {
+    opacity: 1;
+  }
+  to {
+    opacity: 0;
+  }
+}
+
+/* ============================================
+   FOCUS VISIBLE STYLES (Keyboard Navigation)
+   ============================================ */
+button:focus-visible {
+  outline: 2px solid #14b8a6;
+  outline-offset: 2px;
+}
+
+a:focus-visible {
+  outline: 2px solid #14b8a6;
+  outline-offset: 2px;
+}
+
+/* ============================================
+   UTILITY CLASSES
+   ============================================ */
+.transition-all-200 {
+  transition: all 200ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-all-150 {
+  transition: all 150ms cubic-bezier(0.4, 0, 0.2, 1);
+}
+
+.transition-all-100 {
+  transition: all 100ms cubic-bezier(0.4, 0, 1, 1);
+}
+
+.hover-lift:hover {
+  transform: translateY(-2px);
+}
+
+.active-press:active {
+  transform: scale(0.98);
+}
+
+.hover-shadow:hover {
+  box-shadow: 0 4px 12px rgba(20, 184, 166, 0.3);
+}
+
+/* ============================================
+   RESPONSIVE ADJUSTMENTS
+   ============================================ */
+@media (max-width: 640px) {
+  .mobile-menu {
+    width: 280px;
+  }
+
+  .btn-primary,
+  .btn-secondary,
+  .btn-text {
+    font-size: 14px;
+  }
+}
+
+@media (max-width: 375px) {
+  .mobile-menu {
+    width: 100%;
+    max-width: 280px;
+  }
+
+  .btn-primary,
+  .btn-secondary {
+    padding: 10px 16px;
+    font-size: 13px;
+  }
+}
+
+/* ============================================
+   ACCESSIBILITY
+   ============================================ */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
+}
+
+/* High contrast mode support */
+@media (prefers-contrast: more) {
+  .btn-primary {
+    border: 2px solid #0f172a;
+  }
+
+  .btn-secondary {
+    border-width: 3px;
+  }
+
+  button:focus {
+    outline-width: 3px;
+  }
+}

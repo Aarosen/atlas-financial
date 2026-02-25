@@ -19,6 +19,30 @@ export default function NavBar() {
     return () => window.removeEventListener('resize', checkMobile);
   }, []);
 
+  useEffect(() => {
+    if (!isMobile) {
+      setIsMenuOpen(false);
+    }
+  }, [isMobile]);
+
+  useEffect(() => {
+    const handleEscape = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        setIsMenuOpen(false);
+      }
+    };
+
+    if (isMenuOpen) {
+      document.addEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'hidden';
+    }
+
+    return () => {
+      document.removeEventListener('keydown', handleEscape);
+      document.body.style.overflow = 'unset';
+    };
+  }, [isMenuOpen]);
+
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
   const closeMenu = () => setIsMenuOpen(false);
 
@@ -34,7 +58,7 @@ export default function NavBar() {
       <div className="atlasHeaderInner container">
         <button
           onClick={() => window.location.href = '/'}
-          className="flex items-center gap-2 hover:opacity-80 transition-opacity"
+          className="flex items-center gap-2 hover:opacity-70 transition-opacity"
           style={{ textDecoration: 'none', color: 'var(--ink)', background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
         >
           <AtlasLogo size={22} />
@@ -54,7 +78,7 @@ export default function NavBar() {
                 {item.label}
               </button>
             ))}
-            <ButtonLink href="/conversation" variant="primary" size="sm" style={{ padding: '10px 14px', borderRadius: 14, fontWeight: 900, fontSize: 13 }}>
+            <ButtonLink href="/conversation" variant="primary" size="sm" style={{ padding: '10px 14px', borderRadius: 24, fontWeight: 900, fontSize: 13 }}>
               Start
             </ButtonLink>
           </div>
@@ -64,11 +88,11 @@ export default function NavBar() {
         {isMobile && (
           <button
             onClick={toggleMenu}
-            className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2"
-            aria-label="Toggle menu"
+            className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:scale-105 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
+            aria-label="Toggle navigation menu"
             aria-expanded={isMenuOpen}
           >
-            {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
+            {isMenuOpen ? <X size={20} className="transition-transform duration-200" /> : <Menu size={20} className="transition-transform duration-200" />}
           </button>
         )}
       </div>
@@ -77,29 +101,58 @@ export default function NavBar() {
       {isMobile && isMenuOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/50 transition-opacity"
+            className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ease-in-out"
             onClick={closeMenu}
             aria-hidden="true"
+            style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
           />
-          <div className="fixed right-0 top-0 h-screen w-64 bg-white dark:bg-slate-900 shadow-lg z-50 overflow-y-auto animate-in slide-in-from-right-64">
+          <div 
+            className="fixed right-0 top-0 h-screen w-80 bg-white dark:bg-slate-950 shadow-lg z-50 overflow-y-auto border-l border-slate-200 dark:border-slate-800"
+            style={{ 
+              animation: 'slideInRight 300ms cubic-bezier(0.4, 0, 0.2, 1)',
+              willChange: 'transform'
+            }}
+          >
+            <style>{`
+              @keyframes slideInRight {
+                from {
+                  transform: translateX(100%);
+                }
+                to {
+                  transform: translateX(0);
+                }
+              }
+              @keyframes fadeIn {
+                from {
+                  opacity: 0;
+                }
+                to {
+                  opacity: 1;
+                }
+              }
+            `}</style>
             <div className="p-6 space-y-2">
               <button
                 onClick={closeMenu}
-                className="absolute top-4 right-4 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors"
+                className="absolute top-6 right-6 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors duration-150 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
                 aria-label="Close menu"
               >
                 <X size={24} />
               </button>
 
-              <div className="pt-8 space-y-2">
-                {navItems.map((item) => (
+              <div className="pt-8 space-y-1">
+                {navItems.map((item, index) => (
                   <button
                     key={item.href}
                     onClick={() => {
                       window.location.href = item.href;
                       closeMenu();
                     }}
-                    className="w-full text-left px-4 py-3 rounded-lg text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 transition-colors font-medium"
+                    className="w-full text-left px-4 py-3 rounded-lg text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-all duration-150 font-medium hover:translate-x-1 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
+                    style={{ 
+                      transitionProperty: 'background-color, transform',
+                      animationDelay: `${index * 50}ms`
+                    }}
                   >
                     {item.label}
                   </button>
@@ -107,15 +160,15 @@ export default function NavBar() {
               </div>
 
               <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
-                <ButtonLink
-                  href="/conversation"
-                  variant="primary"
-                  size="sm"
-                  style={{ padding: '12px 14px', borderRadius: 14, fontWeight: 900, fontSize: 13, width: '100%', textAlign: 'center', display: 'block' }}
-                  onClick={closeMenu}
+                <button
+                  onClick={() => {
+                    window.location.href = '/conversation';
+                    closeMenu();
+                  }}
+                  className="w-full px-6 py-3 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-teal-500/30 active:shadow-md hover:scale-102 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
                 >
                   Start
-                </ButtonLink>
+                </button>
               </div>
             </div>
           </div>

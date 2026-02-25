@@ -47,18 +47,18 @@ export default function Footer() {
         <div className="mb-12">
           <button
             onClick={() => window.location.href = '/'}
-            className="flex items-center gap-2 mb-4 hover:opacity-70 transition-opacity"
+            className="flex items-center gap-2 mb-4 hover:opacity-70 transition-opacity duration-200 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
             style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
           >
-            <AtlasLogo size={24} />
-            <span className="font-bold text-lg text-slate-900 dark:text-white">Atlas</span>
+            <AtlasLogo size={28} />
+            <span className="font-bold text-xl text-slate-900 dark:text-white">Atlas</span>
           </button>
-          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 max-w-sm">
+          <p className="text-sm text-slate-600 dark:text-slate-400 mb-6 max-w-sm leading-relaxed">
             Your financial intelligence companion. Education, not advice.
           </p>
           <button
             onClick={() => window.location.href = '/conversation'}
-            className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-full transition-all duration-200 text-sm"
+            className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold rounded-full transition-all duration-200 text-sm hover:shadow-lg hover:shadow-teal-500/30 hover:scale-102 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
           >
             Get Started
           </button>
@@ -71,15 +71,15 @@ export default function Footer() {
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-12">
           {footerSections.map((section) => (
             <div key={section.title}>
-              <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-sm uppercase tracking-wider">
+              <h3 className="font-bold text-slate-900 dark:text-white mb-4 text-xs uppercase tracking-widest opacity-80">
                 {section.title}
               </h3>
-              <ul className="space-y-2">
+              <ul className="space-y-3">
                 {section.items.map((item) => (
                   <li key={item.href}>
                     <button
                       onClick={() => window.location.href = item.href}
-                      className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white transition-colors duration-200"
+                      className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white active:text-teal-600 dark:active:text-teal-400 transition-all duration-150 hover:translate-x-0.5 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600 font-medium"
                       style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
                     >
                       • {item.label}
@@ -95,7 +95,7 @@ export default function Footer() {
         <div className="border-t border-slate-200 dark:border-slate-800 pt-8" />
 
         {/* Bottom Section */}
-        <p className="text-xs text-slate-600 dark:text-slate-400">
+        <p className="text-xs text-slate-600 dark:text-slate-400 font-medium">
           © {currentYear} Atlas Financial
         </p>
       </div>
