@@ -1,6 +1,6 @@
 'use client';
 
-import { useState, useEffect } from 'react';
+import { useState, useEffect, useRef } from 'react';
 import { Menu, X } from 'lucide-react';
 import { ButtonLink } from '@/components/Buttons';
 import AtlasLogo from './AtlasLogo';
@@ -8,6 +8,8 @@ import AtlasLogo from './AtlasLogo';
 export default function NavBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const hamburgerRef = useRef<HTMLButtonElement>(null);
+  const menuRef = useRef<HTMLDivElement>(null);
 
   useEffect(() => {
     const checkMobile = () => {
@@ -27,24 +29,37 @@ export default function NavBar() {
 
   useEffect(() => {
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape') {
+      if (e.key === 'Escape' && isMenuOpen) {
+        setIsMenuOpen(false);
+        hamburgerRef.current?.focus();
+      }
+    };
+
+    const handleClickOutside = (e: MouseEvent) => {
+      if (menuRef.current && !menuRef.current.contains(e.target as Node) && 
+          hamburgerRef.current && !hamburgerRef.current.contains(e.target as Node)) {
         setIsMenuOpen(false);
       }
     };
 
     if (isMenuOpen) {
       document.addEventListener('keydown', handleEscape);
+      document.addEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
+      document.removeEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = 'unset';
     };
   }, [isMenuOpen]);
 
   const toggleMenu = () => setIsMenuOpen(!isMenuOpen);
-  const closeMenu = () => setIsMenuOpen(false);
+  const closeMenu = () => {
+    setIsMenuOpen(false);
+    hamburgerRef.current?.focus();
+  };
 
   const navItems = [
     { label: 'Home', href: '/' },
@@ -87,10 +102,12 @@ export default function NavBar() {
         {/* Mobile Menu Button - Only visible on mobile */}
         {isMobile && (
           <button
+            ref={hamburgerRef}
             onClick={toggleMenu}
             className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:scale-105 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
-            aria-label="Toggle navigation menu"
+            aria-label="Main menu"
             aria-expanded={isMenuOpen}
+            aria-controls="mobile-menu"
           >
             {isMenuOpen ? <X size={20} className="transition-transform duration-200" /> : <Menu size={20} className="transition-transform duration-200" />}
           </button>
@@ -107,11 +124,15 @@ export default function NavBar() {
             style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
           />
           <div 
+            ref={menuRef}
+            id="mobile-menu"
             className="fixed right-0 top-0 h-screen w-80 bg-white dark:bg-slate-950 shadow-lg z-50 overflow-y-auto border-l border-slate-200 dark:border-slate-800"
             style={{ 
               animation: 'slideInRight 300ms cubic-bezier(0.4, 0, 0.2, 1)',
               willChange: 'transform'
             }}
+            role="navigation"
+            aria-label="Mobile navigation"
           >
             <style>{`
               @keyframes slideInRight {
