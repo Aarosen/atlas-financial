@@ -5,6 +5,7 @@ import type { ReactNode } from 'react';
 import NavBar from './ui/NavBar';
 import Footer from './ui/Footer';
 import PageTransition from './ui/PageTransition';
+import { UserProvider } from '@/lib/auth/userProvider';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const sora = Sora({ subsets: ['latin'], variable: '--font-sora', display: 'swap' });
@@ -21,13 +22,15 @@ export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" data-scroll-behavior="smooth">
       <body className={`${inter.variable} ${sora.variable}`}>
-        <header role="banner">
-          <NavBar />
-        </header>
-        <main role="main">
-          <PageTransition>{children}</PageTransition>
-        </main>
-        <Footer />
+        <UserProvider>
+          <header role="banner">
+            <NavBar />
+          </header>
+          <main role="main">
+            <PageTransition>{children}</PageTransition>
+          </main>
+          <Footer />
+        </UserProvider>
       </body>
     </html>
   );

@@ -116,3 +116,7 @@ export function MetricCardsContainer({ metrics }: { metrics: MetricCardsProps })
     </div>
   );
 }
+
+export function MetricCards({ metrics }: { metrics: MetricCardsProps }) {
+  return <MetricCardsContainer metrics={metrics} />;
+}

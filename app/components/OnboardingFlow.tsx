@@ -44,8 +44,8 @@ const ONBOARDING_STEPS: OnboardingStep[] = [
 ];
 
 interface OnboardingFlowProps {
-  userId: string;
-  onComplete: (profile: any) => void;
+  userId?: string;
+  onComplete: (profile: any) => void | Promise<void>;
 }
 
 export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
@@ -80,12 +80,16 @@ export function OnboardingFlow({ userId, onComplete }: OnboardingFlowProps) {
   const saveProfile = async () => {
     setIsLoading(true);
     try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+      if (userId) {
+        headers['x-user-id'] = userId;
+      }
+
       const response = await fetch('/api/profile', {
         method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          'x-user-id': userId,
-        },
+        headers,
         body: JSON.stringify({
           name: profileData.name,
           lifeStage: profileData.lifeStage?.toLowerCase().replace(' ', '_') || 'early_career',
