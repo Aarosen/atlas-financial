@@ -58,7 +58,7 @@ export default function Footer() {
               <span className="font-bold text-xl text-slate-900 dark:text-white">Atlas</span>
             </button>
             <p className="text-sm text-slate-600 dark:text-slate-400 mb-8 max-w-sm leading-relaxed">
-              Your financial intelligence companion. Education, not advice.
+              Your financial thinking partner — here to help you understand and decide.
             </p>
             <button
               onClick={() => window.location.href = '/conversation'}
@@ -82,7 +82,7 @@ export default function Footer() {
               </div>
             </div>
             <p className="text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-700 pt-4">
-              Atlas provides financial education, not personalized investment or tax advice. Always consult a qualified financial advisor.
+              Your data is never sold or used for advertising. Conversations are encrypted in transit and at rest.
             </p>
           </div>
         </div>
@@ -124,7 +124,7 @@ export default function Footer() {
               © {currentYear} Atlas Financial. All rights reserved.
             </p>
             <p className="text-xs text-slate-500 dark:text-slate-500 max-w-md">
-              Atlas provides financial education, not personalized investment or tax advice.
+              Atlas helps you learn and plan — not a licensed financial advisor. For complex decisions, consult a CFP.
             </p>
           </div>
 

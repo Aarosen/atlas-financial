@@ -40,7 +40,7 @@ export default function Landing() {
               </Inline>
               <Inline gap={8} wrap={false}>
                 <Smartphone size={16} aria-hidden />
-                Stays on your device
+                Data encrypted & private
               </Inline>
               <Inline gap={8} wrap={false}>
                 <Target size={16} aria-hidden />

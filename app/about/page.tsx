@@ -39,8 +39,8 @@ export default function AboutPage() {
             <li className="flex gap-3">
               <span className="text-blue-600 font-bold">✓</span>
               <div>
-                <h3 className="font-semibold">Education, Not Advice</h3>
-                <p className="text-slate-600 dark:text-slate-400">We teach financial concepts. We don't provide personalized investment or tax advice.</p>
+                <h3 className="font-semibold">Learning & Planning Partner</h3>
+                <p className="text-slate-600 dark:text-slate-400">We help you learn and plan. We're not a licensed financial advisor. For complex decisions, consult a CFP.</p>
               </div>
             </li>
             <li className="flex gap-3">
