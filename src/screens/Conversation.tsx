@@ -589,6 +589,8 @@ export function ConversationScreen({
             <div style={{ position: 'relative', flex: 1 }}>
               <Textarea
                 ref={taRef}
+                id="atlas-message-input"
+                name="message"
                 value={inp}
                 onChange={(e) => onChangeInp(e.target.value)}
                 onKeyDown={onKeyDown}

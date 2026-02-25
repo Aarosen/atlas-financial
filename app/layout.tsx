@@ -3,6 +3,7 @@ import type { Metadata } from 'next';
 import { Inter, Sora } from 'next/font/google';
 import type { ReactNode } from 'react';
 import NavBar from './ui/NavBar';
+import Footer from './ui/Footer';
 import PageTransition from './ui/PageTransition';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
         <main role="main">
           <PageTransition>{children}</PageTransition>
         </main>
+        <Footer />
       </body>
     </html>
   );
