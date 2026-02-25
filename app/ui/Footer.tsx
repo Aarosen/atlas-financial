@@ -75,7 +75,7 @@ export default function Footer() {
                 <Lock size={24} className="text-teal-600 dark:text-teal-400" />
               </div>
               <div>
-                <h3 className="font-semibold text-slate-900 dark:text-white mb-2">Your data is secure</h3>
+                <h2 className="font-semibold text-slate-900 dark:text-white mb-2">Your data is secure</h2>
                 <p className="text-sm text-slate-600 dark:text-slate-400">
                   Your financial information is encrypted and stored securely. Atlas prioritizes your privacy and confidentiality.
                 </p>
@@ -93,7 +93,7 @@ export default function Footer() {
         {/* Footer Sections Grid */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
           {footerSections.map((section) => (
-            <nav key={section.title}>
+            <nav key={section.title} aria-label={`${section.title} navigation`}>
               <h3 className="font-bold text-slate-900 dark:text-white mb-6 text-xs uppercase tracking-widest opacity-80">
                 {section.title}
               </h3>
