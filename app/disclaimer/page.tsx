@@ -1,7 +1,4 @@
-export const metadata = {
-  title: 'Disclaimer — Atlas',
-  description: 'Important disclaimer about Atlas financial education platform.',
-};
+'use client';
 
 export default function DisclaimerPage() {
   return (

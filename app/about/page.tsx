@@ -1,10 +1,6 @@
-export const metadata = {
-  title: 'About Atlas — Your Financial Intelligence Companion',
-  description: 'Learn about Atlas, a privacy-first financial education AI companion.',
-};
+'use client';
 
 export default function AboutPage() {
-
   return (
     <div className="container py-12">
       <div className="max-w-3xl mx-auto">
