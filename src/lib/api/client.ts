@@ -123,7 +123,7 @@ export class ClaudeClient {
             try {
               const j = JSON.parse(payload);
               if (slow) {
-                await new Promise((r) => setTimeout(r, 140));
+                await new Promise((r) => setTimeout(r, 600));
                 if (signal?.aborted) throw Object.assign(new Error('aborted'), { name: 'AbortError' });
               }
               if (typeof j?.delta === 'string' && j.delta) onDelta(j.delta);
