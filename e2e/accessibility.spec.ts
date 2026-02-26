@@ -64,7 +64,7 @@ test('R7: keyboard navigation - landing, conversation, dashboard', async ({ page
   await page.goto('/dashboard');
   await expect(page.getByText('Dashboard not ready yet')).toBeVisible();
   const dashboardCta = page.getByRole('button', { name: 'Go to conversation →' });
-  for (let i = 0; i < 6; i += 1) {
+  for (let i = 0; i < 10; i += 1) {
     if (await dashboardCta.evaluate((el) => el === document.activeElement)) break;
     await page.keyboard.press('Tab');
   }

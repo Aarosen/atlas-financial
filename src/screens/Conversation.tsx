@@ -684,6 +684,7 @@ export function ConversationScreen({
           )}
         </div>
         <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink2)', marginTop: 8 }}>Try: “I make $4k/month and spend about $2.5k on essentials”</div>
+        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--ink3)', marginTop: 6 }}>Messages you type may be sent to our AI provider to generate responses. Atlas only sends what you type for the current request.</div>
       </div>
     </div>
   );
