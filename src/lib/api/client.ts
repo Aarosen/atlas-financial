@@ -122,11 +122,11 @@ export class ClaudeClient {
             if (!payload) continue;
             try {
               const j = JSON.parse(payload);
-              if (typeof j?.delta === 'string' && j.delta) onDelta(j.delta);
               if (slow) {
-                if (signal?.aborted) throw Object.assign(new Error('aborted'), { name: 'AbortError' });
                 await new Promise((r) => setTimeout(r, 140));
+                if (signal?.aborted) throw Object.assign(new Error('aborted'), { name: 'AbortError' });
               }
+              if (typeof j?.delta === 'string' && j.delta) onDelta(j.delta);
               if (j?.done) {
                 this._hadSuccess = true;
                 this._apiStatus = 'online';
@@ -138,8 +138,9 @@ export class ClaudeClient {
                 }
                 return { ok: true, canceled: false };
               }
-            } catch {
-              // ignore
+            } catch (frameErr: any) {
+              if (frameErr?.name === 'AbortError') throw frameErr;
+              // ignore other errors (e.g. JSON parse errors)
             }
           }
         }

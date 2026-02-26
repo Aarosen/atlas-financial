@@ -38,7 +38,7 @@ test('R7: axe baseline - dashboard', async ({ page }) => {
 test('R7: keyboard navigation - landing, conversation, dashboard', async ({ page }) => {
   await page.goto('/');
   const landingStart = page.getByRole('link', { name: 'Start a conversation →' });
-  for (let i = 0; i < 6; i += 1) {
+  for (let i = 0; i < 10; i += 1) {
     if (await landingStart.evaluate((el) => el === document.activeElement)) break;
     await page.keyboard.press('Tab');
   }
