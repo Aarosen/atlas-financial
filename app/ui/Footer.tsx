@@ -55,9 +55,9 @@ export default function Footer() {
               aria-label="Atlas home"
             >
               <AtlasLogo size={28} />
-              <span className="font-bold text-xl text-slate-900 dark:text-white">Atlas</span>
+              <span style={{ fontWeight: 700, fontSize: '20px', color: 'var(--ink)' }}>Atlas</span>
             </button>
-            <p className="text-sm text-slate-600 dark:text-slate-400 mb-8 max-w-sm leading-relaxed">
+            <p style={{ fontSize: '14px', color: 'var(--ink2)', marginBottom: '32px', maxWidth: '400px', lineHeight: 1.6 }}>
               Your financial thinking partner — here to help you understand and decide.
             </p>
             <button
