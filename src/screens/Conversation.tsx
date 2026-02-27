@@ -285,11 +285,13 @@ export function ConversationScreen({
   };
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+      {/* Single unified header - no duplicate navbar */}
       <TopBar title="Conversation" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
 
-      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', paddingTop: 'var(--padY)', paddingBottom: 'var(--padY)' }}>
-        <PageContainer maxWidth={720}>
+      {/* Main scrollable conversation area - fixed layout */}
+      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '12px', paddingBottom: '12px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, width: '100%', maxWidth: '720px', margin: '0 auto', paddingLeft: 'var(--padX)', paddingRight: 'var(--padX)' }}>
           <h1 className="srOnly">Conversation</h1>
           {showJump && (
             <div style={{ position: 'sticky', top: 10, zIndex: 5, display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
@@ -509,7 +511,7 @@ export function ConversationScreen({
             </div>
           )}
           <div ref={botRef} />
-        </PageContainer>
+        </div>
       </div>
 
       <div style={{ padding: '14px var(--padX)', paddingBottom: 'max(14px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
@@ -683,8 +685,193 @@ export function ConversationScreen({
             <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
           )}
         </div>
-        <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink2)', marginTop: 8 }}>Try: “I make $4k/month and spend about $2.5k on essentials”</div>
-        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--ink3)', marginTop: 6 }}>Messages you type may be sent to our AI provider to generate responses. Atlas only sends what you type for the current request.</div>
+        
+        {/* Information requirement state - show when needed */}
+        {msgs.length === 0 && !busy && (
+          <div style={{ textAlign: 'center', marginTop: '16px', padding: '16px', color: 'var(--ink2)' }}>
+            <div style={{ fontSize: 14, fontWeight: 600, marginBottom: '8px' }}>More information required</div>
+            <div style={{ fontSize: 12, color: 'var(--ink3)', lineHeight: 1.6 }}>
+              To get personalized financial guidance, please share some details about your situation.
+            </div>
+          </div>
+        )}
+        
+        <div style={{ textAlign: 'center', fontSize: 12, color: 'var(--ink2)', marginTop: '12px' }}>Try: "I make $4k/month and spend about $2.5k on essentials"</div>
+        <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--ink3)', marginTop: '6px', paddingBottom: '8px' }}>Messages you type may be sent to our AI provider to generate responses. Atlas only sends what you type for the current request.</div>
+      </div>
+
+      {/* Fixed bottom input area - always visible on mobile */}
+      <div style={{ padding: '14px var(--padX)', paddingBottom: 'max(14px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
+        <div style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
+          {(apiErr || apiStatus === 'offline' || apiStatus === 'degraded') && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <div
+                style={{
+                  maxWidth: 680,
+                  width: '100%',
+                  padding: '10px 12px',
+                  borderRadius: 14,
+                  border: '1px solid var(--bdr)',
+                  background: 'var(--bg2)',
+                  boxShadow: 'var(--sh1)',
+                  color: 'var(--ink2)',
+                  fontSize: 13,
+                  lineHeight: 1.55,
+                }}
+              >
+                {apiErr
+                  ? apiErr
+                  : apiStatus === 'offline'
+                    ? 'AI is offline right now — Atlas will do its best in local mode. You can retry anytime.'
+                    : apiStatus === 'degraded'
+                      ? 'AI is a bit slow/unreliable at the moment — if a response fails, hit Retry.'
+                      : 'AI status is unknown — if anything feels off, hit Retry.'}
+              </div>
+            </div>
+          )}
+          {apiErr && canRetry && onRetry && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
+              <Button
+                onClick={onRetry}
+                disabled={busy}
+                variant="secondary"
+                size="sm"
+                style={{ borderRadius: 999, fontWeight: 950, fontSize: 12, boxShadow: 'var(--sh1)' }}
+                aria-label="Retry last message"
+                title="Retry"
+              >
+                Retry
+              </Button>
+            </div>
+          )}
+          {showInlineNextStep && (
+            <button
+              onClick={onNextStep}
+              disabled={busy}
+              className="atlasNextStep"
+              style={{
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'space-between',
+                gap: 12,
+                padding: '10px 12px',
+                borderRadius: 14,
+                border: '1px solid var(--bdr)',
+                background: 'var(--bg2)',
+                boxShadow: 'var(--sh1)',
+                color: 'var(--ink)',
+                cursor: busy ? 'not-allowed' : 'pointer',
+                marginBottom: 10,
+              }}
+              aria-label="Next step"
+              title="Next step"
+            >
+              <div style={{ display: 'grid', gap: 2, textAlign: 'left' }}>
+                <div style={{ fontWeight: 950, fontSize: 12, letterSpacing: '0.06em', color: 'var(--ink2)' }}>NEXT STEP</div>
+                <div style={{ fontWeight: 850, fontSize: 13, lineHeight: 1.35 }}>{nextStepHint}</div>
+              </div>
+              <div style={{ fontWeight: 950, color: 'var(--ink2)' }}>→</div>
+            </button>
+          )}
+          <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
+            <div style={{ position: 'relative', flex: 1 }}>
+              <Textarea
+                ref={taRef}
+                id="atlas-message-input"
+                name="message"
+                value={inp}
+                onChange={(e) => onChangeInp(e.target.value)}
+                onKeyDown={onKeyDown}
+                onFocus={() => setInpFocused(true)}
+                onBlur={() => setInpFocused(false)}
+                placeholder="Tell Atlas anything…"
+                rows={1}
+                style={{ padding: '12px 14px', resize: 'none', maxHeight: 140, overflowY: 'auto', width: '100%', borderRadius: 14 }}
+              />
+              {voiceListening && (
+                <div style={{ position: 'absolute', left: 12, bottom: 50, fontSize: 12, color: 'var(--ink2)', background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 999, padding: '4px 10px', boxShadow: 'var(--sh1)' }}>Listening…</div>
+              )}
+            </div>
+            {speaking && onStopSpeaking && (
+              <Button
+                onClick={onStopSpeaking}
+                disabled={busy}
+                variant="secondary"
+                size="sm"
+                aria-label="Stop speaking"
+                title="Stop speaking"
+              >
+                <Square size={16} aria-hidden />
+                Stop
+              </Button>
+            )}
+            {streaming && onCancelStream && (
+              <Button onClick={onCancelStream} variant="secondary" size="sm" aria-label="Cancel response" title="Cancel">
+                Cancel
+              </Button>
+            )}
+            {!speaking && !streaming && (
+              <div style={{ display: 'flex', gap: 8, alignItems: 'stretch' }}>
+                {showMic && (
+                  <button
+                    onClick={onVoiceStart}
+                    disabled={busy}
+                    aria-label={voiceListening ? 'Voice input (listening)' : 'Voice input'}
+                    title="Voice input"
+                    style={{
+                      width: 44,
+                      minWidth: 44,
+                      borderRadius: 12,
+                      border: 'none',
+                      background: voiceListening ? 'var(--teal)' : 'var(--bg2)',
+                      color: voiceListening ? 'white' : 'var(--ink)',
+                      cursor: busy ? 'not-allowed' : 'pointer',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                      boxShadow: voiceListening ? 'var(--sh1)' : '0 1px 2px rgba(0,0,0,0.05)',
+                      opacity: busy ? 0.5 : 1,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <Mic size={20} aria-hidden />
+                  </button>
+                )}
+                {showSend && (
+                  <button
+                    onClick={onSend}
+                    disabled={!hasInput || busy}
+                    aria-label="Send message"
+                    title="Send"
+                    style={{
+                      width: 44,
+                      minWidth: 44,
+                      borderRadius: 12,
+                      border: 'none',
+                      background: hasInput && !busy ? 'linear-gradient(135deg, var(--teal), var(--sky))' : 'var(--bg3)',
+                      color: hasInput && !busy ? 'white' : 'var(--ink3)',
+                      cursor: hasInput && !busy ? 'pointer' : 'not-allowed',
+                      display: 'flex',
+                      alignItems: 'center',
+                      justifyContent: 'center',
+                      transition: 'all 0.2s ease',
+                      boxShadow: hasInput && !busy ? 'var(--sh1)' : '0 1px 2px rgba(0,0,0,0.05)',
+                      fontWeight: 600,
+                      flexShrink: 0,
+                    }}
+                  >
+                    <ArrowUp size={20} aria-hidden />
+                  </button>
+                )}
+              </div>
+            )}
+          </div>
+          {inpFocused && isDesktop && !busy && (
+            <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
+          )}
+        </div>
       </div>
     </div>
   );
