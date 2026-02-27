@@ -42,8 +42,8 @@ export default function Footer() {
   ];
 
   return (
-    <footer className="bg-white dark:bg-slate-950 border-t border-slate-200 dark:border-slate-800">
-      <div className="container py-20">
+    <footer style={{ background: 'var(--bg)', borderTop: '1px solid var(--bdr)' }}>
+      <div className="container" style={{ paddingTop: '80px', paddingBottom: '80px' }}>
         {/* Brand & Trust Section */}
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
           {/* Brand Column */}
@@ -62,48 +62,48 @@ export default function Footer() {
             </p>
             <button
               onClick={() => window.location.href = '/conversation'}
-              className="px-6 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold rounded-full transition-all duration-200 text-sm hover:shadow-lg hover:shadow-teal-500/30 hover:scale-102 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
+              className="btn btnPrimary btnSm"
             >
               Get Started
             </button>
           </div>
 
           {/* Trust & Security Section */}
-          <div className="bg-slate-50 dark:bg-slate-900/50 rounded-lg p-8 border border-slate-200 dark:border-slate-800">
-            <div className="flex items-start gap-4 mb-6">
-              <div className="p-3 bg-teal-100 dark:bg-teal-900/30 rounded-lg">
-                <Lock size={24} className="text-teal-600 dark:text-teal-400" />
+          <div className="card">
+            <div style={{ display: 'flex', alignItems: 'flex-start', gap: '16px', marginBottom: '24px' }}>
+              <div style={{ padding: '12px', background: 'var(--teal-lt)', borderRadius: 'var(--r-sm)' }}>
+                <Lock size={24} style={{ color: 'var(--teal)' }} />
               </div>
               <div>
-                <h2 className="font-semibold text-slate-900 dark:text-white mb-2">Your data is secure</h2>
-                <p className="text-sm text-slate-600 dark:text-slate-400">
+                <h2 style={{ fontWeight: 700, color: 'var(--ink)', marginBottom: '8px' }}>Your data is secure</h2>
+                <p style={{ fontSize: '14px', color: 'var(--ink2)', lineHeight: 1.6 }}>
                   Your financial information is encrypted and stored securely. Atlas prioritizes your privacy and confidentiality.
                 </p>
               </div>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 border-t border-slate-200 dark:border-slate-700 pt-4">
+            <p style={{ fontSize: '12px', color: 'var(--ink3)', borderTop: '1px solid var(--bdr)', paddingTop: '16px' }}>
               Your data is never sold or used for advertising. Conversations are encrypted in transit and at rest.
             </p>
           </div>
         </div>
 
         {/* Divider */}
-        <div className="border-t border-slate-200 dark:border-slate-800 my-12" />
+        <div style={{ borderTop: '1px solid var(--bdr)', margin: '48px 0' }} />
 
         {/* Footer Sections Grid */}
-        <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-8 mb-16">
+        <div className="grid" style={{ gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: '32px', marginBottom: '64px' }}>
           {footerSections.map((section) => (
             <nav key={section.title} aria-label={`${section.title} navigation`}>
-              <h3 className="font-bold text-slate-900 dark:text-white mb-6 text-xs uppercase tracking-widest opacity-80">
+              <h3 style={{ fontWeight: 900, color: 'var(--ink)', marginBottom: '24px', fontSize: '11px', textTransform: 'uppercase', letterSpacing: '0.08em', opacity: 0.8 }}>
                 {section.title}
               </h3>
-              <ul className="space-y-4">
+              <ul style={{ display: 'flex', flexDirection: 'column', gap: '16px', listStyle: 'none', padding: 0, margin: 0 }}>
                 {section.items.map((item) => (
                   <li key={item.href}>
                     <button
                       onClick={() => window.location.href = item.href}
-                      className="text-sm text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white active:text-teal-600 dark:active:text-teal-400 transition-all duration-150 hover:translate-x-0.5 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600 font-medium"
-                      style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, textAlign: 'left' }}
+                      className="atlasClickCard"
+                      style={{ fontSize: '14px', color: 'var(--ink2)', fontWeight: 600, padding: 0 }}
                     >
                       {item.label}
                     </button>
@@ -115,38 +115,41 @@ export default function Footer() {
         </div>
 
         {/* Divider */}
-        <div className="border-t border-slate-200 dark:border-slate-800 py-8" />
+        <div style={{ borderTop: '1px solid var(--bdr)', paddingTop: '32px', paddingBottom: '32px' }} />
 
         {/* Bottom Section with Social Links */}
-        <div className="flex flex-col md:flex-row justify-between items-start md:items-center gap-8">
+        <div style={{ display: 'flex', flexDirection: 'row', justifyContent: 'space-between', alignItems: 'center', gap: '32px', flexWrap: 'wrap' }}>
           <div>
-            <p className="text-xs text-slate-600 dark:text-slate-400 font-medium mb-2">
+            <p style={{ fontSize: '12px', color: 'var(--ink2)', fontWeight: 600, marginBottom: '8px' }}>
               © {currentYear} Atlas Financial. All rights reserved.
             </p>
-            <p className="text-xs text-slate-500 dark:text-slate-500 max-w-md">
+            <p style={{ fontSize: '12px', color: 'var(--ink3)', maxWidth: '400px' }}>
               Atlas helps you learn and plan — not a licensed financial advisor. For complex decisions, consult a CFP.
             </p>
           </div>
 
           {/* Social Links */}
-          <div className="flex items-center gap-4">
+          <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
             <button
               onClick={() => window.open('https://twitter.com', '_blank')}
-              className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-150 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
+              className="iconBtn"
+              style={{ color: 'var(--ink2)' }}
               aria-label="Follow Atlas on Twitter"
             >
               <Twitter size={20} />
             </button>
             <button
               onClick={() => window.open('https://linkedin.com', '_blank')}
-              className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-150 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
+              className="iconBtn"
+              style={{ color: 'var(--ink2)' }}
               aria-label="Follow Atlas on LinkedIn"
             >
               <Linkedin size={20} />
             </button>
             <button
               onClick={() => window.location.href = 'mailto:support@atlas.com'}
-              className="p-2 text-slate-600 dark:text-slate-400 hover:text-slate-900 dark:hover:text-white hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-all duration-150 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
+              className="iconBtn"
+              style={{ color: 'var(--ink2)' }}
               aria-label="Email Atlas support"
             >
               <Mail size={20} />

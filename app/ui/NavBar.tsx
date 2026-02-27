@@ -104,12 +104,12 @@ export default function NavBar() {
           <button
             ref={hamburgerRef}
             onClick={toggleMenu}
-            className="px-5 py-2.5 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold rounded-full transition-all duration-200 flex items-center justify-center gap-2 hover:scale-105 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
+            className="btn btnPrimary btnSm"
             aria-label="Main menu"
             aria-expanded={isMenuOpen}
             aria-controls="mobile-menu"
           >
-            {isMenuOpen ? <X size={20} className="transition-transform duration-200" /> : <Menu size={20} className="transition-transform duration-200" />}
+            {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         )}
       </div>
@@ -126,8 +126,11 @@ export default function NavBar() {
           <div 
             ref={menuRef}
             id="mobile-menu"
-            className="fixed right-0 top-0 h-screen w-80 bg-white dark:bg-slate-950 shadow-lg z-50 overflow-y-auto border-l border-slate-200 dark:border-slate-800"
+            className="fixed right-0 top-0 h-screen w-80 z-50 overflow-y-auto"
             style={{ 
+              background: 'var(--card)',
+              borderLeft: '1px solid var(--bdr)',
+              boxShadow: 'var(--sh3)',
               animation: 'slideInRight 300ms cubic-bezier(0.4, 0, 0.2, 1)',
               willChange: 'transform'
             }}
@@ -155,13 +158,19 @@ export default function NavBar() {
             <div className="p-6 space-y-2">
               <button
                 onClick={closeMenu}
-                className="absolute top-6 right-6 p-2 hover:bg-slate-100 dark:hover:bg-slate-800 rounded-lg transition-colors duration-150 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
+                className="iconBtn"
+                style={{
+                  position: 'absolute',
+                  top: '24px',
+                  right: '24px',
+                  color: 'var(--ink2)',
+                }}
                 aria-label="Close menu"
               >
                 <X size={24} />
               </button>
 
-              <div className="pt-8 space-y-1">
+              <div style={{ paddingTop: '32px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {navItems.map((item, index) => (
                   <button
                     key={item.href}
@@ -169,8 +178,15 @@ export default function NavBar() {
                       window.location.href = item.href;
                       closeMenu();
                     }}
-                    className="w-full text-left px-4 py-3 rounded-lg text-slate-900 dark:text-white hover:bg-slate-100 dark:hover:bg-slate-800 active:bg-slate-200 dark:active:bg-slate-700 transition-all duration-150 font-medium hover:translate-x-1 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
+                    className="atlasClickCard"
                     style={{ 
+                      width: '100%',
+                      textAlign: 'left',
+                      padding: '12px 16px',
+                      borderRadius: 'var(--r-sm)',
+                      color: 'var(--ink)',
+                      fontWeight: 700,
+                      fontSize: '14px',
                       transitionProperty: 'background-color, transform',
                       animationDelay: `${index * 50}ms`
                     }}
@@ -180,13 +196,14 @@ export default function NavBar() {
                 ))}
               </div>
 
-              <div className="pt-4 border-t border-slate-200 dark:border-slate-700">
+              <div style={{ paddingTop: '16px', borderTop: '1px solid var(--bdr)' }}>
                 <button
                   onClick={() => {
                     window.location.href = '/conversation';
                     closeMenu();
                   }}
-                  className="w-full px-6 py-3 bg-teal-600 hover:bg-teal-700 active:bg-teal-800 text-white font-semibold rounded-full transition-all duration-200 hover:shadow-lg hover:shadow-teal-500/30 active:shadow-md hover:scale-102 active:scale-98 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
+                  className="btn btnPrimary btnMd"
+                  style={{ width: '100%' }}
                 >
                   Start
                 </button>
