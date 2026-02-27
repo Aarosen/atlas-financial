@@ -1,0 +1,65 @@
+name: Pre-Deployment Verification
+
+on:
+  pull_request:
+    branches: [main]
+  push:
+    branches: [main]
+
+jobs:
+  verify-deployment:
+    runs-on: ubuntu-latest
+    
+    steps:
+      - uses: actions/checkout@v4
+      
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '18'
+          cache: 'npm'
+      
+      - name: Install dependencies
+        run: npm ci
+      
+      - name: Run deployment verification
+        run: npm run verify-deployment
+      
+      - name: Check for duplicate components
+        run: |
+          if [ -f "app/ui/Landing.tsx" ] && [ -f "src/screens/Landing.tsx" ]; then
+            echo "ERROR: Duplicate Landing components found!"
+            echo "Remove app/ui/Landing.tsx and use src/screens/Landing.tsx instead"
+            exit 1
+          fi
+      
+      - name: Verify component imports
+        run: |
+          # Check that app/page.tsx imports from @/screens
+          if ! grep -q "from '@/screens/Landing'" app/page.tsx; then
+            echo "ERROR: app/page.tsx does not import from @/screens/Landing"
+            exit 1
+          fi
+          
+          # Check that chat route imports from @/lib/ai
+          if ! grep -q "from '@/lib/ai/" app/api/chat/route.ts; then
+            echo "ERROR: app/api/chat/route.ts does not import from @/lib/ai"
+            exit 1
+          fi
+      
+      - name: Build verification
+        run: npm run build
+      
+      - name: Run tests
+        run: npm test
+      
+      - name: Report verification status
+        if: success()
+        run: echo "✓ All pre-deployment checks passed"
+      
+      - name: Report verification failure
+        if: failure()
+        run: |
+          echo "✗ Pre-deployment verification failed"
+          echo "Please review the deployment checklist: DEPLOYMENT_CHECKLIST.md"
+          exit 1
