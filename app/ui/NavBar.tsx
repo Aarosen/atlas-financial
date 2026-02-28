@@ -1,15 +1,22 @@
 'use client';
 
 import { useState, useEffect, useRef } from 'react';
+import { usePathname } from 'next/navigation';
 import { Menu, X } from 'lucide-react';
 import { ButtonLink } from '@/components/Buttons';
 import AtlasLogo from './AtlasLogo';
 
 export default function NavBar() {
+  const pathname = usePathname();
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Hide NavBar on conversation page (it has its own TopBar)
+  if (pathname === '/conversation') {
+    return null;
+  }
 
   useEffect(() => {
     const checkMobile = () => {

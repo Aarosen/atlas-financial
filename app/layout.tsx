@@ -23,7 +23,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
     <html lang="en" data-scroll-behavior="smooth">
       <body className={`${inter.variable} ${sora.variable}`}>
         <UserProvider>
-          <header role="banner">
+          <header role="banner" style={{ display: 'contents' }}>
             <NavBar />
           </header>
           <main role="main">
