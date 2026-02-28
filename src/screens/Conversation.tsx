@@ -542,21 +542,6 @@ export function ConversationScreen({
               </div>
             </div>
           )}
-          {apiErr && canRetry && onRetry && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-              <Button
-                onClick={onRetry}
-                disabled={busy}
-                variant="secondary"
-                size="sm"
-                style={{ borderRadius: 999, fontWeight: 950, fontSize: 12, boxShadow: 'var(--sh1)' }}
-                aria-label="Retry last message"
-                title="Retry"
-              >
-                Retry
-              </Button>
-            </div>
-          )}
         </div>
       </div>
 
