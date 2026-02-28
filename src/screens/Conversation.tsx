@@ -731,6 +731,7 @@ export function ConversationScreen({
           {inpFocused && isDesktop && !busy && (
             <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
           )}
+          <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--ink3)', marginTop: '12px', paddingBottom: '8px' }}>Messages you type may be sent to our AI provider to generate responses. Atlas only sends what you type for the current request.</div>
         </div>
       </div>
     </div>
