@@ -10,5 +10,30 @@ const pages: Array<{ name: string; path: string }> = [
 ];
 
 test('R5: layout snapshots across key pages', async ({ page }, testInfo) => {
-  testInfo.skip();
+  // Skip snapshot tests on CI only - run on local machines
+  if (process.env.CI) {
+    testInfo.skip();
+    return;
+  }
+
+  const pages = [
+    { path: '/', name: 'landing' },
+    { path: '/conversation', name: 'conversation' },
+    { path: '/dashboard', name: 'dashboard' },
+    { path: '/privacy', name: 'privacy' },
+  ];
+
+  for (const p of pages) {
+    await page.goto(p.path);
+
+    await page.evaluate(() => {
+      const ae = document.activeElement as any;
+      if (ae && typeof ae.blur === 'function') ae.blur();
+    });
+
+    await expect(page).toHaveScreenshot(`page-${p.name}.png`, {
+      fullPage: true,
+      maxDiffPixelRatio: 0.1,
+    });
+  }
 });

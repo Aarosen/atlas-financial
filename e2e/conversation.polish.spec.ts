@@ -26,5 +26,29 @@ test('R4: scroll away shows Jump to latest, clicking returns to bottom', async (
 });
 
 test('R4: conversation visual states are renderable (debug route)', async ({ page }, testInfo) => {
-  testInfo.skip();
+  // Skip snapshot tests on CI only - run on local machines
+  if (process.env.CI) {
+    testInfo.skip();
+    return;
+  }
+
+  const cases = ['idle', 'typing', 'error', 'streaming'] as const;
+
+  // Stabilize screenshots across platforms
+  await page.addStyleTag({ content: '*{caret-color: transparent !important;}' });
+
+  for (const c of cases) {
+    await page.goto(`/debug/conversation?case=${c}`);
+    await expect(page.getByRole('heading', { name: 'Conversation' })).toBeVisible();
+
+    await page.evaluate(() => {
+      const ae = document.activeElement as any;
+      if (ae && typeof ae.blur === 'function') ae.blur();
+    });
+
+    await expect(page).toHaveScreenshot(`conversation-${c}.png`, {
+      fullPage: true,
+      maxDiffPixelRatio: 0.05,
+    });
+  }
 });
