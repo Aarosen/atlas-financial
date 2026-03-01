@@ -70,7 +70,7 @@ function renderMessageText(text: string): ReactNode {
   }
   flush();
 
-  if (blocks.length === 0) return null;
+  if (blocks.length === 0) return <></>;
 
   return (
     <div style={{ display: 'grid', gap: 10 }}>
