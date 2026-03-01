@@ -278,7 +278,7 @@ export function classifyInterruption(userText: string): InterruptionType {
 
 export function metaResponse(userText: string): string {
   if (/(data|privacy|store|stored|send|transmit)/i.test(userText)) {
-    return 'Messages you type may be sent to our AI provider to generate responses, and your financial state is stored locally in your browser (IndexedDB) which you can delete anytime.';
+    return 'Your financial data stays private. Messages are sent to Claude AI to generate responses, and your financial state is stored locally in your browser which you can delete anytime.';
   }
   return "I can answer that. What are you curious about?";
 }
