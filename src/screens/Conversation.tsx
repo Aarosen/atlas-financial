@@ -11,6 +11,7 @@ import { ArrowUp, Mic, Pencil, Square } from 'lucide-react';
 import { humanizeFieldList } from '@/lib/ui/fieldLabels';
 
 function renderMessageText(text: string): ReactNode {
+  // Render message text with proper formatting for paragraphs, lists
   const t = String(text || '').replace(/\r\n/g, '\n');
   const lines = t.split('\n');
 
