@@ -8,9 +8,9 @@ export default function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const reduce = useReducedMotion();
 
-  if (reduce) return <>{children}</>;
-
-  return (
+  return reduce ? (
+    <>{children}</>
+  ) : (
     <AnimatePresence mode="wait" initial={false}>
       <motion.div
         key={pathname}
