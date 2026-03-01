@@ -237,16 +237,16 @@ export function ConversationScreen({
   }, [inp]);
 
   useEffect(() => {
-    if (isNearBottom) scrollToBottom();
-  }, [isNearBottom, msgs.length, busy]);
-
-  useEffect(() => {
     // Scroll to top on initial load to show first message
     const el = scRef.current;
     if (el && msgs.length > 0) {
       el.scrollTop = 0;
     }
   }, []);
+
+  useEffect(() => {
+    if (isNearBottom) scrollToBottom();
+  }, [isNearBottom, msgs.length, busy]);
 
   const showJump = useMemo(() => !isNearBottom && msgs.length > 3, [isNearBottom, msgs.length]);
   const lastMsgRole = msgs.length ? msgs[msgs.length - 1]?.r : undefined;
