@@ -469,83 +469,83 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           return;
         }
 
-      if (kind === 'followup_question') {
-        const am = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
+        if (kind === 'followup_question') {
+          const am = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
 
-        streamAbortRef.current?.abort();
-        const ctrl = new AbortController();
-        streamAbortRef.current = ctrl;
-        const myStreamId = ++streamIdRef.current;
+          streamAbortRef.current?.abort();
+          const ctrl = new AbortController();
+          streamAbortRef.current = ctrl;
+          const myStreamId = ++streamIdRef.current;
 
-        dispatch({ type: 'STREAM_START' });
+          dispatch({ type: 'STREAM_START' });
 
-        let streamed = '';
-        const res = await claude.answerStream({
-          msgs: am,
-          question: ut,
-          mode: 'explain',
-          memorySummary: st.memorySummary,
-          fin: st.fin,
-          onDelta: (t) => {
-            if (streamIdRef.current !== myStreamId) return;
-            if (ctrl.signal.aborted) return;
-            streamed += t;
-            dispatch({ type: 'STREAM_DELTA', delta: t });
-          },
-          signal: ctrl.signal,
-        });
+          let streamed = '';
+          const res = await claude.answerStream({
+            msgs: am,
+            question: ut,
+            mode: 'explain',
+            memorySummary: st.memorySummary,
+            fin: st.fin,
+            onDelta: (t) => {
+              if (streamIdRef.current !== myStreamId) return;
+              if (ctrl.signal.aborted) return;
+              streamed += t;
+              dispatch({ type: 'STREAM_DELTA', delta: t });
+            },
+            signal: ctrl.signal,
+          });
 
-        if (streamIdRef.current !== myStreamId) {
-          // Canceled or replaced by a newer stream.
-          return;
-        }
-        streamAbortRef.current = null;
-        if (!res.ok && res.canceled) {
-          dispatch({ type: 'STREAM_CANCELED' });
-          return;
-        }
+          if (streamIdRef.current !== myStreamId) {
+            // Canceled or replaced by a newer stream.
+            return;
+          }
+          streamAbortRef.current = null;
+          if (!res.ok && res.canceled) {
+            dispatch({ type: 'STREAM_CANCELED' });
+            return;
+          }
 
-        dispatch({ type: res.ok ? 'STREAM_DONE' : 'STREAM_DONE' });
-        if (res.ok) {
-          logReplay(
-            createReplayEntry({
-              role: 'assistant',
-              text: streamed.trim(),
-              kind: 'followup_question',
-              emotionTag: detectReplayEmotion(streamed),
-            })
-          );
-          const learnedNow = detectLearnedConcepts(streamed);
-          await Promise.all(
-            learnedNow.map((concept) =>
-              db.set('learned', {
-                k: concept.toLowerCase(),
-                concept,
-                ts: Date.now(),
+          dispatch({ type: res.ok ? 'STREAM_DONE' : 'STREAM_DONE' });
+          if (res.ok) {
+            logReplay(
+              createReplayEntry({
+                role: 'assistant',
+                text: streamed.trim(),
+                kind: 'followup_question',
+                emotionTag: detectReplayEmotion(streamed),
               })
-            )
-          );
-        }
-        if (resumeQ) {
-          logReplay(
-            createReplayEntry({
-              role: 'assistant',
-              text: resumeQ.text,
-              kind: 'ask',
-              questionKey: resumeQ.key,
-              emotionTag: detectReplayEmotion(resumeQ.text),
-              trace: buildReasoningTrace({
-                decision: 'ask',
+            );
+            const learnedNow = detectLearnedConcepts(streamed);
+            await Promise.all(
+              learnedNow.map((concept) =>
+                db.set('learned', {
+                  k: concept.toLowerCase(),
+                  concept,
+                  ts: Date.now(),
+                })
+              )
+            );
+          }
+          if (resumeQ) {
+            logReplay(
+              createReplayEntry({
+                role: 'assistant',
+                text: resumeQ.text,
+                kind: 'ask',
                 questionKey: resumeQ.key,
-                missingCount: missBefore.length,
-                answeredCount: Object.keys(base.answered || {}).length,
-              }),
-            })
-          );
-          dispatch({ type: 'SEND_ASKED', text: resumeQ.text, questionKey: resumeQ.key });
+                emotionTag: detectReplayEmotion(resumeQ.text),
+                trace: buildReasoningTrace({
+                  decision: 'ask',
+                  questionKey: resumeQ.key,
+                  missingCount: missBefore.length,
+                  answeredCount: Object.keys(base.answered || {}).length,
+                }),
+              })
+            );
+            dispatch({ type: 'SEND_ASKED', text: resumeQ.text, questionKey: resumeQ.key });
+          }
+          return;
         }
-        return;
-      }
 
       const ex = await claude.extract(ut, base.fin);
       setApiStatus(claude.status);
