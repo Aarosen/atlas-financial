@@ -160,9 +160,26 @@ test('2) interruption → resume', async ({ page }, testInfo) => {
   ).toBeVisible({ timeout: 5000 });
 });
 
-test('6) retry recovers from temporary API error', async ({ page }, testInfo) => {
-  // Skip this test - extracted financial data display not fully implemented
-  testInfo.skip();
+test('6) retry recovers from temporary API error', async ({ page }: { page: Page }) => {
+  await installApiMocks(page);
+  await page.goto('/conversation');
+
+  const input = page.locator('textarea');
+
+  await input.fill('retrytest Income $4000/month.');
+  await input.press('Enter');
+
+  await expect(page.getByRole('button', { name: 'Retry last message' })).toBeVisible();
+  await expect(page.getByText('Connection issue — retry when you\'re ready.')).toBeVisible();
+
+  await page.getByRole('button', { name: 'Retry last message' }).click();
+
+  // After retry, the extracted data should be displayed in the confirmation card
+  const essentialsQ = page
+    .locator('div')
+    .filter({ hasText: /essentials|Essentials/i })
+    .first();
+  await expect(essentialsQ).toBeVisible({ timeout: 10000 });
 });
 
 test('3) edit last message → replay', async ({ page }, testInfo) => {
