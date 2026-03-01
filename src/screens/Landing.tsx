@@ -35,7 +35,7 @@ export function LandingScreen({
 
           <div style={{ marginTop: 26, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
             <Button onClick={onStart} variant="primary" size="md">
-              Let’s talk with Atlas →
+              Start a conversation →
             </Button>
             <Button onClick={onToggleTheme} variant="secondary" size="md">
               {theme === 'dark' ? 'Light mode' : 'Dark mode'}
