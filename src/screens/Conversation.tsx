@@ -514,37 +514,6 @@ export function ConversationScreen({
         </div>
       </div>
 
-      <div style={{ padding: '14px var(--padX)', paddingBottom: 'max(14px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
-        <div style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
-          {(apiErr || apiStatus === 'offline' || apiStatus === 'degraded') && (
-            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-              <div
-                style={{
-                  maxWidth: 680,
-                  width: '100%',
-                  padding: '10px 12px',
-                  borderRadius: 14,
-                  border: '1px solid var(--bdr)',
-                  background: 'var(--bg2)',
-                  boxShadow: 'var(--sh1)',
-                  color: 'var(--ink2)',
-                  fontSize: 13,
-                  lineHeight: 1.55,
-                }}
-              >
-                {apiErr
-                  ? apiErr
-                  : apiStatus === 'offline'
-                    ? 'AI is offline right now — Atlas will do its best in local mode. You can retry anytime.'
-                    : apiStatus === 'degraded'
-                      ? 'AI is a bit slow/unreliable at the moment — if a response fails, hit Retry.'
-                      : 'AI status is unknown — if anything feels off, hit Retry.'}
-              </div>
-            </div>
-          )}
-        </div>
-      </div>
-
       {/* Fixed bottom input area - always visible on mobile */}
       <div style={{ padding: '14px var(--padX)', paddingBottom: 'max(14px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
