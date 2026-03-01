@@ -45,7 +45,8 @@ export function StreamingMetricCard({ metrics, isStreaming, onMetricsUpdate }: S
     return () => clearTimeout(timer);
   }, [metrics, displayMetrics, onMetricsUpdate]);
 
-  if (!displayMetrics) return null;
+  if (!displayMetrics) return <></>;
+
 
   const getDebtUrgencyColor = (urgency: string): string => {
     switch (urgency) {
