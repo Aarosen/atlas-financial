@@ -8,15 +8,17 @@ import AtlasLogo from './AtlasLogo';
 
 export default function NavBar() {
   const pathname = usePathname();
+
+  // Hide NavBar on conversation page (it has its own TopBar)
+  // This must be checked BEFORE calling any hooks
+  if (pathname === '/conversation') {
+    return <></>;
+  }
+
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
-
-  // Hide NavBar on conversation page (it has its own TopBar)
-  if (pathname === '/conversation') {
-    return null;
-  }
 
   useEffect(() => {
     const checkMobile = () => {
