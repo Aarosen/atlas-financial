@@ -292,7 +292,7 @@ export function ConversationScreen({
 
       {/* Main scrollable conversation area - fixed layout - optimized for single screen */}
       <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '4px', paddingBottom: '4px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', flex: 1, width: '100%', maxWidth: '720px', margin: '0 auto', paddingLeft: 'var(--padX)', paddingRight: 'var(--padX)' }}>
+        <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '720px', margin: '0 auto', paddingLeft: 'var(--padX)', paddingRight: 'var(--padX)' }}>
           <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Conversation</h1>
           {showJump && (
             <div style={{ position: 'sticky', top: 10, zIndex: 5, display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
