@@ -5,7 +5,23 @@ import { IconButton } from '@/components/IconButton';
 
 function Logo() {
   return (
-    <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+    <button
+      onClick={() => window.location.href = '/'}
+      style={{
+        display: 'flex',
+        alignItems: 'center',
+        gap: 10,
+        background: 'none',
+        border: 'none',
+        cursor: 'pointer',
+        padding: 0,
+        color: 'inherit',
+        fontSize: 'inherit',
+        fontFamily: 'inherit',
+      }}
+      aria-label="Atlas - Go to home"
+      title="Go to home"
+    >
       <svg width="22" height="22" viewBox="0 0 24 24" fill="none" xmlns="http://www.w3.org/2000/svg" aria-hidden>
         <path
           d="M12 2.8c5.08 0 9.2 4.12 9.2 9.2 0 5.08-4.12 9.2-9.2 9.2-5.08 0-9.2-4.12-9.2-9.2 0-5.08 4.12-9.2 9.2-9.2Z"
@@ -16,7 +32,7 @@ function Logo() {
         <path d="M12 6.2 6.8 17.8h10.4L12 6.2Z" fill="currentColor" opacity="0.9" />
       </svg>
       <span style={{ fontWeight: 950, letterSpacing: '-0.02em' }}>Atlas</span>
-    </div>
+    </button>
   );
 }
 

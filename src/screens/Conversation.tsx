@@ -291,7 +291,7 @@ export function ConversationScreen({
       <TopBar title="Conversation" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
 
       {/* Main scrollable conversation area - fixed layout */}
-      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '12px', paddingBottom: '12px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '8px', paddingBottom: '8px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', flex: 1, width: '100%', maxWidth: '720px', margin: '0 auto', paddingLeft: 'var(--padX)', paddingRight: 'var(--padX)' }}>
           <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Conversation</h1>
           {showJump && (
@@ -313,7 +313,7 @@ export function ConversationScreen({
               style={{
                 display: 'flex',
                 justifyContent: m.r === 'u' ? 'flex-end' : 'flex-start',
-                marginBottom: i > 0 && msgs[i - 1]?.r === m.r ? 6 : 10,
+                marginBottom: i > 0 && msgs[i - 1]?.r === m.r ? 4 : 8,
               }}
             >
               <div className={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'atlasBubbleWrap' : undefined}>
@@ -602,7 +602,7 @@ export function ConversationScreen({
                 onBlur={() => setInpFocused(false)}
                 placeholder="Tell Atlas anything…"
                 rows={1}
-                style={{ padding: '12px 14px', resize: 'none', maxHeight: 140, overflowY: 'auto', width: '100%', borderRadius: 14 }}
+                style={{ padding: '10px 12px', resize: 'none', maxHeight: 100, overflowY: 'auto', width: '100%', borderRadius: 14 }}
               />
               {voiceListening && (
                 <div style={{ position: 'absolute', left: 12, bottom: 50, fontSize: 12, color: 'var(--ink2)', background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 999, padding: '4px 10px', boxShadow: 'var(--sh1)' }}>Listening…</div>
