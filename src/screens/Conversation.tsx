@@ -287,7 +287,7 @@ export function ConversationScreen({
 
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
-      {/* Single unified header - no duplicate navbar */}
+      {/* Single unified header - no duplicate navbar - Force redeploy */}
       <TopBar title="Conversation" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
 
       {/* Main scrollable conversation area - fixed layout */}
