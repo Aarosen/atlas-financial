@@ -286,12 +286,12 @@ export function ConversationScreen({
   };
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', overflow: 'hidden' }}>
       {/* Single unified header - no duplicate navbar - Force redeploy */}
       <TopBar title="Conversation" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
 
       {/* Main scrollable conversation area - fixed layout - optimized for single screen */}
-      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '4px', paddingBottom: '4px', display: 'flex', flexDirection: 'column', minHeight: 0, alignItems: 'flex-start' }}>
+      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '4px', paddingBottom: '4px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', width: '100%', maxWidth: '720px', margin: '0 auto', paddingLeft: 'var(--padX)', paddingRight: 'var(--padX)' }}>
           <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Conversation</h1>
           {showJump && (
