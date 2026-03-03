@@ -242,15 +242,16 @@ export async function POST(req: Request) {
       }
       return jsonOk({ text: safe, source: 'compliance_guardrail', model: 'policy', tier });
     }
-    if (type === 'answer_explain' || type === 'answer_explain_stream') {
-      const pb = getPlaybookResponse(String(question || ''));
-      if (pb) {
-        if (type === 'answer_explain_stream') {
-          return streamStaticResponse(pb.body, { model: 'playbook', tier, guardrail: 'playbook' });
-        }
-        return jsonOk({ text: pb.body, source: 'playbook', model: 'playbook', tier });
-      }
-    }
+    // Disabled playbooks to allow natural, adaptive Claude responses instead of rigid templates
+    // if (type === 'answer_explain' || type === 'answer_explain_stream') {
+    //   const pb = getPlaybookResponse(String(question || ''));
+    //   if (pb) {
+    //     if (type === 'answer_explain_stream') {
+    //       return streamStaticResponse(pb.body, { model: 'playbook', tier, guardrail: 'playbook' });
+    //     }
+    //     return jsonOk({ text: pb.body, source: 'playbook', model: 'playbook', tier });
+    //   }
+    // }
   }
 
   const detectedLang = detectLanguage(String(question || '')) as SupportedLanguage;
@@ -567,139 +568,47 @@ Return ONLY the rewritten text.`;
       return jsonOk({ text: fallbackAnswer(String(question || '').trim()), source: 'fallback', tier });
     }
 
-    // Apply comprehensive AI engine suite for chat responses
+    // For chat responses, use Claude's natural generation with minimal post-processing
+    // This allows adaptive, conversational responses instead of rule-based overrides
     if (type === 'chat' && text) {
-      try {
-        const lastUserMsg = String((messages || []).slice(-1)[0]?.content || '').trim();
-        const financialState = (body as any)?.fin || {};
-        const conversationHistory = messages || [];
+      // Only apply crisis detection for genuine safety concerns
+      const lastUserMsg = String((messages || []).slice(-1)[0]?.content || '').trim();
+      const conversationHistory = messages || [];
+      const financialState = (body as any)?.fin || {};
 
-        // STEP 1: Crisis Detection - HIGHEST PRIORITY
-        const crisisSignal = detectCrisisSignals(lastUserMsg, conversationHistory, financialState);
-        if (crisisSignal) {
-          const crisisResponse = generateCrisisResponse(crisisSignal);
-          return jsonOk({
-            text: crisisResponse,
-            source: 'atlas_crisis',
-            model: usedModel,
-            tier,
-            adaptive: {
-              phase: 'crisis',
-              signals: ['crisis', crisisSignal.type],
-              shouldAskFollowUp: false,
-              followUpQuestion: null,
-              readyForActionPlan: false,
-              escalateToHuman: crisisSignal.escalateToHuman,
-            },
-          });
-        }
-
-        // STEP 2: Direct Answer Engine - Answer specific follow-up questions
-        if (isDirectFollowUpQuestion(lastUserMsg, conversationHistory)) {
-          const directAnswer = generateDirectAnswer({
-            userMessage: lastUserMsg,
-            conversationHistory,
-            financialState,
-            previousResponse: text,
-          });
-
-          if (directAnswer && directAnswer.trim().length > 0) {
-            // STEP 3: Enhance with Context Awareness
-            const context = extractConversationContext(conversationHistory);
-            const urgency = assessUrgency(context);
-            let enhancedAnswer = enhanceWithContextAwareness(directAnswer, context, lastUserMsg);
-
-            // STEP 4: Add Objection Handling
-            const objections = detectObjections(lastUserMsg);
-            if (objections.length > 0) {
-              enhancedAnswer = buildObjectionAwareRecommendation(enhancedAnswer, lastUserMsg);
-            }
-
-            // STEP 5: Detect and Apply Appropriate Tone
-            const tone = detectAppropriateTone(lastUserMsg, {
-              isCrisis: false,
-              hasProgress: false,
-              isFirstMessage: false,
-              emotionalState: detectEmotion(conversationHistory) === 'anxious' ? 'stressed' : 'neutral',
-            });
-            enhancedAnswer = injectPersonality(enhancedAnswer, tone);
-
-            return jsonOk({
-              text: enhancedAnswer,
-              source: 'atlas_direct',
-              model: usedModel,
-              tier,
-              adaptive: {
-                phase: 'strategy',
-                signals: urgency.urgencyLevel === 'critical' ? ['urgency'] : [],
-                shouldAskFollowUp: false,
-                followUpQuestion: null,
-                readyForActionPlan: false,
-              },
-            });
-          }
-        }
-
-        // STEP 6: Cultural Context Recognition
-        const culturalContext = extractCulturalContext(conversationHistory);
-        let enhancedResponse = text;
-
-        // Add cultural acknowledgment if applicable
-        if (culturalContext.obligations.length > 0 || culturalContext.constraints.noInterest) {
-          const culturalAck = generateCulturalAcknowledgment(culturalContext);
-          enhancedResponse += culturalAck;
-        }
-
-        // STEP 7: Conversation Arc & Synthesis
-        const arc = buildConversationArc(conversationHistory, financialState);
-        if (isReadyForSynthesis(conversationHistory)) {
-          const synthesis = generateSessionSynthesis(arc, financialState, conversationHistory);
-          // Add synthesis message if conversation is ready
-          if (synthesis.summary) {
-            enhancedResponse += `\n\n---\n\n**Session Summary:**\n${synthesis.summary}`;
-          }
-        }
-
-        // STEP 8: Objection Handling
-        const objections = detectObjections(lastUserMsg);
-        if (objections.length > 0) {
-          enhancedResponse = buildObjectionAwareRecommendation(enhancedResponse, lastUserMsg);
-        }
-
-        // STEP 9: Tone & Personality
-        const tone = detectAppropriateTone(lastUserMsg, {
-          isCrisis: false,
-          hasProgress: arc.questionsAsked.length > 5,
-          isFirstMessage: conversationHistory.length <= 2,
-          emotionalState: detectEmotion(conversationHistory) === 'anxious' ? 'stressed' : 'neutral',
-        });
-        enhancedResponse = injectPersonality(enhancedResponse, tone);
-
-        // STEP 10: Apply adaptive intelligence layer
-        const adaptiveResult = processUserMessageAdaptively(
-          lastUserMsg,
-          conversationHistory,
-          financialState,
-          enhancedResponse
-        );
-
+      const crisisSignal = detectCrisisSignals(lastUserMsg, conversationHistory, financialState);
+      if (crisisSignal) {
+        const crisisResponse = generateCrisisResponse(crisisSignal);
         return jsonOk({
-          text: adaptiveResult.finalResponse,
-          source: 'atlas_comprehensive',
+          text: crisisResponse,
+          source: 'atlas_crisis',
           model: usedModel,
           tier,
           adaptive: {
-            phase: adaptiveResult.adaptiveResponse.conversationPhase,
-            signals: adaptiveResult.adaptiveResponse.userSignals.map(s => s.type),
-            shouldAskFollowUp: adaptiveResult.shouldAskFollowUp,
-            followUpQuestion: adaptiveResult.followUpQuestion,
-            readyForActionPlan: adaptiveResult.readyForActionPlan,
+            phase: 'crisis',
+            signals: ['crisis', crisisSignal.type],
+            shouldAskFollowUp: false,
+            followUpQuestion: null,
+            readyForActionPlan: false,
+            escalateToHuman: crisisSignal.escalateToHuman,
           },
         });
-      } catch (engineError) {
-        console.error('[atlas_comprehensive] processing_error', engineError);
-        return jsonOk({ text, source: 'claude', model: usedModel, tier });
       }
+
+      // Return Claude's natural response without additional transformations
+      return jsonOk({
+        text,
+        source: 'claude',
+        model: usedModel,
+        tier,
+        adaptive: {
+          phase: 'conversation',
+          signals: [],
+          shouldAskFollowUp: false,
+          followUpQuestion: null,
+          readyForActionPlan: false,
+        },
+      });
     }
 
     return jsonOk({ text, source: 'claude', model: usedModel, tier });

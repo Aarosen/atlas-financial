@@ -290,8 +290,8 @@ export function ConversationScreen({
       {/* Single unified header - no duplicate navbar */}
       <TopBar title="Conversation" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
 
-      {/* Main scrollable conversation area - fixed layout */}
-      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '4px', paddingBottom: '4px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* Main scrollable conversation area - optimized for single-screen view */}
+      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '2px', paddingBottom: '2px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', width: '100%', maxWidth: '720px', margin: '0 auto', paddingLeft: 'var(--padX)', paddingRight: 'var(--padX)' }}>
           <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Conversation</h1>
           {showJump && (
@@ -313,7 +313,7 @@ export function ConversationScreen({
               style={{
                 display: 'flex',
                 justifyContent: m.r === 'u' ? 'flex-end' : 'flex-start',
-                marginBottom: i > 0 && msgs[i - 1]?.r === m.r ? 2 : 6,
+                marginBottom: i > 0 && msgs[i - 1]?.r === m.r ? 1 : 3,
               }}
             >
               <div className={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'atlasBubbleWrap' : undefined}>
@@ -402,12 +402,12 @@ export function ConversationScreen({
             </div>
           )}
           {showActionSuggestions && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
               <div style={{ maxWidth: '86%', width: '100%' }}>
                 <Card>
                   <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ACTION IDEAS</div>
-                  <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>Pick one small step to build momentum.</div>
-                  <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ marginTop: 6, color: 'var(--ink2)', lineHeight: 1.6, fontSize: 13 }}>Pick one small step to build momentum.</div>
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {actionSuggestions?.map((s) => (
                       <Button key={s.title} onClick={() => onQuickReply?.(s.prompt)} variant="secondary" size="sm">
                         {s.title}
@@ -419,12 +419,12 @@ export function ConversationScreen({
             </div>
           )}
           {showGoalReplies && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
               <div style={{ maxWidth: '86%', width: '100%' }}>
                 <Card>
                   <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>PICK A GOAL</div>
-                  <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>What are you aiming for right now?</div>
-                  <div style={{ marginTop: 10, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
+                  <div style={{ marginTop: 6, color: 'var(--ink2)', lineHeight: 1.6, fontSize: 13 }}>What are you aiming for right now?</div>
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
                     {['Stability', 'Growth', 'Flexibility', 'Wealth building'].map((label) => (
                       <Button key={label} onClick={() => onQuickReply?.(label)} variant="secondary" size="sm">
                         {label}
@@ -439,7 +439,7 @@ export function ConversationScreen({
             </div>
           )}
           {pendingBlock === 'confirm' && pendingFin && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
               <div style={{ maxWidth: '86%', width: '100%' }}>
                 <Card>
                   <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>CONFIRM CAPTURED NUMBERS</div>
@@ -466,7 +466,7 @@ export function ConversationScreen({
             </div>
           )}
           {pendingBlock === 'lever' && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
               <div style={{ maxWidth: '86%', width: '100%' }}>
                 <Card>
                   <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ATLAS RECOMMENDS</div>
@@ -483,7 +483,7 @@ export function ConversationScreen({
             </div>
           )}
           {pendingBlock === 'next' && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
               <div style={{ maxWidth: '86%', width: '100%' }}>
                 <Card>
                   <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ONE NEXT STEP</div>
@@ -516,7 +516,7 @@ export function ConversationScreen({
       </div>
 
       {/* Fixed bottom input area - always visible on mobile */}
-      <div style={{ padding: '14px var(--padX)', paddingBottom: 'max(14px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
+      <div style={{ padding: '10px var(--padX)', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
           {(apiErr || apiStatus === 'offline' || apiStatus === 'degraded') && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
@@ -684,9 +684,9 @@ export function ConversationScreen({
             )}
           </div>
           {inpFocused && isDesktop && !busy && (
-            <div style={{ marginTop: 8, textAlign: 'center', fontSize: 12, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
+            <div style={{ marginTop: 6, textAlign: 'center', fontSize: 11, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
           )}
-          <div style={{ textAlign: 'center', fontSize: 11, color: 'var(--ink3)', marginTop: '12px', paddingBottom: '8px' }}>Messages you type may be sent to our AI provider to generate responses. Atlas only sends what you type for the current request.</div>
+          <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--ink3)', marginTop: '8px', paddingBottom: '4px' }}>Messages you type may be sent to our AI provider to generate responses. Atlas only sends what you type for the current request.</div>
         </div>
       </div>
     </div>
