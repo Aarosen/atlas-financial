@@ -161,12 +161,22 @@ export class ClaudeClient {
     }
   }
 
-  async chat(msgs: Array<{ role: 'user' | 'assistant'; content: string }>, missing: string[]) {
+  async chat(
+    msgs: Array<{ role: 'user' | 'assistant'; content: string }>,
+    missing: string[],
+    args?: { memorySummary?: string | null; fin?: Partial<FinancialState> | null }
+  ) {
     try {
       const r = await fetch(this.ep, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'chat', messages: msgs, missing }),
+        body: JSON.stringify({
+          type: 'chat',
+          messages: msgs,
+          missing,
+          memorySummary: args?.memorySummary ?? null,
+          fin: args?.fin ?? null,
+        }),
       });
       if (!r.ok) {
         const t = await r.text().catch(() => '');

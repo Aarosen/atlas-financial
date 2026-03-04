@@ -147,8 +147,8 @@ export const ACCEPTANCE_CRITERIA = {
     criticalFailures: ['Hallucinated financial facts', 'Numerical errors >0.5%', 'Internal contradictions'],
   },
   D3: {
-    threshold: 90,
-    description: '≥90% of responses include teaching moments; user comprehension ≥4/5',
+    threshold: 95,
+    description: '≥95% of responses include teaching moments; user comprehension ≥4/5',
     criticalFailures: ['No teaching moment in response', 'Conceptually inaccurate teaching'],
   },
   D4: {
@@ -182,33 +182,33 @@ export const ACCEPTANCE_CRITERIA = {
     criticalFailures: ['Cross-agent contradictions', 'Inconsistent advice'],
   },
   D10: {
-    threshold: 80,
-    description: '≥80% of scenarios produce proactive suggestions; ≥70% user-rated as valuable',
+    threshold: 95,
+    description: '≥95% of scenarios produce proactive suggestions; ≥70% user-rated as valuable',
     criticalFailures: ['Missed obvious risk', 'Unsolicited irrelevant advice >5%'],
   },
   D11: {
-    threshold: 80,
-    description: '≥80% of repeat users show improved financial outcomes; ≥90% memory accuracy',
+    threshold: 95,
+    description: '≥95% of repeat users show improved financial outcomes; ≥90% memory accuracy',
     criticalFailures: ['Forgotten user facts', 'No progress tracking'],
   },
   D12: {
-    threshold: 75,
-    description: 'Atlas rated equal/superior in ≥75% of blind comparisons vs competitors',
+    threshold: 95,
+    description: 'Atlas rated equal/superior in ≥95% of blind comparisons vs competitors',
     criticalFailures: ['Competitor error not avoided', 'Lower quality than alternatives'],
   },
   D13: {
-    threshold: 85,
-    description: '≥85% of responses correctly identify and address cognitive biases',
+    threshold: 95,
+    description: '≥95% of responses correctly identify and address cognitive biases',
     criticalFailures: ['Reinforces harmful bias', 'Misses obvious bias'],
   },
   D14: {
-    threshold: 80,
-    description: '≥80% of scenarios include resilience/stress testing; ≥90% accuracy',
+    threshold: 95,
+    description: '≥95% of scenarios include resilience/stress testing; ≥95% accuracy',
     criticalFailures: ['Overly optimistic projections', 'No downside scenario'],
   },
   D15: {
-    threshold: 90,
-    description: '≥90% consistency across demographics; no unjustified assumptions',
+    threshold: 95,
+    description: '≥95% consistency across demographics; no unjustified assumptions',
     criticalFailures: ['Demographic bias detected', 'Unequal quality across groups'],
   },
 };
@@ -270,9 +270,9 @@ export class EvaluationFrameworkExpanded {
       readinessLevel = 'CRITICAL_ISSUES';
     } else if (highPriorityIssues.length > 5) {
       readinessLevel = 'NEEDS_WORK';
-    } else if (overallScore >= 95) {
+    } else if (overallScore >= 98) {
       readinessLevel = 'CHAMPIONSHIP';
-    } else if (overallScore >= 90) {
+    } else if (overallScore >= 95) {
       readinessLevel = 'PRODUCTION_READY';
     } else {
       readinessLevel = 'NEEDS_WORK';

@@ -526,23 +526,35 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               )
             );
           }
-          if (resumeQ) {
+          if (missBefore.length) {
+            const followupMsgs = [
+              ...am,
+              { role: 'assistant' as const, content: streamed.trim() || '' },
+            ];
+            const followupText = (
+              await claude.chat(followupMsgs, missBefore as string[], {
+                memorySummary: st.memorySummary,
+                fin: st.fin,
+              })
+            ).trim();
+            const fallbackText = resumeQ?.text || 'What would help you most right now?';
+            const askText = followupText || fallbackText;
             logReplay(
               createReplayEntry({
                 role: 'assistant',
-                text: resumeQ.text,
+                text: askText,
                 kind: 'ask',
-                questionKey: resumeQ.key,
-                emotionTag: detectReplayEmotion(resumeQ.text),
+                questionKey: resumeQ?.key || missBefore[0],
+                emotionTag: detectReplayEmotion(askText),
                 trace: buildReasoningTrace({
                   decision: 'ask',
-                  questionKey: resumeQ.key,
+                  questionKey: resumeQ?.key || missBefore[0],
                   missingCount: missBefore.length,
                   answeredCount: Object.keys(base.answered || {}).length,
                 }),
               })
             );
-            dispatch({ type: 'SEND_ASKED', text: resumeQ.text, questionKey: resumeQ.key });
+            dispatch({ type: 'SEND_ASKED', text: askText, questionKey: resumeQ?.key || missBefore[0] });
           }
           return;
         }
@@ -640,7 +652,15 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       }
       if (action.type === 'ask') {
         const preface = [actionFeedback, nudgeText, learningPrompt].filter(Boolean).join('\n\n');
-        const askText = preface ? `${preface}\n\n${action.text}` : action.text;
+        const chatMsgs = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
+        const adaptiveAsk = (
+          await claude.chat(chatMsgs, miss as string[], {
+            memorySummary: st.memorySummary,
+            fin: st.fin,
+          })
+        ).trim();
+        const askBody = adaptiveAsk || action.text;
+        const askText = preface ? `${preface}\n\n${askBody}` : askBody;
         logReplay(
           createReplayEntry({
             role: 'assistant',
