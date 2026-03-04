@@ -1,9 +1,15 @@
 'use client';
 
+import { usePathname } from 'next/navigation';
 import { Lock, Mail, Linkedin, Twitter } from 'lucide-react';
 import AtlasLogo from './AtlasLogo';
 
 export default function Footer() {
+  const pathname = usePathname();
+  if (pathname === '/conversation') {
+    return null;
+  }
+
   const currentYear = new Date().getFullYear();
 
   const footerSections = [
