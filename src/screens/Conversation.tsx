@@ -449,6 +449,27 @@ export function ConversationScreen({
               </div>
             </div>
           )}
+          {showGoalReplies && (
+            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
+              <div style={{ maxWidth: '86%', width: '100%' }}>
+                <Card>
+                  <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>WHAT ARE YOU OPTIMIZING FOR?</div>
+                  <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                    {[
+                      { label: 'Stability', value: 'Stability' },
+                      { label: 'Growth', value: 'Growth' },
+                      { label: 'Flexibility', value: 'Flexibility' },
+                      { label: 'Wealth building', value: 'Wealth building' },
+                    ].map((goal) => (
+                      <Button key={goal.label} onClick={() => onQuickReply?.(goal.value)} variant="secondary" size="sm">
+                        {goal.label}
+                      </Button>
+                    ))}
+                  </div>
+                </Card>
+              </div>
+            </div>
+          )}
           {showActionSuggestions && (
             <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
               <div style={{ maxWidth: '86%', width: '100%' }}>

@@ -19,6 +19,7 @@ export function LanguageSelector({
       <select
         value={currentLanguage}
         onChange={(e) => onLanguageChange(e.target.value as SupportedLanguage)}
+        aria-label="Language"
         style={{
           padding: '8px 12px',
           borderRadius: '6px',
