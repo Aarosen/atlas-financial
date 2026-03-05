@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
-import type { ChatMessage } from '@/lib/state/types';
+import type { ChatMessage, Strategy } from '@/lib/state/types';
 import { TopBar } from '@/components/TopBar';
 import { IconButton } from '@/components/IconButton';
 import { Textarea } from '@/components/TextInput';
@@ -153,7 +153,7 @@ export function ConversationScreen({
   pendingBlock?: 'confirm' | 'lever' | 'next' | null;
   pendingFin?: { monthlyIncome: number; essentialExpenses: number; totalSavings: number; highInterestDebt: number | null; lowInterestDebt: number | null } | null;
   selectedLever?: string | null;
-  baseline?: { lever: string; explainability?: { inputsUsed?: Record<string, string> } } | null;
+  baseline?: Strategy | null;
   onConfirmFin?: () => void;
   onEditFin?: () => void;
   onConfirmNextStep?: () => void;
@@ -192,6 +192,7 @@ export function ConversationScreen({
   const [inpFocused, setInpFocused] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const [editAffForMsgIdx, setEditAffForMsgIdx] = useState<number | null>(null);
+  const [showExplain, setShowExplain] = useState(false);
   const longPressTimerRef = useRef<number | null>(null);
   const hasInput = inp.trim().length > 0;
   const showMic = !!voiceSupported && !!onVoiceStart && !hasInput;
@@ -264,14 +265,29 @@ export function ConversationScreen({
     increase_future_allocation: 'Grow future savings',
     optimize_discretionary_spend: 'Optimize discretionary spend',
   };
+  const tierCopy: Record<Strategy['tier'], { name: string; desc: string }> = {
+    Foundation: { name: 'Foundation', desc: 'We steady the ground first.' },
+    Stabilizing: { name: 'Stabilizing', desc: 'We reduce pressure and build buffer.' },
+    Strategic: { name: 'Strategic', desc: 'We’re building momentum with intent.' },
+    GrowthReady: { name: 'Growth Ready', desc: 'We can lean into growth.' },
+  };
   const recommendedLever = baseline?.lever || selectedLever || 'stabilize_cashflow';
   const leverLabel = leverLabels[recommendedLever] || recommendedLever;
   const leverBasedOn = baseline?.explainability?.inputsUsed
     ? humanizeFieldList(Object.keys(baseline.explainability.inputsUsed).filter(Boolean))
     : ['income', 'essentials', 'savings', 'debt'];
+  const explainability = baseline?.explainability;
+  const explainReasons = explainability?.reasonCodes ?? [];
+  const explainInputs = explainability?.inputsUsed ?? {};
+  const explainAssumptions = explainability?.assumptions ?? [];
+  const tierInfo = baseline?.tier ? tierCopy[baseline.tier] : null;
   const showInlineNextStep = !!(onNextStep && nextStepHint && !pendingBlock);
   const showGoalReplies = !pendingBlock && lastQuestionKey === 'primaryGoal' && !!onQuickReply;
   const showActionSuggestions = !pendingBlock && !!actionSuggestions?.length && !!onQuickReply;
+
+  useEffect(() => {
+    setShowExplain(false);
+  }, [pendingBlock, recommendedLever]);
 
   const startLongPress = (idx: number) => {
     if (isDesktop) return;
@@ -473,13 +489,62 @@ export function ConversationScreen({
                 <Card>
                   <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ATLAS RECOMMENDS</div>
                   <div style={{ marginTop: 8, fontWeight: 950, fontSize: 16 }}>{leverLabel}</div>
+                  {tierInfo && (
+                    <div style={{ marginTop: 6, color: 'var(--ink2)', fontWeight: 800 }}>
+                      Tier: {tierInfo.name} • {tierInfo.desc}
+                    </div>
+                  )}
                   <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>
                     From what you've shared about your {leverBasedOn.join(', ')}, here's what I think makes sense.
                   </div>
                   <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <Button onClick={onConfirmNextStep} variant="primary" size="sm" disabled={!onConfirmNextStep}>Yes, use this lever</Button>
                     <Button onClick={onEditFin} variant="secondary" size="sm" disabled={!onEditFin}>Discuss other options</Button>
+                    {explainability && (
+                      <Button onClick={() => setShowExplain((v) => !v)} variant="secondary" size="sm">
+                        {showExplain ? 'Hide why' : 'Why this?'}
+                      </Button>
+                    )}
                   </div>
+                  {showExplain && explainability && (
+                    <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>REASONS</div>
+                        <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                          {explainReasons.map((c) => (
+                            <div key={c} style={{ padding: '6px 10px', borderRadius: 999, border: '1px solid var(--bdr)', background: 'var(--bg2)', fontWeight: 800, color: 'var(--ink2)' }}>
+                              {c}
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>INPUTS USED</div>
+                        <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+                          {Object.entries(explainInputs).map(([k, v]) => (
+                            <div key={k} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '8px 10px', borderRadius: 12, border: '1px solid var(--bdr)', background: 'var(--bg2)' }}>
+                              <div style={{ color: 'var(--ink2)', fontWeight: 800 }}>{k}</div>
+                              <div style={{ fontWeight: 950 }}>{v}</div>
+                            </div>
+                          ))}
+                        </div>
+                      </div>
+                      <div>
+                        <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ASSUMPTIONS</div>
+                        <div style={{ marginTop: 8, display: 'grid', gap: 6 }}>
+                          {explainAssumptions.length ? (
+                            explainAssumptions.map((a) => (
+                              <div key={a} style={{ padding: '8px 10px', borderRadius: 12, border: '1px solid var(--bdr)', background: 'var(--bg2)', color: 'var(--ink2)', fontWeight: 800 }}>
+                                {a}
+                              </div>
+                            ))
+                          ) : (
+                            <div style={{ padding: '8px 10px', borderRadius: 12, border: '1px solid var(--bdr)', background: 'var(--bg2)', color: 'var(--ink2)', fontWeight: 800 }}>None</div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  )}
                 </Card>
               </div>
             </div>
@@ -520,6 +585,24 @@ export function ConversationScreen({
       {/* Fixed bottom input area - always visible on mobile */}
       <div style={{ padding: '10px var(--padX)', paddingBottom: 'max(10px, env(safe-area-inset-bottom))', borderTop: '1px solid var(--bdr)', background: 'var(--bg)' }}>
         <div style={{ maxWidth: 720, margin: '0 auto', width: '100%' }}>
+          {streaming && (
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 8 }}>
+              <div
+                style={{
+                  padding: '6px 10px',
+                  borderRadius: 999,
+                  border: '1px solid var(--bdr)',
+                  background: 'var(--bg2)',
+                  color: 'var(--ink2)',
+                  fontSize: 12,
+                  fontWeight: 800,
+                  letterSpacing: '0.04em',
+                }}
+              >
+                Streaming response…
+              </div>
+            </div>
+          )}
           {(apiErr || apiStatus === 'offline' || apiStatus === 'degraded') && (
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
               <div
