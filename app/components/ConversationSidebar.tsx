@@ -26,7 +26,11 @@ export function ConversationSidebar({
     const fetchSessions = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch(`/api/conversation?userId=${user.id}`);
+        const response = await fetch('/api/conversation', {
+          headers: {
+            'x-user-id': user.id,
+          },
+        });
         if (!response.ok) throw new Error('Failed to fetch sessions');
 
         const data = await response.json();

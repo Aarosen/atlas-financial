@@ -27,6 +27,8 @@ import { buildMetricExplainer } from '@/lib/ui/metricExplainer';
 import { Button } from '@/components/Buttons';
 import { BarChart3, LayoutList, MessageSquare, Settings } from 'lucide-react';
 import type { SupportedLanguage } from '@/lib/ai/slangMapper';
+import { trackOutcomeProgress, type UserOutcomeMetrics } from '@/lib/ai/phase4-integration';
+import { useUser } from '@/lib/auth/userContext';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -55,6 +57,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const db = useMemo(() => new AtlasDb(), []);
   const claude = useMemo(() => new ClaudeClient(), []);
   const engine = useMemo(() => new StrategyEngine(), []);
+  const { user, isLoading: authLoading } = useUser();
+  const userId = user?.id || 'guest';
   const [mounted, setMounted] = useState(false);
   const [apiStatus, setApiStatus] = useState(claude.status);
   const [voiceListening, setVoiceListening] = useState(false);
@@ -99,6 +103,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [voiceAutoSend, setVoiceAutoSend] = useState(false);
   const [editingLast, setEditingLast] = useState(false);
   const [language, setLanguage] = useState<SupportedLanguage>('en');
+  const [outcomeMetrics, setOutcomeMetrics] = useState<UserOutcomeMetrics | null>(null);
+  const [lastOutcomeState, setLastOutcomeState] = useState<{ debtBalance: number; savings: number } | null>(null);
+  const [restored, setRestored] = useState(false);
   const lastSendSnapshotRef = useRef<typeof st | null>(null);
   const lastUserTextRef = useRef<string | null>(null);
   const streamAbortRef = useRef<AbortController | null>(null);
@@ -192,6 +199,18 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   }, []);
 
   useEffect(() => {
+    if (authLoading || restored) return;
+    db.get<{ userId?: string; state?: typeof st }>('conv', 'snapshot')
+      .then((snap) => {
+        if (!snap?.state) return;
+        if (snap.userId && snap.userId !== userId) return;
+        dispatch({ type: 'RESTORE', state: snap.state });
+      })
+      .catch(() => {})
+      .finally(() => setRestored(true));
+  }, [authLoading, db, restored, userId]);
+
+  useEffect(() => {
     if (typeof window === 'undefined') return;
     const mq = window.matchMedia('(max-width: 719px)');
     const onChange = () => setIsMobile(!!mq.matches);
@@ -217,6 +236,41 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     tabStacksRef.current[tab] = st.scr;
     setActiveTab(tab);
   }, [st.scr]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!restored) return;
+    const snapshot = {
+      ...st,
+      streaming: false,
+      busy: false,
+    };
+    void db.set('conv', { k: 'snapshot', userId, state: snapshot, ts: Date.now() });
+  }, [authLoading, db, restored, st, userId]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    db.get<{ metrics?: UserOutcomeMetrics; lastState?: { debtBalance: number; savings: number } }>('outcomes', 'metrics')
+      .then((stored) => {
+        if (stored?.metrics) setOutcomeMetrics(stored.metrics);
+        if (stored?.lastState) setLastOutcomeState(stored.lastState);
+      })
+      .catch(() => {});
+  }, [authLoading, db]);
+
+  useEffect(() => {
+    if (authLoading) return;
+    if (!st.baseline) return;
+    const debtBalance = Number(st.fin.highInterestDebt || 0) + Number(st.fin.lowInterestDebt || 0);
+    const savings = Number(st.fin.totalSavings || 0);
+    if (lastOutcomeState && lastOutcomeState.debtBalance === debtBalance && lastOutcomeState.savings === savings) return;
+    const prev = outcomeMetrics ? ({ ...outcomeMetrics, ...(lastOutcomeState || {}) } as any) : null;
+    const nextMetrics = trackOutcomeProgress(prev, { debtBalance, savings });
+    setOutcomeMetrics(nextMetrics);
+    const nextState = { debtBalance, savings };
+    setLastOutcomeState(nextState);
+    void db.set('outcomes', { k: 'metrics', userId, metrics: nextMetrics, lastState: nextState, ts: Date.now() });
+  }, [authLoading, db, lastOutcomeState, outcomeMetrics, st.baseline, st.fin.highInterestDebt, st.fin.lowInterestDebt, st.fin.totalSavings, userId]);
 
   useEffect(() => {
     if (typeof window === 'undefined') return;
@@ -875,7 +929,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         theme={theme}
         onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
         apiErr={st.apiErr}
-        apiStatus={claude.status}
+        apiStatus={apiStatus}
         fin={st.fin}
         baseline={st.baseline}
         onTalk={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })}
@@ -884,6 +938,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         fc={fc}
         fp={fp}
         getMetricExplainer={metricExplainerText}
+        outcomeMetrics={outcomeMetrics}
       />
     );
 

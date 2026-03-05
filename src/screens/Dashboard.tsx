@@ -23,6 +23,7 @@ export function DashboardScreen({
   fc,
   fp,
   getMetricExplainer,
+  outcomeMetrics,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -36,6 +37,14 @@ export function DashboardScreen({
   fc: (n: number) => string;
   fp: (n: number) => string;
   getMetricExplainer: (metric: string, fin: FinancialState, baseline: Strategy) => string;
+  outcomeMetrics?: {
+    debtReduction: number;
+    savingsGrowth: number;
+    financialConfidence: number;
+    creditScoreImprovement: number;
+    conceptsMastered: string[];
+    strugglingConcepts: string[];
+  } | null;
 }) {
   const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
   const [activeMetric, setActiveMetric] = useState<string | null>(null);
@@ -142,6 +151,15 @@ export function DashboardScreen({
     );
   };
 
+  const outcomeSummary = outcomeMetrics
+    ? {
+        debtReduction: `${Math.max(0, outcomeMetrics.debtReduction).toFixed(1)}%`,
+        savingsGrowth: `${Math.max(0, outcomeMetrics.savingsGrowth).toFixed(1)}%`,
+        financialConfidence: `${Math.min(5, Math.max(0, outcomeMetrics.financialConfidence)).toFixed(1)} / 5`,
+        creditScoreImprovement: `${Math.round(outcomeMetrics.creditScoreImprovement)} pts`,
+      }
+    : null;
+
   return (
     <ScreenWrap>
       <h1 className="srOnly">Dashboard</h1>
@@ -156,6 +174,35 @@ export function DashboardScreen({
               <div style={{ marginTop: 8, color: 'var(--ink3)', fontSize: 12 }}>Tell me more so I can refine this.</div>
             )}
           </Card>
+
+          {outcomeSummary && outcomeMetrics && (
+            <Card>
+              <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>OUTCOME TRACKING</div>
+              <div style={{ marginTop: 10, display: 'grid', gap: 8 }}>
+                {[
+                  { label: 'Debt reduction', value: outcomeSummary.debtReduction },
+                  { label: 'Savings growth', value: outcomeSummary.savingsGrowth },
+                  { label: 'Confidence', value: outcomeSummary.financialConfidence },
+                  { label: 'Credit score change', value: outcomeSummary.creditScoreImprovement },
+                ].map((row) => (
+                  <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '8px 10px', borderRadius: 12, border: '1px solid var(--bdr)', background: 'var(--bg2)' }}>
+                    <div style={{ color: 'var(--ink2)', fontWeight: 800 }}>{row.label}</div>
+                    <div style={{ fontWeight: 950 }}>{row.value}</div>
+                  </div>
+                ))}
+              </div>
+              {(outcomeMetrics.conceptsMastered.length > 0 || outcomeMetrics.strugglingConcepts.length > 0) && (
+                <div style={{ marginTop: 10, display: 'grid', gap: 6, color: 'var(--ink3)', fontSize: 12 }}>
+                  {outcomeMetrics.conceptsMastered.length > 0 && (
+                    <div>Mastered: {outcomeMetrics.conceptsMastered.slice(0, 3).join(', ')}</div>
+                  )}
+                  {outcomeMetrics.strugglingConcepts.length > 0 && (
+                    <div>Needs work: {outcomeMetrics.strugglingConcepts.slice(0, 3).join(', ')}</div>
+                  )}
+                </div>
+              )}
+            </Card>
+          )}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
             <ClickCard metric="net">
