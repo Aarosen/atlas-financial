@@ -9,6 +9,8 @@ import { Card } from '@/components/Card';
 import { PageContainer } from '@/components/Layout';
 import { ArrowUp, Mic, Pencil, Square } from 'lucide-react';
 import { humanizeFieldList } from '@/lib/ui/fieldLabels';
+import { MetricCardPayload } from '@/components/MetricCardPayload';
+import { extractMetricCardFromResponse } from '@/lib/ai/metricCardPrompt';
 
 function renderMessageText(text: string): ReactNode {
   // Render message text with proper formatting for paragraphs, lists
@@ -307,85 +309,102 @@ export function ConversationScreen({
               </Button>
             </div>
           )}
-          {msgs.map((m, i) => (
-            <div
-              key={i}
-              style={{
-                display: 'flex',
-                justifyContent: m.r === 'u' ? 'flex-end' : 'flex-start',
-                marginBottom: i > 0 && msgs[i - 1]?.r === m.r ? 1 : 3,
-              }}
-            >
-              <div className={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'atlasBubbleWrap' : undefined}>
-                {m.r === 'u' && i === lastUserIdx && onEditLastUserMessage && (
-                  <div className={['atlasEditAff', editAffForMsgIdx === i ? 'atlasEditAffShow' : ''].filter(Boolean).join(' ')}>
-                    <IconButton
-                      aria-label="Edit last message"
-                      title="Edit"
-                      onClick={() => {
-                        setEditAffForMsgIdx(null);
-                        onEditLastUserMessage();
-                      }}
-                    >
-                      <Pencil size={16} aria-hidden />
-                    </IconButton>
-                  </div>
-                )}
+          {msgs.map((m, i) => {
+            const isAssistant = m.r === 'a';
+            const parsed = isAssistant ? extractMetricCardFromResponse(m.t) : { text: m.t, card: null };
+            const displayText = parsed.text || '';
 
-                <div
-                  className={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'atlasBubbleInteractive' : undefined}
-                  onClick={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? onEditLastUserMessage : undefined}
-                  onPointerDown={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? () => startLongPress(i) : undefined}
-                  onPointerUp={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? cancelLongPress : undefined}
-                  onPointerCancel={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? cancelLongPress : undefined}
-                  role={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'button' : undefined}
-                  tabIndex={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 0 : undefined}
-                  onKeyDown={
-                    m.r === 'u' && i === lastUserIdx && onEditLastUserMessage
-                      ? (event) => {
-                          if (event.key === 'Enter' || event.key === ' ') {
-                            event.preventDefault();
-                            onEditLastUserMessage();
-                          }
-                        }
-                      : undefined
-                  }
-                  data-testid={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'lastUserBubble' : undefined}
-                  style={{
-                    maxWidth: m.r === 'a' ? '86%' : undefined,
-                    lineHeight: 1.6,
-                    fontSize: 'var(--fsBody)',
-                    padding: '11px 13px',
-                    borderRadius: m.r === 'u' ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
-                    background: m.r === 'u' ? 'linear-gradient(135deg,var(--teal),var(--sky))' : 'var(--bg2)',
-                    color: m.r === 'u' ? '#fff' : 'var(--ink)',
-                    border: m.r === 'u' ? 'none' : '1px solid var(--bdr)',
-                    boxShadow:
-                      m.r === 'u'
-                        ? i === lastUserIdx && onEditLastUserMessage
-                          ? '0 0 0 2px color-mix(in srgb, var(--sky) 26%, transparent)'
-                          : 'none'
-                        : 'var(--sh1)',
-                    cursor: m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'pointer' : 'default',
-                    opacity: m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 0.98 : 1,
-                  }}
-                  title={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? (isDesktop ? 'Click to edit and resend' : 'Tap to edit • Long-press for options') : undefined}
-                  onMouseLeave={m.r === 'u' && i === lastUserIdx ? () => setEditAffForMsgIdx(null) : undefined}
-                >
-                  {m.r === 'a' ? (
-                    <div
-                      className={i === lastAssistantIdx ? 'atlasMsgAEnter' : undefined}
-                      data-testid={i === lastAssistantIdx ? 'lastAssistantBubble' : undefined}
-                    >
-                      {renderMessageText(m.t)}
+            return (
+              <div
+                key={i}
+                style={{
+                  display: 'flex',
+                  justifyContent: m.r === 'u' ? 'flex-end' : 'flex-start',
+                  marginBottom: i > 0 && msgs[i - 1]?.r === m.r ? 1 : 3,
+                }}
+              >
+                <div className={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'atlasBubbleWrap' : undefined}>
+                  {m.r === 'u' && i === lastUserIdx && onEditLastUserMessage && (
+                    <div className={['atlasEditAff', editAffForMsgIdx === i ? 'atlasEditAffShow' : ''].filter(Boolean).join(' ')}>
+                      <IconButton
+                        aria-label="Edit last message"
+                        title="Edit"
+                        onClick={() => {
+                          setEditAffForMsgIdx(null);
+                          onEditLastUserMessage();
+                        }}
+                      >
+                        <Pencil size={16} aria-hidden />
+                      </IconButton>
                     </div>
-                  ) : (
-                    <div style={{ whiteSpace: 'pre-wrap' }}>{m.t}</div>
+                  )}
+
+                  <div
+                    className={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'atlasBubbleInteractive' : undefined}
+                    onClick={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? onEditLastUserMessage : undefined}
+                    onPointerDown={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? () => startLongPress(i) : undefined}
+                    onPointerUp={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? cancelLongPress : undefined}
+                    onPointerCancel={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? cancelLongPress : undefined}
+                    role={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'button' : undefined}
+                    tabIndex={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 0 : undefined}
+                    onKeyDown={
+                      m.r === 'u' && i === lastUserIdx && onEditLastUserMessage
+                        ? (event) => {
+                            if (event.key === 'Enter' || event.key === ' ') {
+                              event.preventDefault();
+                              onEditLastUserMessage();
+                            }
+                          }
+                        : undefined
+                    }
+                    data-testid={m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'lastUserBubble' : undefined}
+                    style={{
+                      maxWidth: m.r === 'a' ? '86%' : undefined,
+                      lineHeight: 1.6,
+                      fontSize: 'var(--fsBody)',
+                      padding: '11px 13px',
+                      borderRadius: m.r === 'u' ? '18px 18px 6px 18px' : '18px 18px 18px 6px',
+                      background: m.r === 'u' ? 'linear-gradient(135deg,var(--teal),var(--sky))' : 'var(--bg2)',
+                      color: m.r === 'u' ? '#fff' : 'var(--ink)',
+                      border: m.r === 'u' ? 'none' : '1px solid var(--bdr)',
+                      boxShadow:
+                        m.r === 'u'
+                          ? i === lastUserIdx && onEditLastUserMessage
+                            ? '0 0 0 2px color-mix(in srgb, var(--sky) 26%, transparent)'
+                            : 'none'
+                          : 'var(--sh1)',
+                      cursor: m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 'pointer' : 'default',
+                      opacity: m.r === 'u' && i === lastUserIdx && onEditLastUserMessage ? 0.98 : 1,
+                    }}
+                    title={
+                      m.r === 'u' && i === lastUserIdx && onEditLastUserMessage
+                        ? isDesktop
+                          ? 'Click to edit and resend'
+                          : 'Tap to edit • Long-press for options'
+                        : undefined
+                    }
+                    onMouseLeave={m.r === 'u' && i === lastUserIdx ? () => setEditAffForMsgIdx(null) : undefined}
+                  >
+                    {m.r === 'a' ? (
+                      <div
+                        className={i === lastAssistantIdx ? 'atlasMsgAEnter' : undefined}
+                        data-testid={i === lastAssistantIdx ? 'lastAssistantBubble' : undefined}
+                      >
+                        {renderMessageText(displayText)}
+                      </div>
+                    ) : (
+                      <div style={{ whiteSpace: 'pre-wrap' }}>{m.t}</div>
+                    )}
+                  </div>
+                  {parsed.card && m.r === 'a' && (
+                    <div style={{ marginTop: 10 }}>
+                      <MetricCardPayload card={parsed.card} />
+                    </div>
                   )}
                 </div>
               </div>
-            </div>
-          ))}
+            );
+          })}
           {busy && (
             <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 14 }}>
               <div
@@ -411,23 +430,6 @@ export function ConversationScreen({
                     {actionSuggestions?.map((s) => (
                       <Button key={s.title} onClick={() => onQuickReply?.(s.prompt)} variant="secondary" size="sm">
                         {s.title}
-                      </Button>
-                    ))}
-                  </div>
-                </Card>
-              </div>
-            </div>
-          )}
-          {showGoalReplies && (
-            <div style={{ display: 'flex', justifyContent: 'flex-start', marginBottom: 8 }}>
-              <div style={{ maxWidth: '86%', width: '100%' }}>
-                <Card>
-                  <div style={{ fontWeight: 900, fontSize: 13, letterSpacing: '0.08em', color: 'var(--ink2)' }}>PICK A GOAL</div>
-                  <div style={{ marginTop: 6, color: 'var(--ink2)', lineHeight: 1.6, fontSize: 13 }}>What are you aiming for right now?</div>
-                  <div style={{ marginTop: 8, display: 'flex', gap: 8, flexWrap: 'wrap' }}>
-                    {['Stability', 'Growth', 'Flexibility', 'Wealth building'].map((label) => (
-                      <Button key={label} onClick={() => onQuickReply?.(label)} variant="secondary" size="sm">
-                        {label}
                       </Button>
                     ))}
                     <Button onClick={() => onQuickReply?.('Something else: ')} variant="secondary" size="sm">

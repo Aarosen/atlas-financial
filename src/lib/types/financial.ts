@@ -41,6 +41,14 @@ export interface FinancialMetrics {
   confidence: 'low' | 'medium' | 'high';
 }
 
+export interface MetricCardPayload {
+  type: 'metric_card';
+  title: string;
+  value: string;
+  subtitle?: string;
+  action?: string;
+}
+
 export interface AtlasInsight {
   type: 'financial_snapshot' | 'goal_progress' | 'debt_analysis' | 'savings_opportunity' | 'risk_alert';
   metrics: FinancialMetrics;

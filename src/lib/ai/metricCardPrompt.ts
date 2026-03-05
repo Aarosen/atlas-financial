@@ -128,6 +128,37 @@ export function extractMetricsFromResponse(
   };
 }
 
+export function extractMetricCardFromResponse(
+  response: string
+): { text: string; card: { type: 'metric_card'; title: string; value: string; subtitle?: string; action?: string } | null } {
+  const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
+
+  if (!jsonMatch) {
+    return { text: response, card: null };
+  }
+
+  try {
+    const jsonStr = jsonMatch[1];
+    const parsed = JSON.parse(jsonStr);
+    if (parsed?.type !== 'metric_card' || typeof parsed.title !== 'string' || typeof parsed.value !== 'string') {
+      return { text: response.replace(/```json\n[\s\S]*?\n```/, '').trim(), card: null };
+    }
+
+    return {
+      text: response.replace(/```json\n[\s\S]*?\n```/, '').trim(),
+      card: {
+        type: 'metric_card',
+        title: parsed.title,
+        value: parsed.value,
+        subtitle: typeof parsed.subtitle === 'string' ? parsed.subtitle : undefined,
+        action: typeof parsed.action === 'string' ? parsed.action : undefined,
+      },
+    };
+  } catch {
+    return { text: response, card: null };
+  }
+}
+
 export function validateMetrics(metrics: any): boolean {
   if (!metrics) return false;
 
