@@ -766,6 +766,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           onSend={() => void send()}
           canRetry={canRetry}
           onRetry={retryLast}
+          language={language}
+          onLanguageChange={(lang: SupportedLanguage) => {
+            setLanguage(lang);
+            void db.set('prefs', { k: 'language', v: lang });
+          }}
           onQuickReply={(text) => {
             dispatch({ type: 'SET_INPUT', text });
             if (text.trim().endsWith(':')) return;

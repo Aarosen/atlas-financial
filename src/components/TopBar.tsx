@@ -1,7 +1,9 @@
 import type { ReactNode } from 'react';
 import type { ClaudeApiStatus } from '@/lib/api/client';
+import type { SupportedLanguage } from '@/lib/ai/slangMapper';
 import { Moon, Sun } from 'lucide-react';
 import { IconButton } from '@/components/IconButton';
+import { LanguageSelector } from '@/components/LanguageSelector';
 
 function Logo() {
   return (
@@ -50,7 +52,7 @@ function StatusPill({ apiErr, status }: { apiErr: string | null; status: ClaudeA
     return (
       <div style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--green-lt)', borderRadius: 999, padding: '6px 12px', border: '1px solid rgba(46,125,82,.2)' }}>
         <span style={{ width: 6, height: 6, borderRadius: 999, background: 'var(--green)', display: 'inline-block' }} />
-        <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 800 }}>Claude AI active</span>
+        <span style={{ fontSize: 11, color: 'var(--green)', fontWeight: 800 }}>Atlas AI active</span>
       </div>
     );
   }
@@ -87,12 +89,16 @@ export function TopBar({
   onToggleTheme,
   apiErr,
   apiStatus,
+  language,
+  onLanguageChange,
 }: {
   title: string;
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
   apiErr: string | null;
   apiStatus: ClaudeApiStatus;
+  language?: SupportedLanguage;
+  onLanguageChange?: (lang: SupportedLanguage) => void;
 }) {
   return (
     <div className="atlasHeader">
@@ -102,6 +108,9 @@ export function TopBar({
         <div style={{ color: 'var(--ink2)', fontWeight: 800, fontSize: 12 }}>{title}</div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
+        {language && onLanguageChange && (
+          <LanguageSelector currentLanguage={language} onLanguageChange={onLanguageChange} />
+        )}
         <StatusPill apiErr={apiErr} status={apiStatus} />
         <IconButton onClick={onToggleTheme} aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} title="Theme">
           {theme === 'dark' ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}

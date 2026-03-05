@@ -1,6 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
 import type { ChatMessage, Strategy } from '@/lib/state/types';
+import type { SupportedLanguage } from '@/lib/ai/slangMapper';
 import { TopBar } from '@/components/TopBar';
 import { IconButton } from '@/components/IconButton';
 import { Textarea } from '@/components/TextInput';
@@ -143,6 +144,8 @@ export function ConversationScreen({
   onCancelStream,
   canRetry,
   onRetry,
+  language,
+  onLanguageChange,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -178,6 +181,8 @@ export function ConversationScreen({
   onCancelStream?: () => void;
   canRetry?: boolean;
   onRetry?: () => void;
+  language?: SupportedLanguage;
+  onLanguageChange?: (lang: SupportedLanguage) => void;
 }) {
   const lastUserIdx = (() => {
     for (let i = msgs.length - 1; i >= 0; i--) {
@@ -306,7 +311,15 @@ export function ConversationScreen({
   return (
     <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
       {/* Single unified header - no duplicate navbar */}
-      <TopBar title="Conversation" theme={theme} onToggleTheme={onToggleTheme} apiErr={apiErr} apiStatus={apiStatus} />
+      <TopBar
+        title="Conversation"
+        theme={theme}
+        onToggleTheme={onToggleTheme}
+        apiErr={apiErr}
+        apiStatus={apiStatus}
+        language={language}
+        onLanguageChange={onLanguageChange}
+      />
 
       {/* Main scrollable conversation area - optimized for single-screen view */}
       <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '2px', paddingBottom: '2px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>

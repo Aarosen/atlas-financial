@@ -86,6 +86,9 @@ export default function Page() {
         <div style={{ marginTop: 10, color: 'var(--ink2)', lineHeight: 1.9 }}>
           Atlas is built for clarity and confidence—not perfection. The goal is to help you choose one high-integrity move that makes your life feel lighter.
         </div>
+        <div style={{ marginTop: 10, color: 'var(--ink3)', lineHeight: 1.8, fontSize: 13 }}>
+          AI responses are powered by Claude.
+        </div>
       </Card>
 
       <Inline style={{ marginTop: 26 }} gap={12}>
