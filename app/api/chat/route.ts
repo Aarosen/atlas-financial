@@ -369,7 +369,8 @@ When you calculate a specific number, include a JSON block at the very end of th
   "title": "Your Emergency Fund Target",
   "value": "$7,200",
   "subtitle": "Based on $2,400/month essentials × 3 months",
-  "action": "Set aside $150/week to reach this in 48 weeks"
+  "action": "Set aside $150/week to reach this in 48 weeks",
+  "explain": "This target covers 3 months of essentials so a job change or emergency doesn't force new debt."
 }
 \`\`\`
 Only include this JSON when you have enough data. Keep it outside the conversational text and ensure it is valid JSON.

@@ -6,12 +6,13 @@ import type { MetricCardPayload as MetricCardPayloadType } from '@/lib/types/fin
 export function MetricCardPayload({ card }: { card: MetricCardPayloadType }) {
   const [showWhy, setShowWhy] = useState(false);
   const explainer = useMemo(() => {
+    if (card.explain) return card.explain;
     const lines: string[] = [];
     if (card.subtitle) lines.push(card.subtitle);
     if (card.action) lines.push(card.action);
     if (!lines.length) lines.push('Based on the numbers you shared so far.');
     return lines.join('\n');
-  }, [card.action, card.subtitle]);
+  }, [card.action, card.explain, card.subtitle]);
 
   return (
     <div

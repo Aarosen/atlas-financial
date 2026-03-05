@@ -130,7 +130,7 @@ export function extractMetricsFromResponse(
 
 export function extractMetricCardFromResponse(
   response: string
-): { text: string; card: { type: 'metric_card'; title: string; value: string; subtitle?: string; action?: string } | null } {
+): { text: string; card: { type: 'metric_card'; title: string; value: string; subtitle?: string; action?: string; explain?: string } | null } {
   const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
 
   if (!jsonMatch) {
@@ -152,6 +152,7 @@ export function extractMetricCardFromResponse(
         value: parsed.value,
         subtitle: typeof parsed.subtitle === 'string' ? parsed.subtitle : undefined,
         action: typeof parsed.action === 'string' ? parsed.action : undefined,
+        explain: typeof parsed.explain === 'string' ? parsed.explain : undefined,
       },
     };
   } catch {

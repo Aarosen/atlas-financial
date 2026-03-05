@@ -47,6 +47,7 @@ export interface MetricCardPayload {
   value: string;
   subtitle?: string;
   action?: string;
+  explain?: string;
 }
 
 export interface AtlasInsight {
