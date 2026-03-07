@@ -24,6 +24,7 @@ import { createFeedbackEntry, shouldPromptFeedback } from '@/lib/ai/feedback';
 import { createVoice } from '@/lib/voice/voice';
 import { ConversationScreen, DashboardScreen, LandingScreen, PlanScreen, SettingsScreen, StrategyScreen, SummaryScreen, TierRevealScreen } from '@/screens';
 import { buildMetricExplainer } from '@/lib/ui/metricExplainer';
+import { generateStableOpeningMessage } from '@/lib/ai/initialGreetingEngine';
 import { Button } from '@/components/Buttons';
 import { BarChart3, LayoutList, MessageSquare, Settings } from 'lucide-react';
 import type { SupportedLanguage } from '@/lib/ai/slangMapper';
@@ -106,13 +107,59 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [outcomeMetrics, setOutcomeMetrics] = useState<UserOutcomeMetrics | null>(null);
   const [lastOutcomeState, setLastOutcomeState] = useState<{ debtBalance: number; savings: number } | null>(null);
   const [restored, setRestored] = useState(false);
+  useEffect(() => {
+    if (!restored) return;
+    if (typeof document === 'undefined') return;
+    document.documentElement.dataset.atlasReady = 'true';
+  }, [restored]);
   const lastSendSnapshotRef = useRef<typeof st | null>(null);
   const lastUserTextRef = useRef<string | null>(null);
   const streamAbortRef = useRef<AbortController | null>(null);
   const streamIdRef = useRef(0);
-  const [st, dispatch] = useReducer(conversationReducer, createInitialConversationState(initialScreen));
+  const lastKeydownHandledRef = useRef<number | null>(null);
+  const lastGreetingLanguageRef = useRef<SupportedLanguage | null>(null);
+  const [st, dispatch] = useReducer(conversationReducer, createInitialConversationState(initialScreen, language));
+  const latestStateRef = useRef(st);
+  const inputDraftRef = useRef('');
+  const hasUserInteractedRef = useRef(false);
 
   const bot = useRef<HTMLDivElement | null>(null);
+
+  useEffect(() => {
+    latestStateRef.current = st;
+  }, [st]);
+
+  const updateInput = useCallback(
+    (text: string) => {
+      inputDraftRef.current = text;
+      hasUserInteractedRef.current = true;
+      try {
+        if (text.trim().length > 0) {
+          window.localStorage.setItem('atlas:talkDraft', text);
+        } else {
+          window.localStorage.removeItem('atlas:talkDraft');
+        }
+      } catch {
+        // ignore
+      }
+      dispatch({ type: 'SET_INPUT', text });
+    },
+    [dispatch]
+  );
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    if (inputDraftRef.current.trim().length > 0) return;
+    try {
+      const stored = window.localStorage.getItem('atlas:talkDraft');
+      if (stored && !st.inp.trim().length) {
+        inputDraftRef.current = stored;
+        updateInput(stored);
+      }
+    } catch {
+      // ignore
+    }
+  }, [st.inp, updateInput]);
 
   const handleConfirmFin = useCallback(async () => {
     if (!st.pendingFin) return;
@@ -196,14 +243,44 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   useEffect(() => {
     setMounted(true);
+    if (typeof document !== 'undefined') {
+      document.documentElement.dataset.mounted = 'true';
+      document.documentElement.dataset.atlasReady = 'true';
+    }
+    if (typeof window !== 'undefined') {
+      (window as typeof window & { __atlasMounted?: boolean }).__atlasMounted = true;
+    }
   }, []);
 
   useEffect(() => {
-    if (authLoading || restored) return;
+    if (typeof document === 'undefined') return;
+    document.documentElement.dataset.restored = restored ? 'true' : 'false';
+  }, [restored]);
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    (window as typeof window & { __atlasRestored?: boolean }).__atlasRestored = restored;
+  }, [restored]);
+
+  useEffect(() => {
+    if (restored) return;
+    const timeoutId = window.setTimeout(() => {
+      setRestored(true);
+    }, 1500);
+    return () => window.clearTimeout(timeoutId);
+  }, [restored]);
+
+  useEffect(() => {
+    if (restored || authLoading) return;
     db.get<{ userId?: string; state?: typeof st }>('conv', 'snapshot')
       .then((snap) => {
         if (!snap?.state) return;
         if (snap.userId && snap.userId !== userId) return;
+        if (hasUserInteractedRef.current) return;
+        if (inputDraftRef.current.trim().length > 0) return;
+        const current = latestStateRef.current;
+        const hasUserMessage = current.msgs.some((m) => m.r === 'u');
+        if (hasUserMessage || current.inp.trim().length > 0 || current.pendingBlock || current.pendingFin) return;
         dispatch({ type: 'RESTORE', state: snap.state });
       })
       .catch(() => {})
@@ -223,6 +300,59 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       return () => mq.removeListener(onChange);
     }
   }, []);
+
+  const persistDraft = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const el = document.getElementById('atlas-message-input') as HTMLTextAreaElement | null;
+    // Prefer the ref (set by updateInput on every keystroke) over the DOM value,
+    // because React's controlled-component reconciliation may have already reset
+    // el.value to '' by the time a tab-switch fires this callback.
+    const next = (inputDraftRef.current || el?.value || st.inp).trimEnd();
+    try {
+      if (next) {
+        window.localStorage.setItem('atlas:talkDraft', next);
+      } else {
+        window.localStorage.removeItem('atlas:talkDraft');
+      }
+    } catch {
+      // ignore
+    }
+    if (next && next !== st.inp) updateInput(next);
+  }, [st.inp, updateInput]);
+
+  const restoreDraft = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    let draft = inputDraftRef.current;
+    if (!draft) {
+      try {
+        draft = window.localStorage.getItem('atlas:talkDraft') || '';
+      } catch {
+        draft = '';
+      }
+    }
+    if (!draft) return;
+    const el = document.getElementById('atlas-message-input') as HTMLTextAreaElement | null;
+    if (el && el.value !== draft) {
+      el.value = draft;
+    }
+    if (draft !== st.inp) updateInput(draft);
+  }, [st.inp, updateInput]);
+
+  const captureDraftFromDom = useCallback(() => {
+    if (typeof window === 'undefined') return;
+    const el = document.getElementById('atlas-message-input') as HTMLTextAreaElement | null;
+    const next = el?.value ?? '';
+    if (next && next !== st.inp) updateInput(next);
+  }, [st.inp, updateInput]);
+
+  useEffect(() => {
+    if (activeTab === 'talk') {
+      requestAnimationFrame(() => restoreDraft());
+    } else {
+      captureDraftFromDom();
+      persistDraft();
+    }
+  }, [activeTab, captureDraftFromDom, persistDraft, restoreDraft]);
 
   useEffect(() => {
     const tabForScreen = (scr: Screen) => {
@@ -244,6 +374,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       ...st,
       streaming: false,
       busy: false,
+      inp: '',
     };
     void db.set('conv', { k: 'snapshot', userId, state: snapshot, ts: Date.now() });
   }, [authLoading, db, restored, st, userId]);
@@ -305,6 +436,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     db.set('prefs', { k: 'theme', v: theme }).catch(() => {});
+    try {
+      window.localStorage.setItem('atlas:theme', theme);
+    } catch {
+      // ignore
+    }
   }, [theme, db]);
 
   useEffect(() => {
@@ -314,6 +450,18 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       })
       .catch(() => {});
   }, [db]);
+
+  useEffect(() => {
+    if (st.scr !== 'conversation') return;
+    if (lastGreetingLanguageRef.current === language) return;
+    const hasUserMessage = st.msgs.some((m) => m.r === 'u');
+    lastGreetingLanguageRef.current = language;
+    if (hasUserMessage) return;
+    if (st.inp.trim().length > 0) return;
+    const nextGreeting = generateStableOpeningMessage(language);
+    const nextState = { ...st, msgs: [{ r: 'a' as const, t: nextGreeting }] };
+    dispatch({ type: 'RESTORE', state: nextState });
+  }, [language, st, st.scr]);
 
   useEffect(() => {
     db.get<{ v: boolean }>('prefs', 'speakReplies')
@@ -350,7 +498,14 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       .catch(() => {});
     db.get<{ v: SupportedLanguage }>('prefs', 'language')
       .then((p: { v: SupportedLanguage } | undefined) => {
-        if (p?.v && ['en', 'es', 'fr', 'zh'].includes(p.v)) setLanguage(p.v);
+        if (p?.v && ['en', 'es', 'fr', 'zh'].includes(p.v)) {
+          setLanguage(p.v);
+          try {
+            window.localStorage.setItem('atlas:language', p.v);
+          } catch {
+            // ignore
+          }
+        }
       })
       .catch(() => {});
   }, [db]);
@@ -438,6 +593,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   const doSend = useCallback(
     async (base: typeof st, ut: string) => {
+      inputDraftRef.current = '';
+      hasUserInteractedRef.current = true;
       dispatch({ type: 'SEND_START', text: ut });
       const kind = classifyInterruption(ut);
       const logReplay = (entry: ReturnType<typeof createReplayEntry>) => {
@@ -540,6 +697,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             mode: 'explain',
             memorySummary: st.memorySummary,
             fin: st.fin,
+            language,
             onDelta: (t) => {
               if (streamIdRef.current !== myStreamId) return;
               if (ctrl.signal.aborted) return;
@@ -589,6 +747,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               await claude.chat(followupMsgs, missBefore as string[], {
                 memorySummary: st.memorySummary,
                 fin: st.fin,
+                language,
               })
             ).trim();
             const fallbackText = resumeQ?.text || 'What would help you most right now?';
@@ -613,7 +772,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           return;
         }
 
-      const ex = await claude.extract(ut, base.fin);
+      const ex = await claude.extract(ut, base.fin, { language });
       setApiStatus(claude.status);
 
       const st1 = applyUserTurn(
@@ -711,6 +870,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           await claude.chat(chatMsgs, miss as string[], {
             memorySummary: st.memorySummary,
             fin: st.fin,
+            language,
           })
         ).trim();
         const askBody = adaptiveAsk || action.text;
@@ -783,24 +943,46 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   useEffect(() => {
     voice.setOnTranscript((t) => {
-      dispatch({ type: 'SET_INPUT', text: t });
+      updateInput(t);
       if (voiceAutoSend) {
         queueMicrotask(() => void send(t));
       }
     });
-  }, [voice, voiceAutoSend, send]);
+  }, [voice, voiceAutoSend, send, updateInput]);
 
   const onKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      void send();
+      const value = (e.currentTarget as HTMLTextAreaElement)?.value || st.inp;
+      if (value !== st.inp) updateInput(value);
+      lastKeydownHandledRef.current = e.timeStamp;
+      void send(value);
     }
   };
+
+  useEffect(() => {
+    if (typeof window === 'undefined') return;
+    const onWindowKeyDown = (e: KeyboardEvent) => {
+      if (e.key !== 'Enter' || e.shiftKey) return;
+      if (st.scr !== 'conversation') return;
+      if (st.busy) return;
+      if (lastKeydownHandledRef.current === e.timeStamp) return;
+      const el = document.getElementById('atlas-message-input') as HTMLTextAreaElement | null;
+      const value = (el?.value || st.inp).trim();
+      if (!value) return;
+      if (value !== st.inp) updateInput(value);
+      e.preventDefault();
+      void send(value);
+    };
+    window.addEventListener('keydown', onWindowKeyDown, { capture: true });
+    return () => window.removeEventListener('keydown', onWindowKeyDown, { capture: true } as EventListenerOptions);
+  }, [send, st.busy, st.inp, st.scr, updateInput]);
 
   const renderTalkStack = (scr: Screen) => (
     <>
       <div style={{ display: scr === 'conversation' ? 'block' : 'none' }}>
         <ConversationScreen
+          inputEnabled={mounted}
           theme={theme}
           onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
           apiErr={st.apiErr}
@@ -815,7 +997,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           onEditFin={handleEditFin}
           onConfirmNextStep={handleConfirmNextStep}
           inp={st.inp}
-          onChangeInp={(v) => dispatch({ type: 'SET_INPUT', text: v })}
+          onChangeInp={updateInput}
           onKeyDown={onKeyDown}
           onSend={() => void send()}
           canRetry={canRetry}
@@ -824,9 +1006,15 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           onLanguageChange={(lang: SupportedLanguage) => {
             setLanguage(lang);
             void db.set('prefs', { k: 'language', v: lang });
+            try {
+              window.localStorage.setItem('atlas:language', lang);
+            } catch {
+              // ignore
+            }
           }}
+          hydrated={mounted}
           onQuickReply={(text) => {
-            dispatch({ type: 'SET_INPUT', text });
+            updateInput(text);
             if (text.trim().endsWith(':')) return;
             void send(text);
           }}
@@ -836,7 +1024,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             const t = String(lastUser?.t || '').trim();
             if (!t) return;
             setEditingLast(true);
-            dispatch({ type: 'SET_INPUT', text: t });
+            updateInput(t);
           }}
           nextStepHint={st.baseline && st.missing.length === 0 && !st.pendingBlock ? 'Continue with one step' : null}
           nextStepContent={st.baseline && st.missing.length === 0 ? nextStepContent(st.fin, st.baseline) : null}
@@ -1017,7 +1205,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       onDeleteLocalData={() => {
         void (async () => {
           await db.nuke();
-          dispatch({ type: 'RESET' });
+          dispatch({ type: 'RESET', language });
         })();
       }}
       onBackToDashboard={() => dispatch({ type: 'NAVIGATE', scr: 'dashboard' })}
@@ -1026,20 +1214,35 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       onLanguageChange={(lang: SupportedLanguage) => {
         setLanguage(lang);
         void db.set('prefs', { k: 'language', v: lang });
+        try {
+          window.localStorage.setItem('atlas:language', lang);
+        } catch {
+          // ignore
+        }
       }}
     />
   );
 
   const showTabs = isMobile && st.scr !== 'landing';
   const tabTarget = (tab: typeof activeTab) => tabStacksRef.current[tab];
+  const talkScr = showTabs ? tabTarget('talk') : st.scr;
+  const talkVisible = showTabs
+    ? activeTab === 'talk'
+    : st.scr === 'conversation' || st.scr === 'summary' || st.scr === 'tier';
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg)' }}>
+    <div
+      data-atlas-ready={mounted ? 'true' : 'false'}
+      data-restored={restored ? 'true' : 'false'}
+      data-mounted={mounted ? 'true' : 'false'}
+      style={{ minHeight: '100vh', background: 'var(--bg)' }}
+    >
       {st.scr === 'landing' && <LandingScreen theme={theme} onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))} onStart={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} />}
+
+      <div style={{ display: talkVisible ? 'block' : 'none' }}>{renderTalkStack(talkScr)}</div>
 
       {showTabs ? (
         <>
-          <div style={{ display: activeTab === 'talk' ? 'block' : 'none' }}>{renderTalkStack(tabTarget('talk'))}</div>
           <div style={{ display: activeTab === 'plan' ? 'block' : 'none' }}>{renderPlan()}</div>
           <div style={{ display: activeTab === 'dashboard' ? 'block' : 'none' }}>{renderDashboard()}</div>
           <div style={{ display: activeTab === 'settings' ? 'block' : 'none' }}>{renderSettings()}</div>
@@ -1062,6 +1265,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
                   aria-label={tab.label}
                   className={["atlasTabBtn", isActive ? "atlasTabBtnActive" : ""].filter(Boolean).join(' ')}
                   onClick={() => {
+                    if (activeTab === 'talk' && tab.id !== 'talk') {
+                      captureDraftFromDom();
+                      persistDraft();
+                    }
                     setActiveTab(tab.id);
                     dispatch({ type: 'NAVIGATE', scr: tabTarget(tab.id) });
                   }}
@@ -1075,9 +1282,6 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         </>
       ) : (
         <>
-          {st.scr === 'conversation' && renderTalkStack('conversation')}
-          {st.scr === 'summary' && renderTalkStack('summary')}
-          {st.scr === 'tier' && renderTalkStack('tier')}
           {st.scr === 'dashboard' && renderDashboard()}
           {(st.scr === 'plan' || st.scr === 'strategy') && renderPlan()}
           {st.scr === 'settings' && renderSettings()}

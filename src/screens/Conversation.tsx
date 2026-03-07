@@ -146,6 +146,8 @@ export function ConversationScreen({
   onRetry,
   language,
   onLanguageChange,
+  hydrated: appHydrated,
+  inputEnabled = true,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -183,6 +185,8 @@ export function ConversationScreen({
   onRetry?: () => void;
   language?: SupportedLanguage;
   onLanguageChange?: (lang: SupportedLanguage) => void;
+  hydrated?: boolean;
+  inputEnabled?: boolean;
 }) {
   const lastUserIdx = (() => {
     for (let i = msgs.length - 1; i >= 0; i--) {
@@ -198,6 +202,54 @@ export function ConversationScreen({
   const [isDesktop, setIsDesktop] = useState(false);
   const [editAffForMsgIdx, setEditAffForMsgIdx] = useState<number | null>(null);
   const [showExplain, setShowExplain] = useState(false);
+  const [inputHydrated, setInputHydrated] = useState(false);
+  const inpRef = useRef(inp);
+  const handleInputBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
+    setInpFocused(false);
+    const next = e.currentTarget.value;
+    if (next !== inp) onChangeInp(next);
+  };
+
+  useEffect(() => {
+    inpRef.current = inp;
+  }, [inp]);
+
+  useEffect(() => {
+    if (inputHydrated) return;
+    const el = taRef.current;
+    if (!el) return;
+    const domValue = el.value?.trim();
+    if (domValue && domValue !== inp) {
+      onChangeInp(domValue);
+    }
+    setInputHydrated(true);
+  }, [inputHydrated, inp, onChangeInp]);
+
+  useEffect(() => {
+    const el = taRef.current;
+    if (!el) return;
+    const sync = () => {
+      const next = el.value;
+      if (next !== inp) onChangeInp(next);
+    };
+    el.addEventListener('input', sync);
+    el.addEventListener('change', sync);
+    return () => {
+      el.removeEventListener('input', sync);
+      el.removeEventListener('change', sync);
+    };
+  }, [inp, onChangeInp]);
+
+  useEffect(() => {
+    return () => {
+      const el = taRef.current;
+      if (!el) return;
+      const next = el.value?.trim();
+      if (!next) return;
+      if (inp.trim().length > 0) return;
+      onChangeInp(next);
+    };
+  }, [inp, onChangeInp]);
   const longPressTimerRef = useRef<number | null>(null);
   const hasInput = inp.trim().length > 0;
   const showMic = !!voiceSupported && !!onVoiceStart && !hasInput;
@@ -710,21 +762,39 @@ export function ConversationScreen({
           )}
           <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
             <div style={{ position: 'relative', flex: 1 }}>
-              <Textarea
-                ref={taRef}
-                id="atlas-message-input"
-                name="message"
-                value={inp}
-                onChange={(e) => onChangeInp(e.target.value)}
-                onKeyDown={onKeyDown}
-                onFocus={() => setInpFocused(true)}
-                onBlur={() => setInpFocused(false)}
-                placeholder="Tell Atlas anything…"
-                rows={1}
-                style={{ padding: '8px 10px', resize: 'none', maxHeight: 80, overflowY: 'auto', width: '100%', borderRadius: 14 }}
-              />
-              {voiceListening && (
-                <div style={{ position: 'absolute', left: 12, bottom: 50, fontSize: 12, color: 'var(--ink2)', background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 999, padding: '4px 10px', boxShadow: 'var(--sh1)' }}>Listening…</div>
+              {inputEnabled ? (
+                <>
+                  <Textarea
+                    ref={taRef}
+                    id="atlas-message-input"
+                    name="message"
+                    data-app-hydrated={appHydrated ? 'true' : 'false'}
+                    defaultValue={inp}
+                    autoFocus
+                    onChange={(e) => onChangeInp(e.target.value)}
+                    onInput={(e) => onChangeInp((e.currentTarget as HTMLTextAreaElement).value)}
+                    onKeyDown={onKeyDown}
+                    onFocus={() => setInpFocused(true)}
+                    onBlur={handleInputBlur}
+                    placeholder="Tell Atlas anything…"
+                    rows={1}
+                    style={{ padding: '8px 10px', resize: 'none', maxHeight: 80, overflowY: 'auto', width: '100%', borderRadius: 14 }}
+                  />
+                  {voiceListening && (
+                    <div style={{ position: 'absolute', left: 12, bottom: 50, fontSize: 12, color: 'var(--ink2)', background: 'var(--card)', border: '1px solid var(--bdr)', borderRadius: 999, padding: '4px 10px', boxShadow: 'var(--sh1)' }}>Listening…</div>
+                  )}
+                </>
+              ) : (
+                <div
+                  style={{
+                    padding: '8px 10px',
+                    width: '100%',
+                    borderRadius: 14,
+                    minHeight: 24,
+                    background: 'var(--bg2)',
+                    border: '1px solid var(--bdr)',
+                  }}
+                />
               )}
             </div>
             {speaking && onStopSpeaking && (
