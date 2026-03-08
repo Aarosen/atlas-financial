@@ -750,7 +750,6 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               await claude.chat(followupMsgs, missBefore as string[], {
                 memorySummary: st.memorySummary,
                 fin: st.fin,
-                language,
               })
             ).trim();
             const fallbackText = resumeQ?.text || 'What would help you most right now?';
