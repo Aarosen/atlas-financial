@@ -6,6 +6,8 @@
  * Requirements: D3 (Teaching Excellence), D4 (Personalization), D6 (Tone & Empathy)
  */
 
+import type { SupportedLanguage } from '@/lib/ai/slangMapper';
+
 export interface GreetingContext {
   timeOfDay?: 'morning' | 'afternoon' | 'evening' | 'night';
   isReturningUser?: boolean;
@@ -13,6 +15,7 @@ export interface GreetingContext {
   deviceType?: 'mobile' | 'desktop' | 'tablet';
   userAge?: number;
   lifeStage?: 'student' | 'early_career' | 'mid_career' | 'pre_retirement' | 'retired';
+  language?: SupportedLanguage;
 }
 
 /**
@@ -20,77 +23,153 @@ export interface GreetingContext {
  * rather than demanding form completion
  */
 export function generateInitialGreeting(context: GreetingContext = {}): string {
-  const greetings = [
+  const greetings: Record<SupportedLanguage, string[]> = {
+    en: [
     "What's going on with your money right now?",
-    
-    "Let's talk about what's actually on your mind.",
-    
-    "Tell me what's real for you financially.",
-    
-    "What's the biggest thing you're thinking about with money?",
-    
-    "What brought you here? What do you want to figure out?",
-  ];
 
-  const timeBasedGreetings: Record<string, string[]> = {
-    morning: [
-      "What's on your mind this morning?",
-      "Let's figure this out.",
+    "Let's talk about what's actually on your mind.",
+
+    "Tell me what's real for you financially.",
+
+    "What's the biggest thing you're thinking about with money?",
+
+    "What brought you here? What do you want to figure out?",
     ],
-    afternoon: [
-      "What's going on?",
-      "Tell me what's up.",
+    es: [
+      '¿Qué está pasando con tu dinero ahora mismo?',
+      'Hablemos de lo que realmente tienes en mente.',
+      'Cuéntame qué es real para ti en lo financiero.',
+      '¿Qué es lo más grande que estás pensando sobre dinero?',
+      '¿Qué te trajo aquí? ¿Qué quieres resolver?',
     ],
-    evening: [
-      "What's on your mind?",
-      "Let's talk through it.",
+    fr: [
+      "Qu'est-ce qui se passe avec ton argent en ce moment ?",
+      "Parlons de ce que tu as vraiment en tête.",
+      "Dis-moi ce qui est réel pour toi financièrement.",
+      "Quelle est la plus grande chose que tu penses à propos d'argent ?",
+      "Qu'est-ce qui t'amène ici ? Qu'est-ce que tu veux comprendre ?",
     ],
-    night: [
-      "Late night money thoughts? I'm here.",
-      "Can't sleep thinking about this? Let's work through it.",
+    zh: [
+      '你现在的财务情况怎么样？',
+      '聊聊你心里真正担心的事吧。',
+      '告诉我你现在真实的财务处境。',
+      '关于钱，你最在意的一件事是什么？',
+      '是什么让你来到这里？你想弄清什么？',
     ],
   };
 
-  const returningUserGreetings = [
-    "Welcome back. I remember where we left off. What's on your mind now?",
-    "Good to see you again. Let's pick up where we left off or explore something new.",
-    "Back again — I like that. What should we focus on today?",
-  ];
+  const timeBasedGreetings: Record<string, Record<SupportedLanguage, string[]>> = {
+    morning: [
+      { en: "What's on your mind this morning?", es: '¿Qué tienes en mente esta mañana?', fr: "Qu'est-ce qui te passe par la tête ce matin ?", zh: '你今天早上在想什么？' },
+      { en: "Let's figure this out.", es: 'Vamos a resolverlo.', fr: 'On va trouver une solution.', zh: '我们一起理清。' },
+    ].reduce<Record<SupportedLanguage, string[]>>((acc, item) => {
+      (Object.keys(item) as SupportedLanguage[]).forEach((lang) => {
+        acc[lang] = acc[lang] || [];
+        acc[lang].push(item[lang] as string);
+      });
+      return acc;
+    }, { en: [], es: [], fr: [], zh: [] }),
+    afternoon: [
+      { en: "What's going on?", es: '¿Qué está pasando?', fr: "Qu'est-ce qui se passe ?", zh: '最近怎么样？' },
+      { en: "Tell me what's up.", es: 'Cuéntame qué pasa.', fr: "Dis-moi ce qui se passe.", zh: '跟我说说情况。' },
+    ].reduce<Record<SupportedLanguage, string[]>>((acc, item) => {
+      (Object.keys(item) as SupportedLanguage[]).forEach((lang) => {
+        acc[lang] = acc[lang] || [];
+        acc[lang].push(item[lang] as string);
+      });
+      return acc;
+    }, { en: [], es: [], fr: [], zh: [] }),
+    evening: [
+      { en: "What's on your mind?", es: '¿Qué tienes en mente?', fr: "Qu'est-ce qui te préoccupe ?", zh: '你在想什么？' },
+      { en: "Let's talk through it.", es: 'Hablemos de ello.', fr: "Parlons-en.", zh: '我们一起聊聊。' },
+    ].reduce<Record<SupportedLanguage, string[]>>((acc, item) => {
+      (Object.keys(item) as SupportedLanguage[]).forEach((lang) => {
+        acc[lang] = acc[lang] || [];
+        acc[lang].push(item[lang] as string);
+      });
+      return acc;
+    }, { en: [], es: [], fr: [], zh: [] }),
+    night: [
+      { en: "Late night money thoughts? I'm here.", es: '¿Pensamientos de dinero tarde en la noche? Aquí estoy.', fr: "Pensées d'argent tard le soir ? Je suis là.", zh: '深夜为钱发愁？我在。' },
+      { en: "Can't sleep thinking about this? Let's work through it.", es: '¿No puedes dormir por esto? Vamos a resolverlo.', fr: "Impossible de dormir à cause de ça ? On va y voir clair.", zh: '因为这事睡不着？我们一起理清。' },
+    ].reduce<Record<SupportedLanguage, string[]>>((acc, item) => {
+      (Object.keys(item) as SupportedLanguage[]).forEach((lang) => {
+        acc[lang] = acc[lang] || [];
+        acc[lang].push(item[lang] as string);
+      });
+      return acc;
+    }, { en: [], es: [], fr: [], zh: [] }),
+  };
 
-  const lifeStageGreetings: Record<string, string[]> = {
-    student: [
-      "What's on your mind with money right now?",
-      "What do you want to figure out?",
+  const returningUserGreetings: Record<SupportedLanguage, string[]> = {
+    en: [
+      "Welcome back. I remember where we left off. What's on your mind now?",
+      "Good to see you again. Let's pick up where we left off or explore something new.",
+      "Back again — I like that. What should we focus on today?",
     ],
-    early_career: [
-      "What's the biggest money thing on your mind?",
-      "What brought you here today?",
+    es: [
+      'Bienvenido de nuevo. Recuerdo dónde nos quedamos. ¿Qué tienes en mente ahora?',
+      'Me alegra verte otra vez. Retomemos donde lo dejamos o exploremos algo nuevo.',
+      'De vuelta otra vez — me gusta. ¿En qué nos enfocamos hoy?',
     ],
-    mid_career: [
-      "What's going on with your finances?",
-      "What do you want to get clarity on?",
+    fr: [
+      "Re-bienvenue. Je me souviens où on s'est arrêtés. Qu'est-ce qui te préoccupe maintenant ?",
+      "Content de te revoir. On peut reprendre où on s'est arrêtés ou explorer autre chose.",
+      "Te revoilà — j'aime ça. Sur quoi on se concentre aujourd'hui ?",
     ],
-    pre_retirement: [
-      "What's the money question you want to tackle?",
-      "What's on your mind about retirement?",
+    zh: [
+      '欢迎回来。我记得我们停在哪了。你现在在想什么？',
+      '很高兴再见到你。我们可以接着上次继续，或者聊点新的。',
+      '又见面了 — 真好。今天想先聊什么？',
     ],
-    retired: [
-      "What's the money thing you want to work through?",
-      "What's on your mind right now?",
-    ],
+  };
+
+  const lifeStageGreetings: Record<string, Record<SupportedLanguage, string[]>> = {
+    student: {
+      en: ["What's on your mind with money right now?", 'What do you want to figure out?'],
+      es: ['¿Qué tienes en mente sobre dinero ahora?', '¿Qué quieres resolver?'],
+      fr: ["Qu'est-ce que tu as en tête côté argent ?", 'Qu’est-ce que tu veux éclaircir ?'],
+      zh: ['你现在关于钱最在意什么？', '你想弄清什么？'],
+    },
+    early_career: {
+      en: ["What's the biggest money thing on your mind?", 'What brought you here today?'],
+      es: ['¿Qué es lo más grande que tienes en mente sobre dinero?', '¿Qué te trajo hoy?'],
+      fr: ["Quelle est la plus grande question d'argent dans ta tête ?", "Qu'est-ce qui t'amène aujourd'hui ?"],
+      zh: ['你现在关于钱最重要的一件事是什么？', '今天为什么来？'],
+    },
+    mid_career: {
+      en: ["What's going on with your finances?", 'What do you want to get clarity on?'],
+      es: ['¿Qué está pasando con tus finanzas?', '¿En qué quieres claridad?'],
+      fr: ["Qu'est-ce qui se passe avec tes finances ?", 'Sur quoi veux-tu de la clarté ?'],
+      zh: ['你的财务情况怎么样？', '你最想弄清哪部分？'],
+    },
+    pre_retirement: {
+      en: ["What's the money question you want to tackle?", "What's on your mind about retirement?"],
+      es: ['¿Qué pregunta de dinero quieres abordar?', '¿Qué tienes en mente sobre la jubilación?'],
+      fr: ["Quelle question d'argent veux-tu aborder ?", 'Qu’est-ce qui te préoccupe sur la retraite ?'],
+      zh: ['你最想解决的财务问题是什么？', '关于退休你在想什么？'],
+    },
+    retired: {
+      en: ["What's the money thing you want to work through?", "What's on your mind right now?"],
+      es: ['¿Qué tema de dinero quieres resolver?', '¿Qué tienes en mente ahora?'],
+      fr: ["Quel sujet financier veux-tu éclaircir ?", "Qu'est-ce qui te passe par la tête ?"],
+      zh: ['你想聊聊哪件财务事？', '你现在在想什么？'],
+    },
   };
 
   // Select greeting based on context
-  let selectedGreeting = greetings[Math.floor(Math.random() * greetings.length)];
+  const lang = context.language || 'en';
+  const baseGreetings = greetings[lang] || greetings.en;
+  let selectedGreeting = baseGreetings[0];
 
-  if (context.isReturningUser && returningUserGreetings.length > 0) {
-    selectedGreeting = returningUserGreetings[Math.floor(Math.random() * returningUserGreetings.length)];
-  } else if (context.timeOfDay && timeBasedGreetings[context.timeOfDay]) {
-    const timeGreetings = timeBasedGreetings[context.timeOfDay];
-    selectedGreeting = timeGreetings[Math.floor(Math.random() * timeGreetings.length)];
-  } else if (context.lifeStage && lifeStageGreetings[context.lifeStage]) {
-    const stageGreetings = lifeStageGreetings[context.lifeStage];
-    selectedGreeting = stageGreetings[Math.floor(Math.random() * stageGreetings.length)];
+  if (context.isReturningUser && returningUserGreetings[lang]?.length) {
+    selectedGreeting = returningUserGreetings[lang][0];
+  } else if (context.timeOfDay && timeBasedGreetings[context.timeOfDay]?.[lang]?.length) {
+    const timeGreetings = timeBasedGreetings[context.timeOfDay][lang];
+    selectedGreeting = timeGreetings[0];
+  } else if (context.lifeStage && lifeStageGreetings[context.lifeStage]?.[lang]?.length) {
+    const stageGreetings = lifeStageGreetings[context.lifeStage][lang];
+    selectedGreeting = stageGreetings[0];
   }
 
   return selectedGreeting;
@@ -103,18 +182,117 @@ export function generateInitialGreeting(context: GreetingContext = {}): string {
 export function generateFullOpeningMessage(context: GreetingContext = {}): string {
   const greeting = generateInitialGreeting(context);
 
-  const openingQuestions = [
-    "What's on your mind when it comes to money right now?",
-    "What's the biggest money question or worry you have right now?",
-    "What brought you here today? What's the money situation you want to figure out?",
-    "Tell me what's real for you financially right now — what matters most?",
-    "What's the one money thing you'd like to get clarity on?",
-  ];
+  const openingQuestions: Record<SupportedLanguage, string[]> = {
+    en: [
+      "What's on your mind when it comes to money right now?",
+      "What's the biggest money question or worry you have right now?",
+      "What brought you here today? What's the money situation you want to figure out?",
+      "Tell me what's real for you financially right now — what matters most?",
+      "What's the one money thing you'd like to get clarity on?",
+    ],
+    es: [
+      '¿Qué tienes en mente cuando se trata de dinero ahora mismo?',
+      '¿Cuál es la mayor pregunta o preocupación financiera que tienes ahora?',
+      '¿Qué te trajo hoy? ¿Qué situación financiera quieres resolver?',
+      'Cuéntame qué es real para ti financieramente ahora — ¿qué importa más?',
+      '¿Cuál es la única cosa del dinero sobre la que quieres claridad?',
+    ],
+    fr: [
+      "Qu'est-ce qui te préoccupe en matière d'argent en ce moment ?",
+      "Quelle est ta plus grande question ou inquiétude financière aujourd'hui ?",
+      "Qu'est-ce qui t'amène aujourd'hui ? Quelle situation financière veux-tu clarifier ?",
+      "Dis-moi ce qui est réel pour toi financièrement maintenant — qu'est-ce qui compte le plus ?",
+      "Quelle est la seule question d'argent sur laquelle tu veux de la clarté ?",
+    ],
+    zh: [
+      '现在谈到钱，你最在意的是什么？',
+      '你现在最大的财务问题或担忧是什么？',
+      '是什么让你今天来到这里？你想解决哪种财务情况？',
+      '告诉我你现在真实的财务处境 — 最重要的是什么？',
+      '关于钱，你最想弄清的一件事是什么？',
+    ],
+  };
 
-  const question = openingQuestions[Math.floor(Math.random() * openingQuestions.length)];
+  const lang = context.language || 'en';
+  const questions = openingQuestions[lang] || openingQuestions.en;
+  const question = questions[0];
 
   return `${greeting}\n\n${question}`;
 }
+
+/**
+ * Deterministic opening message for SSR/client hydration stability.
+ */
+function generateStableOpeningMessage(language: SupportedLanguage = 'en'): string {
+  const greetings: Record<SupportedLanguage, string[]> = {
+    en: [
+      "What's going on with your money right now?",
+      "Let's talk about what's actually on your mind.",
+      "Tell me what's real for you financially.",
+      "What's the biggest thing you're thinking about with money?",
+      'What brought you here? What do you want to figure out?',
+    ],
+    es: [
+      '¿Qué está pasando con tu dinero ahora mismo?',
+      'Hablemos de lo que realmente tienes en mente.',
+      'Cuéntame qué es real para ti en lo financiero.',
+      '¿Qué es lo más grande que estás pensando sobre dinero?',
+      '¿Qué te trajo aquí? ¿Qué quieres resolver?',
+    ],
+    fr: [
+      "Qu'est-ce qui se passe avec ton argent en ce moment ?",
+      'Parlons de ce que tu as vraiment en tête.',
+      'Dis-moi ce qui est réel pour toi financièrement.',
+      "Quelle est la plus grande chose que tu penses à propos d'argent ?",
+      "Qu'est-ce qui t'amène ici ? Qu'est-ce que tu veux comprendre ?",
+    ],
+    zh: [
+      '你现在的财务情况怎么样？',
+      '聊聊你心里真正担心的事吧。',
+      '告诉我你现在真实的财务处境。',
+      '关于钱，你最在意的一件事是什么？',
+      '是什么让你来到这里？你想弄清什么？',
+    ],
+  };
+
+  const openingQuestions: Record<SupportedLanguage, string[]> = {
+    en: [
+      'What\'s on your mind when it comes to money right now?',
+      'What\'s the biggest money question or worry you have right now?',
+      "What brought you here today? What's the money situation you want to figure out?",
+      "Tell me what's real for you financially right now — what matters most?",
+      "What's the one money thing you'd like to get clarity on?",
+    ],
+    es: [
+      '¿Qué tienes en mente cuando se trata de dinero ahora mismo?',
+      '¿Cuál es la mayor pregunta o preocupación financiera que tienes ahora?',
+      '¿Qué te trajo hoy? ¿Qué situación financiera quieres resolver?',
+      'Cuéntame qué es real para ti financieramente ahora — ¿qué importa más?',
+      '¿Cuál es la única cosa del dinero sobre la que quieres claridad?',
+    ],
+    fr: [
+      "Qu'est-ce qui te préoccupe en matière d'argent en ce moment ?",
+      "Quelle est ta plus grande question ou inquiétude financière aujourd'hui ?",
+      "Qu'est-ce qui t'amène aujourd'hui ? Quelle situation financière veux-tu clarifier ?",
+      "Dis-moi ce qui est réel pour toi financièrement maintenant — qu'est-ce qui compte le plus ?",
+      "Quelle est la seule question d'argent sur laquelle tu veux de la clarté ?",
+    ],
+    zh: [
+      '现在谈到钱，你最在意的是什么？',
+      '你现在最大的财务问题或担忧是什么？',
+      '是什么让你今天来到这里？你想解决哪种财务情况？',
+      '告诉我你现在真实的财务处境 — 最重要的是什么？',
+      '关于钱，你最想弄清的一件事是什么？',
+    ],
+  };
+
+  const lang = language || 'en';
+  const greeting = (greetings[lang] || greetings.en)[0] ?? greetings.en[0];
+  const question = (openingQuestions[lang] || openingQuestions.en)[0] ?? openingQuestions.en[0];
+  return `${greeting}\n\n${question}`;
+}
+
+export { generateStableOpeningMessage };
 
 /**
  * Generate mentor-like follow-up messages that show understanding
