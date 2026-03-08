@@ -1206,7 +1206,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       onDeleteLocalData={() => {
         void (async () => {
           await db.nuke();
-          dispatch({ type: 'RESET', language });
+          dispatch({ type: 'RESET' });
         })();
       }}
       onBackToDashboard={() => dispatch({ type: 'NAVIGATE', scr: 'dashboard' })}
