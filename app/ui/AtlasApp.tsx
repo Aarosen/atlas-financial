@@ -774,7 +774,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           return;
         }
 
-      const ex = await claude.extract(ut, base.fin, { language });
+      const ex = await claude.extract(ut, base.fin);
       setApiStatus(claude.status);
 
       const st1 = applyUserTurn(
