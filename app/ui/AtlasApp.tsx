@@ -701,7 +701,6 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             mode: 'explain',
             memorySummary: st.memorySummary,
             fin: st.fin,
-            language,
             onDelta: (t) => {
               if (streamIdRef.current !== myStreamId) return;
               if (ctrl.signal.aborted) return;
