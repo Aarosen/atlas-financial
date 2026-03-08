@@ -118,7 +118,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const streamIdRef = useRef(0);
   const lastKeydownHandledRef = useRef<number | null>(null);
   const lastGreetingLanguageRef = useRef<SupportedLanguage | null>(null);
-  const [st, dispatch] = useReducer(conversationReducer, createInitialConversationState(initialScreen, language));
+  const [st, dispatch] = useReducer(
+    conversationReducer,
+    { initialScreen, language },
+    ({ initialScreen, language }) => createInitialConversationState(initialScreen, language)
+  );
   const latestStateRef = useRef(st);
   const inputDraftRef = useRef('');
   const hasUserInteractedRef = useRef(false);
