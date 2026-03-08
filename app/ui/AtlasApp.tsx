@@ -872,7 +872,6 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           await claude.chat(chatMsgs, miss as string[], {
             memorySummary: st.memorySummary,
             fin: st.fin,
-            language,
           })
         ).trim();
         const askBody = adaptiveAsk || action.text;
