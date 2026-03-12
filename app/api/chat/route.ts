@@ -251,7 +251,7 @@ export async function POST(req: Request) {
     return jsonError(400, 'Invalid JSON body');
   }
 
-  const { type, messages, missing, question, memorySummary, language, fin, sessionState } = body as {
+  const { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState } = body as {
     type?: string;
     messages?: any[];
     missing?: string[];
@@ -259,6 +259,7 @@ export async function POST(req: Request) {
     memorySummary?: string;
     language?: SupportedLanguage;
     fin?: Record<string, any>;
+    extractedFields?: Record<string, unknown>;
     sessionState?: Record<string, any>;
   };
 
@@ -717,7 +718,7 @@ Return ONLY the rewritten text.`;
     if (type === 'chat' && text) {
       const lastUserMsg = String((messages || []).slice(-1)[0]?.content || '').trim();
       const conversationHistory = messages || [];
-      const financialProfile = fin || {};
+      const financialProfile = { ...(fin || {}), ...(extractedFields || {}) };
 
       // Step 1: Crisis check first (safety gate)
       const crisisSignal = detectCrisisSignals(lastUserMsg, conversationHistory, financialProfile as any);

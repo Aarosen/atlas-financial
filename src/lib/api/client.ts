@@ -170,10 +170,11 @@ export class ClaudeClient {
     signal?: AbortSignal;
     memorySummary?: string | null;
     fin?: Partial<FinancialState> | null;
+    extractedFields?: Record<string, unknown>;
     sessionState?: Record<string, any>;
     language?: SupportedLanguage;
   }): Promise<{ ok: boolean; canceled: boolean }> {
-    const { msgs, missing, onDelta, onSessionState, signal, memorySummary, fin, sessionState, language } = args;
+    const { msgs, missing, onDelta, onSessionState, signal, memorySummary, fin, extractedFields, sessionState, language } = args;
     try {
       const r = await fetch(this.ep, {
         method: 'POST',
@@ -184,6 +185,7 @@ export class ClaudeClient {
           missing,
           memorySummary: memorySummary ?? null,
           fin: fin ?? null,
+          extractedFields: extractedFields ?? null,
           sessionState: sessionState ?? {},
           language,
         }),

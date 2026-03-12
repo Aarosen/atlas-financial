@@ -92,7 +92,8 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
     const k = effectiveQuestionKey;
     answered[k] = true;
     unknown[k] = true;
-    if (k === 'highInterestDebt' || k === 'lowInterestDebt') (collected as any)[k] = 0;
+    // Only zero out debt if user explicitly said "don't know" about debt
+    if ((k === 'highInterestDebt' || k === 'lowInterestDebt') && !mentionsDebt) (collected as any)[k] = 0;
     if (k === 'totalSavings') (collected as any)[k] = 0;
   }
 
@@ -101,7 +102,8 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
     if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
       answered[k] = true;
       if (unknown[k]) delete unknown[k];
-      (collected as any)[k] = 0;
+      // Only zero out if user explicitly said "no" and didn't mention debt amounts
+      if (!mentionsDebt) (collected as any)[k] = 0;
     }
   }
 
