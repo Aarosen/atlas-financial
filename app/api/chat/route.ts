@@ -411,7 +411,8 @@ MANDATORY FLOW FOR FINANCIAL TOPICS:
 5) NEXT STEP: Propose one specific follow-up question or action (never "Any other questions?").
 
 Never skip Step 2. If data is missing, ask before advising. Never give ranges like "3-6 months" or round numbers like "$1,000" without the user's data.
-When using numbers from the CALCULATION RESULTS block, state them as exact — do not use "about," "approximately," or "roughly" since these are deterministic calculations.
+
+CRITICAL: If a CALCULATION RESULTS block is present, you MUST cite the exact numbers from it in your response. Do not estimate, approximate, or improvise numbers. Use the payoff timeline, interest savings, and strategy comparison directly from the block. Do not use "about," "approximately," or "roughly" — state exact figures only.
 
 FORMATTING RULES:
 - Max 3 bullet points per response (prefer sentences).
@@ -833,7 +834,7 @@ Include once per conversation: "I'm here to help you think through your finances
       // Session state block goes FIRST — it's the most critical context
       const promptSections: string[] = [
         sessionStateBlock,           // ← THE CORE FIX: always first, never trimmed
-        ...(calculationBlock ? [calculationBlock] : []), // ← Inject pre-calculated metrics if available
+        ...(calculationBlock ? [`\n━━━ AUTHORITATIVE CALCULATION DATA ━━━\nYOU MUST USE ONLY THE NUMBERS BELOW. DO NOT ESTIMATE OR CALCULATE INDEPENDENTLY.\n${calculationBlock}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`] : []), // ← Inject pre-calculated metrics if available
         ...(objectionBlock ? [objectionBlock] : []), // ← Inject objection handling if detected
         personaPrompt,
         memoryContext,
