@@ -272,7 +272,23 @@ export function classifyInterruption(userText: string): InterruptionType {
   if (/(what.*do.*(data|store|send)|privacy|private|stored|transmit)/i.test(t)) return 'meta';
   if (/\b(store|send)\b/i.test(t) && /\bwhat|why|how\b/i.test(t)) return 'meta';
   if (/^(actually|correction|sorry|wait|i meant|update)/i.test(t) || /\bmy\s+(income|rent|expenses|savings|debt)\s+is\b/i.test(t)) return 'correction';
-  if (t.includes('?')) return 'followup_question';
+
+  if (t.includes('?')) {
+    // Goal-oriented questions should route to orchestrator, not explain mode
+    const isGoalQuestion =
+      /\bcan i afford\b/i.test(t) ||
+      /\bshould i\b/i.test(t) ||
+      /\bhow (much|do i|can i|should i)\b/i.test(t) ||
+      /\bwhat (should|would|can|is the best)\b/i.test(t) ||
+      /\b(afford|budget|save|invest|pay off|debt|retire|emergency fund)\b/i.test(t) ||
+      /\bam i (on track|okay|good|saving enough)\b/i.test(t);
+
+    if (isGoalQuestion) return 'answer_to_question';
+
+    // Genuine clarifying/educational questions use explain mode
+    return 'followup_question';
+  }
+
   return 'answer_to_question';
 }
 
