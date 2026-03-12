@@ -131,20 +131,42 @@ export function extractMetricsFromResponse(
 export function extractMetricCardFromResponse(
   response: string
 ): { text: string; card: { type: 'metric_card'; title: string; value: string; subtitle?: string; action?: string; explain?: string } | null } {
-  // Try multiple JSON extraction patterns
-  let jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
   let jsonStr: string | null = null;
   let fullMatch: string | null = null;
 
-  if (jsonMatch) {
-    jsonStr = jsonMatch[1];
-    fullMatch = jsonMatch[0];
+  // Try markdown fence format first
+  let match = response.match(/```json\n([\s\S]*?)\n```/);
+  if (match) {
+    jsonStr = match[1];
+    fullMatch = match[0];
   } else {
-    // Try without markdown fence - look for metrics object
-    jsonMatch = response.match(/\{[\s\S]*?"metrics"\s*:\s*\{[\s\S]*?\}\s*\}/);
-    if (jsonMatch) {
-      jsonStr = jsonMatch[0];
-      fullMatch = jsonMatch[0];
+    // Try to find JSON object by looking for opening brace and parsing until we have valid JSON
+    const jsonStart = response.indexOf('{');
+    if (jsonStart !== -1) {
+      // Try to find the matching closing brace
+      let braceCount = 0;
+      let jsonEnd = -1;
+      for (let i = jsonStart; i < response.length; i++) {
+        if (response[i] === '{') braceCount++;
+        if (response[i] === '}') {
+          braceCount--;
+          if (braceCount === 0) {
+            jsonEnd = i + 1;
+            break;
+          }
+        }
+      }
+      
+      if (jsonEnd !== -1) {
+        const potentialJson = response.substring(jsonStart, jsonEnd);
+        try {
+          JSON.parse(potentialJson);
+          jsonStr = potentialJson;
+          fullMatch = potentialJson;
+        } catch {
+          // Not valid JSON, continue
+        }
+      }
     }
   }
 
@@ -157,8 +179,7 @@ export function extractMetricCardFromResponse(
     
     // Handle metrics object format (Claude's actual output)
     if (parsed?.metrics && typeof parsed.metrics === 'object') {
-      // Don't render metrics as a card - just remove from text
-      // Metrics are handled separately by the UI
+      // Remove metrics JSON from text to prevent raw JSON leaking into chat
       return { text: fullMatch ? response.replace(fullMatch, '').trim() : response, card: null };
     }
     
@@ -177,6 +198,7 @@ export function extractMetricCardFromResponse(
       };
     }
 
+    // If it's JSON but not a recognized format, remove it from text anyway
     return { text: fullMatch ? response.replace(fullMatch, '').trim() : response, card: null };
   } catch {
     return { text: response, card: null };
