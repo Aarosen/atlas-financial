@@ -593,10 +593,23 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     }
   }, [st.scr]);
 
-  const missing = useCallback((f: FinancialState) => NEED.filter((k) => {
-    const value = f[k];
-    return value === null || value === undefined || (typeof value === 'number' && value === 0);
-  }), []);
+  const missing = useCallback((f: FinancialState) => {
+    // For debt_payoff goal, don't require totalSavings
+    const goal = sessionStateRef.current?.goal;
+    const fieldsToCheck = goal === 'debt_payoff' 
+      ? NEED.filter(k => k !== 'totalSavings')
+      : NEED;
+    
+    return fieldsToCheck.filter((k) => {
+      const value = f[k];
+      // For lowInterestDebt: null = missing, 0 = explicitly none (valid answer)
+      if (k === 'lowInterestDebt') {
+        return value === null || value === undefined;
+      }
+      // For other fields: undefined, null, or zero = missing
+      return value === null || value === undefined || (typeof value === 'number' && value === 0);
+    });
+  }, []);
 
   const handleSessionState = useCallback((state: Record<string, any>) => {
     setSessionState(state);
