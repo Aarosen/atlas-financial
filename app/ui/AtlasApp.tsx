@@ -106,6 +106,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [language, setLanguage] = useState<SupportedLanguage>('en');
   const [outcomeMetrics, setOutcomeMetrics] = useState<UserOutcomeMetrics | null>(null);
   const [lastOutcomeState, setLastOutcomeState] = useState<{ debtBalance: number; savings: number } | null>(null);
+  const [sessionState, setSessionState] = useState<Record<string, any>>({});
   const [restored, setRestored] = useState(false);
   useEffect(() => {
     if (!restored) return;
@@ -868,13 +869,47 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       if (action.type === 'ask') {
         const preface = [actionFeedback, nudgeText, learningPrompt].filter(Boolean).join('\n\n');
         const chatMsgs = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
-        const adaptiveAsk = (
-          await claude.chat(chatMsgs, miss as string[], {
-            memorySummary: st.memorySummary,
-            fin: st.fin,
-          })
-        ).trim();
-        const askBody = adaptiveAsk || action.text;
+        
+        // Use chatStream to get guided responses with session state injection
+        streamAbortRef.current?.abort();
+        const ctrl = new AbortController();
+        streamAbortRef.current = ctrl;
+        const myStreamId = ++streamIdRef.current;
+
+        dispatch({ type: 'STREAM_START' });
+
+        let adaptiveAsk = '';
+        const res = await claude.chatStream({
+          msgs: chatMsgs,
+          missing: miss as string[],
+          onDelta: (t) => {
+            if (streamIdRef.current !== myStreamId) return;
+            if (ctrl.signal.aborted) return;
+            adaptiveAsk += t;
+            dispatch({ type: 'STREAM_DELTA', delta: t });
+          },
+          onSessionState: (state) => {
+            // Update sessionState when orchestrator sends it
+            setSessionState(state);
+          },
+          signal: ctrl.signal,
+          memorySummary: st.memorySummary,
+          fin: st.fin,
+          sessionState,
+        });
+
+        if (streamIdRef.current !== myStreamId) {
+          return;
+        }
+        streamAbortRef.current = null;
+        if (!res.ok && res.canceled) {
+          dispatch({ type: 'STREAM_CANCELED' });
+          return;
+        }
+
+        dispatch({ type: 'STREAM_DONE' });
+        
+        const askBody = adaptiveAsk.trim() || action.text;
         const askText = preface ? `${preface}\n\n${askBody}` : askBody;
         logReplay(
           createReplayEntry({
