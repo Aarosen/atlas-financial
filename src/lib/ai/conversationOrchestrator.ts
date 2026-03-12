@@ -37,6 +37,7 @@ export interface FinancialProfile {
   timeHorizonYears?: number;
   riskTolerance?: 'cautious' | 'balanced' | 'growth';
   biggestConcern?: string;
+  proposedPayment?: number; // For affordability checks: the payment amount being evaluated
 }
 
 export interface SessionState {
@@ -147,6 +148,7 @@ const FIELD_LABELS: Record<keyof FinancialProfile, string> = {
   timeHorizonYears: 'time horizon',
   riskTolerance: 'risk tolerance',
   biggestConcern: 'biggest financial concern',
+  proposedPayment: 'proposed payment amount',
 };
 
 export function getMissingFields(goal: ConversationGoal, profile: FinancialProfile): string[] {
