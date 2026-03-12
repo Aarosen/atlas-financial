@@ -8,7 +8,7 @@
  * DROP-IN REPLACEMENT for the chat handler in route.ts
  */
 
-import { detectObjections, type Objection } from './objectionHandlingEngine';
+import { detectObjections, generateObjectionHandlingInstruction, type Objection } from './objectionHandlingEngine';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -304,8 +304,13 @@ function buildObjectionBlock(detectedObjections: Objection[], userMessage: strin
     block += `Response: ${objection.proactiveResponse}\n\n`;
   }
 
-  block += 'INSTRUCTION: Acknowledge the objection by name, reframe with one concrete counterexample or small win, then ask the next discovery question.\n';
+  block += 'INSTRUCTION: Acknowledge the objection by name, reframe with one CONCRETE counterexample (specific number, timeframe, or method), then ask ONE follow-up question.\n';
+  block += 'Do NOT use generic encouragement like "you can do this" or "I believe in you."\n';
   block += 'Do NOT ask for data before addressing the objection — it will feel tone-deaf.\n';
+  
+  // Add specific instruction for this objection type
+  block += generateObjectionHandlingInstruction(detectedObjections);
+  
   block += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
 
   return block;

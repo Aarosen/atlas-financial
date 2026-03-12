@@ -229,7 +229,7 @@ export function generateEmpathyAcknowledgment(objectionCategory: ObjectionCatego
 }
 
 /**
- * Build objection-aware recommendation
+ * Build objection-aware recommendation with specific instruction for Claude
  */
 export function buildObjectionAwareRecommendation(
   baseRecommendation: string,
@@ -247,4 +247,42 @@ export function buildObjectionAwareRecommendation(
   response += generateProactiveObjectionResponse(detectedObjections);
 
   return response;
+}
+
+/**
+ * Generate specific instruction for Claude on how to handle objections
+ * This is injected into the system prompt to ensure concrete, specific responses
+ */
+export function generateObjectionHandlingInstruction(detectedObjections: Objection[]): string {
+  if (detectedObjections.length === 0) return '';
+
+  let instruction = '\n━━━ OBJECTION HANDLING INSTRUCTION ━━━\n';
+  instruction += 'The user is expressing a psychological barrier. Address it with SPECIFICITY, not generic encouragement.\n\n';
+
+  for (const objection of detectedObjections.slice(0, 2)) {
+    instruction += `**For ${objection.category} objection:**\n`;
+
+    if (objection.category === 'debt') {
+      instruction += `Do NOT say "you can do this" or "I believe in you." Instead, cite a CONCRETE reframe:\n`;
+      instruction += `Example: "Someone with $40,000 in debt paying $500/month extra could be debt-free in 6-7 years using the avalanche method. The math often looks different once we run the actual numbers. What's your total debt balance?"\n\n`;
+    } else if (objection.category === 'affordability') {
+      instruction += `Do NOT say "start small." Instead, cite a CONCRETE number:\n`;
+      instruction += `Example: "Even $25/week adds up to $1,300/year. That's enough to start a high-yield savings account or fund an emergency fund. What's one small amount you could commit to?"\n\n`;
+    } else if (objection.category === 'discipline') {
+      instruction += `Do NOT say "you don't need willpower." Instead, cite a CONCRETE mechanism:\n`;
+      instruction += `Example: "Automation removes the decision entirely. Set up a $50 automatic transfer on payday — it happens before you see the money. No willpower needed. What amount could you automate?"\n\n`;
+    } else if (objection.category === 'risk') {
+      instruction += `Do NOT say "risk is worth it." Instead, cite CONCRETE data:\n`;
+      instruction += `Example: "A diversified portfolio of index funds has recovered from every crash in history, including 2008 and 2020. If you invested $100/month starting in 2008, you'd have $18,000 today despite the crash. What's your timeline?"\n\n`;
+    } else if (objection.category === 'time') {
+      instruction += `Do NOT say "it's easier than you think." Instead, cite CONCRETE time:\n`;
+      instruction += `Example: "Setup takes 30 minutes — opening an account and setting up automatic transfers. After that, it's completely hands-off. Can you find 30 minutes this week?"\n\n`;
+    } else {
+      instruction += `Cite a CONCRETE counterexample or specific scenario, not generic encouragement.\n`;
+      instruction += `Then ask ONE follow-up question to move forward.\n\n`;
+    }
+  }
+
+  instruction += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+  return instruction;
 }
