@@ -722,6 +722,21 @@ Return ONLY the rewritten text.`;
         financialProfile,
         previousState: sessionState as any,
       });
+      
+      // DEBUG: Log financial profile and missing fields for debt_payoff goal
+      if (state.goal === 'debt_payoff') {
+        console.log('[atlas_debug] debt_payoff goal detected', {
+          goal: state.goal,
+          financialProfile: {
+            monthlyIncome: financialProfile.monthlyIncome,
+            essentialExpenses: financialProfile.essentialExpenses,
+            highInterestDebt: financialProfile.highInterestDebt,
+            lowInterestDebt: financialProfile.lowInterestDebt,
+          },
+          missingFields: orchestratorMissingFields,
+          shouldCalculate: orchestratorMissingFields.length === 0 && state.phase !== 'greeting',
+        });
+      }
 
       // Step 3: Build enriched system prompt with session state block FIRST
       // The session state block is injected first so it's never trimmed away
