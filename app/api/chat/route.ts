@@ -675,6 +675,12 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
       try {
         const clean = String(text).replace(/```json|```/g, '').trim();
         const fields = JSON.parse(clean);
+        
+        // DEBUG: Log extraction results
+        console.log('[atlas_debug] EXTRACTION RESULT', {
+          userMessage: messages[0]?.content?.substring(0, 100),
+          extractedFields: fields,
+        });
         return jsonOk({ fields, source: 'claude', model: usedModel, tier });
       } catch {
         return jsonOk({ fields: {}, source: 'claude_parse_error', model: usedModel, tier });
@@ -739,6 +745,7 @@ Return ONLY the rewritten text.`;
         phase: state.phase,
         turnCount: state.turnCount,
         missingFields: orchestratorMissingFields,
+        shouldCalculate: orchestratorMissingFields.length === 0 && state.phase !== 'greeting',
         financialProfile: {
           monthlyIncome: financialProfile.monthlyIncome,
           essentialExpenses: financialProfile.essentialExpenses,
@@ -746,6 +753,18 @@ Return ONLY the rewritten text.`;
           lowInterestDebt: financialProfile.lowInterestDebt,
         },
       });
+      
+      // DEBUG: Log calculation block if present
+      if (calculationBlock) {
+        console.log('[atlas_debug] CALCULATION BLOCK GENERATED', {
+          blockLength: calculationBlock.length,
+          blockPreview: calculationBlock.substring(0, 500),
+        });
+      } else {
+        console.log('[atlas_debug] NO CALCULATION BLOCK', {
+          reason: 'calculationBlock is null or undefined',
+        });
+      }
 
       // Step 3: Build enriched system prompt with session state block FIRST
       // The session state block is injected first so it's never trimmed away
