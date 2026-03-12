@@ -120,6 +120,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const lastKeydownHandledRef = useRef<number | null>(null);
   const lastGreetingLanguageRef = useRef<SupportedLanguage | null>(null);
   const sessionStateRef = useRef<Record<string, any>>({});
+  const sendInProgressRef = useRef(false);
   const [st, dispatch] = useReducer(
     conversationReducer,
     initialScreen,
@@ -981,22 +982,28 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   const send = useCallback(
     async (overrideText?: string) => {
-      if (st.busy) return;
-      voice.stopSpeak();
-      const ut = String((overrideText ?? st.inp) || '').trim();
-      if (!ut) return;
+      if (sendInProgressRef.current || st.busy) return;
+      sendInProgressRef.current = true;
+      
+      try {
+        voice.stopSpeak();
+        const ut = String((overrideText ?? st.inp) || '').trim();
+        if (!ut) return;
 
-      if (editingLast && lastSendSnapshotRef.current) {
-        const snap = lastSendSnapshotRef.current;
-        setEditingLast(false);
-        dispatch({ type: 'RESTORE', state: snap });
-        await doSend(snap, ut);
-        return;
+        if (editingLast && lastSendSnapshotRef.current) {
+          const snap = lastSendSnapshotRef.current;
+          setEditingLast(false);
+          dispatch({ type: 'RESTORE', state: snap });
+          await doSend(snap, ut);
+          return;
+        }
+
+        lastSendSnapshotRef.current = st;
+        lastUserTextRef.current = ut;
+        await doSend(st, ut);
+      } finally {
+        sendInProgressRef.current = false;
       }
-
-      lastSendSnapshotRef.current = st;
-      lastUserTextRef.current = ut;
-      await doSend(st, ut);
     },
     [st, voice, editingLast, doSend]
   );
