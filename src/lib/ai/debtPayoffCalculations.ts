@@ -192,7 +192,12 @@ export function compareDebtStrategies(
   } else if (interestSavings < 0) {
     recommendation = `Snowball saves $${Math.round(Math.abs(interestSavings))} in interest compared to avalanche.`;
   } else {
-    recommendation = 'Both strategies result in the same total interest paid.';
+    // When there's only one debt, both methods are identical
+    if (debts.length === 1) {
+      recommendation = `With only one debt, both avalanche and snowball methods produce identical results. Focus on paying $${Math.round(monthlyPayment)} monthly to be debt-free in ${avalanche.monthsToPayoff} months.`;
+    } else {
+      recommendation = 'Both strategies result in the same total interest paid. Choose based on psychological preference: avalanche minimizes interest, snowball builds momentum.';
+    }
   }
 
   return {
