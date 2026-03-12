@@ -438,6 +438,11 @@ export class ClaudeClient {
       if (!('lowInterestDebt' in x)) x.lowInterestDebt = 0;
     }
 
+    // Handle "no other debts" or "no student loans" etc. to set lowInterestDebt to 0
+    if (/no\s+(?:other|additional)?\s*(?:debt|loan|student.loan|car.loan|mortgage)|don't\s+have\s+(?:any\s+)?(?:student|car|other)?\s*(?:debt|loan)/i.test(t)) {
+      if (!('lowInterestDebt' in x)) x.lowInterestDebt = 0;
+    }
+
     if (/no\s+savings?|zero\s+saved|nothing\s+saved/i.test(t)) x.totalSavings = 0;
 
     if (/stable|stability|secure|peace.of.mind/i.test(t)) x.primaryGoal = 'stability';
