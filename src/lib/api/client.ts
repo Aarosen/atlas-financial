@@ -37,12 +37,12 @@ export class ClaudeClient {
     }
   }
 
-  async extract(msg: string, _ctx: Partial<FinancialState> = {}, opts?: { language?: SupportedLanguage }) {
+  async extract(msg: string, _ctx: Partial<FinancialState> = {}, opts?: { language?: SupportedLanguage; lastQuestion?: string }) {
     try {
       const r = await fetch(this.ep, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'extract', messages: [{ role: 'user', content: msg }], language: opts?.language }),
+        body: JSON.stringify({ type: 'extract', messages: [{ role: 'user', content: msg }], language: opts?.language, lastQuestion: opts?.lastQuestion }),
       });
       if (!r.ok) {
         this._lastErrorStatus = r.status;

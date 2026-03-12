@@ -131,7 +131,7 @@ export function detectGoal(
 const REQUIRED_FIELDS: Record<ConversationGoal, Array<keyof FinancialProfile>> = {
   affordability_check: ['monthlyIncome', 'essentialExpenses'],
   emergency_fund: ['monthlyIncome', 'essentialExpenses', 'totalSavings'],
-  debt_payoff: ['monthlyIncome', 'essentialExpenses', 'highInterestDebt', 'lowInterestDebt'],
+  debt_payoff: ['monthlyIncome', 'essentialExpenses', 'highInterestDebt'],
   budget_build: ['monthlyIncome', 'essentialExpenses', 'discretionaryExpenses'],
   investment_start: ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt'],
   retirement_planning: ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'timeHorizonYears'],

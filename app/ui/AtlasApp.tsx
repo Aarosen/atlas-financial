@@ -817,7 +817,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           return;
         }
 
-      const ex = await claude.extract(ut, base.fin);
+      // Get the last assistant message (the question that was asked)
+      const lastAssistantMsg = prevMsgs.slice().reverse().find((m) => m.r === 'a')?.t || '';
+      
+      const ex = await claude.extract(ut, base.fin, { language, lastQuestion: lastAssistantMsg });
       setApiStatus(claude.status);
 
       const st1 = applyUserTurn(

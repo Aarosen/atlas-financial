@@ -251,7 +251,7 @@ export async function POST(req: Request) {
     return jsonError(400, 'Invalid JSON body');
   }
 
-  const { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState } = body as {
+  const { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion } = body as {
     type?: string;
     messages?: any[];
     missing?: string[];
@@ -261,6 +261,7 @@ export async function POST(req: Request) {
     fin?: Record<string, any>;
     extractedFields?: Record<string, unknown>;
     sessionState?: Record<string, any>;
+    lastQuestion?: string;
   };
 
   if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'answer_explain', 'answer_explain_stream'].includes(type)) {
@@ -323,16 +324,23 @@ export async function POST(req: Request) {
   const detectedLang = (preferredLanguage || detectLanguage(lastUserText)) as SupportedLanguage;
   const normalizedQuestion = normalizeSlang(lastUserText, detectedLang);
 
+  const lastQuestionContext = lastQuestion ? `\nLAST QUESTION ASKED: "${lastQuestion}"\nUse this context to understand what the user is responding to.` : '';
+  
   const extractPrompt = `You are Atlas's financial data extraction engine.
-Your only job is to identify financial facts from conversational text and return them as structured JSON.
+Your only job is to identify financial facts from conversational text and return them as structured JSON.${lastQuestionContext}
 
 EXTRACTION RULES:
 - Extract ONLY values explicitly stated or clearly implied in the message.
 - Never infer, estimate, or fabricate values not present in the text.
 - If a user says "about $4k" or "roughly $4,000" — extract 4000.
 - "I have no savings" → totalSavings: 0. "No debt" or "No other debt" → highInterestDebt: 0, lowInterestDebt: 0.
+- DEBT NEGATIONS (user explicitly says NO to a debt type):
+  * If last question asked about credit cards/high-interest debt and user says "No", "No I don't", "Nope", "None" → highInterestDebt: 0
+  * If last question asked about student loans/car loans/other debt and user says "No", "No I don't", "Nope", "None" → lowInterestDebt: 0
+  * "No credit card debt" or "No high-interest debt" → highInterestDebt: 0
+  * "No student loans" or "No car loans" or "No low-interest debt" → lowInterestDebt: 0
 - CRITICAL: Extract debt amounts from ANY mention of debt. "$8,000 credit card debt" → highInterestDebt: 8000. "$15k student loans" → lowInterestDebt: 15000.
-- CRITICAL: Do NOT omit debt fields. If user mentions debt with an amount, extract it. If user says "no debt", set both to 0. Otherwise omit.
+- CRITICAL: Do NOT omit debt fields when user explicitly answers. If user mentions debt with an amount, extract it. If user says "no" to a debt question, set that field to 0. Otherwise omit.
 - Annual salary → divide by 12 for monthlyIncome.
 - "Take-home" / "after tax" / "net" → use as monthlyIncome.
 - Value ranges ("$3,000–$3,500") → use the midpoint.
