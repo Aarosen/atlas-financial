@@ -250,45 +250,51 @@ export function buildObjectionAwareRecommendation(
 }
 
 /**
- * Generate specific instruction for Claude on how to handle objections
+ * Generate objection handling instruction using few-shot example format
  * This is injected into the system prompt to ensure concrete, specific responses
  */
 export function generateObjectionHandlingInstruction(detectedObjections: Objection[]): string {
   if (detectedObjections.length === 0) return '';
 
   let instruction = '\n━━━ OBJECTION HANDLING INSTRUCTION ━━━\n';
-  instruction += 'CRITICAL: The user is expressing a psychological barrier. Respond with LITERAL SPECIFICITY.\n';
-  instruction += 'Do NOT include labels, parentheses, or field names in your response.\n';
-  instruction += 'Do NOT use generic encouragement like "you can do this" or "I believe in you."\n\n';
+  instruction += 'The user is expressing a psychological barrier. Use the example format below to respond.\n\n';
 
   for (const objection of detectedObjections.slice(0, 2)) {
-    instruction += `**For ${objection.category} objection:**\n`;
-
     if (objection.category === 'debt') {
-      instruction += `Acknowledge their feeling in ONE sentence. Then respond EXACTLY like this:\n`;
-      instruction += `"For example, someone with $40,000 in debt who puts just $300/month extra toward the highest-interest card could be debt-free in under 5 years using the avalanche method — we can run those numbers for your situation. What's your total debt balance?"\n`;
-      instruction += `Do NOT paraphrase. Use the specific numbers and method name. Do NOT include field labels.\n\n`;
+      instruction += `OBJECTION DETECTED: hopelessness about debt payoff\n\n`;
+      instruction += `When the user expresses hopelessness about debt, respond like this example:\n`;
+      instruction += `---\n`;
+      instruction += `I hear that. Here's what the math actually looks like: someone with $40,000 in debt putting $300/month extra toward the highest-interest card first could be debt-free in under 5 years — that's the avalanche method. We can run those exact numbers for your situation. What's your total debt balance?\n`;
+      instruction += `---\n`;
+      instruction += `Structure: one empathy sentence, one concrete math example with specific dollar amount and timeframe, one question.\n\n`;
     } else if (objection.category === 'affordability') {
-      instruction += `Acknowledge their feeling in ONE sentence. Then respond EXACTLY like this:\n`;
-      instruction += `"Even $25/week adds up to $1,300/year. That's enough to start a high-yield savings account or fund an emergency fund. What's one small amount you could commit to?"\n`;
-      instruction += `Do NOT paraphrase. Use the specific dollar amounts. Do NOT include field labels.\n\n`;
+      instruction += `OBJECTION DETECTED: can't afford to save\n\n`;
+      instruction += `When the user says they can't afford to save, respond like this example:\n`;
+      instruction += `---\n`;
+      instruction += `I get it — money is tight. But here's what's possible: even $25/week adds up to $1,300/year. That's enough to start a high-yield savings account or fund an emergency fund. What's one small amount you could commit to?\n`;
+      instruction += `---\n`;
+      instruction += `Structure: one empathy sentence, one concrete amount with annual total, one question.\n\n`;
     } else if (objection.category === 'discipline') {
-      instruction += `Acknowledge their feeling in ONE sentence. Then respond EXACTLY like this:\n`;
-      instruction += `"Automation removes the decision entirely. Set up a $50 automatic transfer on payday — it happens before you see the money. No willpower needed. What amount could you automate?"\n`;
-      instruction += `Do NOT paraphrase. Use the specific mechanism and amount. Do NOT include field labels.\n\n`;
+      instruction += `OBJECTION DETECTED: doubts about ability to stick with it\n\n`;
+      instruction += `When the user doubts their discipline, respond like this example:\n`;
+      instruction += `---\n`;
+      instruction += `You don't need willpower — you need automation. Set up a $50 automatic transfer on payday and it happens before you see the money. No decisions, no discipline needed. What amount could you automate?\n`;
+      instruction += `---\n`;
+      instruction += `Structure: one reframe about mechanism, one concrete example with amount, one question.\n\n`;
     } else if (objection.category === 'risk') {
-      instruction += `Acknowledge their feeling in ONE sentence. Then respond EXACTLY like this:\n`;
-      instruction += `"A diversified portfolio of index funds has recovered from every crash in history, including 2008 and 2020. If you invested $100/month starting in 2008, you'd have $18,000 today despite the crash. What's your timeline?"\n`;
-      instruction += `Do NOT paraphrase. Use the specific historical examples and numbers. Do NOT include field labels.\n\n`;
+      instruction += `OBJECTION DETECTED: fear of losing money\n\n`;
+      instruction += `When the user fears market risk, respond like this example:\n`;
+      instruction += `---\n`;
+      instruction += `Your caution is healthy. Here's the data: a diversified portfolio of index funds has recovered from every crash in history, including 2008 and 2020. If you'd invested $100/month starting in 2008, you'd have $18,000 today despite the crash. What's your timeline?\n`;
+      instruction += `---\n`;
+      instruction += `Structure: one validation, one historical example with specific numbers, one question.\n\n`;
     } else if (objection.category === 'time') {
-      instruction += `Acknowledge their feeling in ONE sentence. Then respond EXACTLY like this:\n`;
-      instruction += `"Setup takes 30 minutes — opening an account and setting up automatic transfers. After that, it's completely hands-off. Can you find 30 minutes this week?"\n`;
-      instruction += `Do NOT paraphrase. Use the specific timeframe. Do NOT include field labels.\n\n`;
-    } else {
-      instruction += `Acknowledge their feeling in ONE sentence.\n`;
-      instruction += `Then cite a CONCRETE counterexample with specific numbers or timeframes.\n`;
-      instruction += `Then ask ONE follow-up question to move forward.\n`;
-      instruction += `Do NOT use generic encouragement. Do NOT include field labels or parentheses.\n\n`;
+      instruction += `OBJECTION DETECTED: too complicated or time-consuming\n\n`;
+      instruction += `When the user says it's too complicated, respond like this example:\n`;
+      instruction += `---\n`;
+      instruction += `Setup takes 30 minutes — opening an account and setting up automatic transfers. After that, it's completely hands-off. Can you find 30 minutes this week?\n`;
+      instruction += `---\n`;
+      instruction += `Structure: one concrete timeframe, one reassurance, one question.\n\n`;
     }
   }
 
