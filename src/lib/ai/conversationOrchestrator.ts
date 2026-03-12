@@ -129,7 +129,7 @@ export function detectGoal(
 const REQUIRED_FIELDS: Record<ConversationGoal, Array<keyof FinancialProfile>> = {
   affordability_check: ['monthlyIncome', 'essentialExpenses'],
   emergency_fund: ['monthlyIncome', 'essentialExpenses', 'totalSavings'],
-  debt_payoff: ['monthlyIncome', 'essentialExpenses', 'highInterestDebt', 'monthlyDebtPayments'],
+  debt_payoff: ['monthlyIncome', 'essentialExpenses', 'highInterestDebt', 'lowInterestDebt'],
   budget_build: ['monthlyIncome', 'essentialExpenses', 'discretionaryExpenses'],
   investment_start: ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt'],
   retirement_planning: ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'timeHorizonYears'],
@@ -155,7 +155,11 @@ const FIELD_LABELS: Record<keyof FinancialProfile, string> = {
 export function getMissingFields(goal: ConversationGoal, profile: FinancialProfile): string[] {
   const required = REQUIRED_FIELDS[goal] || [];
   return required
-    .filter((field) => profile[field] === undefined || profile[field] === null)
+    .filter((field) => {
+      const value = profile[field];
+      // Missing if undefined, null, or zero (for numeric fields)
+      return value === undefined || value === null || (typeof value === 'number' && value === 0);
+    })
     .map((field) => FIELD_LABELS[field]);
 }
 
@@ -229,7 +233,7 @@ function getPhaseInstructions(
     case 'greeting':
       return 'Open warmly. Ask ONE grounding question to understand what brought them here today. Do not ask for numbers yet.';
     case 'discovery':
-      return `Ask for the first missing field only: "${missingFields[0]}". Keep it conversational and warm. Accept approximate values.`;
+      return `Ask for the first missing field only: "${missingFields[0]}". Keep it conversational and warm. Accept approximate values. Do not use parentheses to explain why you need it.`;
     case 'analysis':
       return `You have enough data. Run the calculation for ${goal.replace(/_/g, ' ')}. Show specific numbers, not ranges. Then offer one next step and one scenario.`;
     case 'guidance':
