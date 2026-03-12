@@ -679,6 +679,12 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
         const fields = JSON.parse(clean);
         return jsonOk({ fields, source: 'claude', model: usedModel, tier });
       } catch {
+        return jsonOk({ fields: {}, source: 'claude_parse_error', model: usedModel, tier });
+      }
+    }
+
+    if (type === 'answer') {
+      const t0 = String(text || '').trim();
       if (!violatesGuardrails(t0)) {
         return jsonOk({ text: t0, source: 'claude', model: usedModel, tier });
       }
