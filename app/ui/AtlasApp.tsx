@@ -992,6 +992,12 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
         // Clear input immediately before sending
         updateInput('');
+        // Also clear localStorage draft so the restore effect doesn't re-populate it
+        try {
+          window.localStorage.removeItem('atlas:talkDraft');
+        } catch {
+          // ignore
+        }
 
         if (editingLast && lastSendSnapshotRef.current) {
           const snap = lastSendSnapshotRef.current;
