@@ -251,7 +251,7 @@ export async function POST(req: Request) {
     return jsonError(400, 'Invalid JSON body');
   }
 
-  const { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion } = body as {
+  const { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion, answered } = body as {
     type?: string;
     messages?: any[];
     missing?: string[];
@@ -262,6 +262,7 @@ export async function POST(req: Request) {
     extractedFields?: Record<string, unknown>;
     sessionState?: Record<string, any>;
     lastQuestion?: string;
+    answered?: Record<string, boolean>;
   };
 
   if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'answer_explain', 'answer_explain_stream'].includes(type)) {
@@ -741,6 +742,7 @@ Return ONLY the rewritten text.`;
         messages: conversationHistory,
         financialProfile,
         previousState: sessionState as any,
+        answered: answered || {},
       });
 
       // Step 3: Build enriched system prompt with session state block FIRST

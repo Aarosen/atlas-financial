@@ -789,6 +789,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               memorySummary: st.memorySummary,
               fin: finRef.current,
               sessionState: sessionStateRef.current,
+              answered: st.answered,
               onDelta: (t) => { followupText += t; },
               onSessionState: handleSessionState,
               signal: followupCtrl.signal,
@@ -939,6 +940,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           fin: finRef.current,
           extractedFields: ex.fields as any,
           sessionState: sessionStateRef.current,
+          answered: st.answered,
         });
 
         if (streamIdRef.current !== myStreamId) {

@@ -154,12 +154,21 @@ const FIELD_LABELS: Record<keyof FinancialProfile, string> = {
   proposedPayment: 'proposed payment amount',
 };
 
-export function getMissingFields(goal: ConversationGoal, profile: FinancialProfile): string[] {
+export function getMissingFields(goal: ConversationGoal, profile: FinancialProfile, answered?: Record<string, boolean>): string[] {
   const required = REQUIRED_FIELDS[goal] || [];
   return required
     .filter((field) => {
       const value = profile[field];
-      // For lowInterestDebt and highInterestDebt: null/undefined = missing, 0 = explicitly none (valid answer)
+      // For debt_payoff goal: treat 0 debt as missing unless user explicitly answered
+      if (goal === 'debt_payoff' && (field === 'highInterestDebt' || field === 'lowInterestDebt')) {
+        // If user hasn't explicitly answered this field, it's missing (even if value is 0)
+        if (!answered?.[field]) {
+          return true;
+        }
+        // If user explicitly answered, only missing if undefined/null
+        return value === undefined || value === null;
+      }
+      // For other goals: null/undefined = missing, 0 = explicitly none (valid answer)
       if (field === 'lowInterestDebt' || field === 'highInterestDebt') {
         return value === undefined || value === null;
       }
@@ -344,6 +353,7 @@ export interface OrchestratorInput {
   messages: Array<{ role: string; content: string }>;
   financialProfile: FinancialProfile;
   previousState?: Partial<SessionState>;
+  answered?: Record<string, boolean>;
 }
 
 export interface OrchestratorOutput {
@@ -357,11 +367,11 @@ export interface OrchestratorOutput {
 }
 
 export function orchestrate(input: OrchestratorInput): OrchestratorOutput {
-  const { messages, financialProfile, previousState } = input;
+  const { messages, financialProfile, previousState, answered } = input;
 
   const turnCount = messages.filter((m) => m.role === 'user').length;
   const goal = detectGoal(messages, previousState?.goal ?? 'unknown');
-  const missingFields = getMissingFields(goal, financialProfile);
+  const missingFields = getMissingFields(goal, financialProfile, answered);
   const phase = detectPhase(turnCount, missingFields, financialProfile, goal);
   const openLoops = detectOpenLoops(messages, previousState?.openLoops ?? []);
   const urgencyLevel = detectUrgency(financialProfile, messages);
