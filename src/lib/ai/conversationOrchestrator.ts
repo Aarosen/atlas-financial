@@ -159,6 +159,15 @@ export function getMissingFields(goal: ConversationGoal, profile: FinancialProfi
   return required
     .filter((field) => {
       const value = profile[field];
+      // For monthlyIncome: treat 0 as missing unless user explicitly answered (e.g., "I'm unemployed")
+      if (field === 'monthlyIncome') {
+        // If user hasn't explicitly answered this field, it's missing (even if value is 0)
+        if (!answered?.[field]) {
+          return true;
+        }
+        // If user explicitly answered, only missing if undefined/null
+        return value === undefined || value === null;
+      }
       // For debt_payoff goal: treat 0 debt as missing unless user explicitly answered
       if (goal === 'debt_payoff' && (field === 'highInterestDebt' || field === 'lowInterestDebt')) {
         // If user hasn't explicitly answered this field, it's missing (even if value is 0)
