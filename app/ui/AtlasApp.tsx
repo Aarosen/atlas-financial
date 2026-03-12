@@ -990,6 +990,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         const ut = String((overrideText ?? st.inp) || '').trim();
         if (!ut) return;
 
+        // Clear input immediately before sending
+        updateInput('');
+
         if (editingLast && lastSendSnapshotRef.current) {
           const snap = lastSendSnapshotRef.current;
           setEditingLast(false);
@@ -1005,7 +1008,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         sendInProgressRef.current = false;
       }
     },
-    [st, voice, editingLast, doSend]
+    [st, voice, editingLast, doSend, updateInput]
   );
 
   const canRetry = !!st.apiErr && !st.busy && !!lastSendSnapshotRef.current && !!lastUserTextRef.current;
@@ -1028,14 +1031,14 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     });
   }, [voice, voiceAutoSend, send, updateInput]);
 
-  const onKeyDown = (e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
+  const onKeyDown = useCallback((e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {
       e.preventDefault();
-      const value = (e.currentTarget as HTMLTextAreaElement)?.value || st.inp;
-      if (value !== st.inp) updateInput(value);
+      const value = (e.currentTarget as HTMLTextAreaElement)?.value || latestStateRef.current.inp;
+      if (value !== latestStateRef.current.inp) updateInput(value);
       void send(value);
     }
-  };
+  }, [send, updateInput]);
 
   const renderTalkStack = (scr: Screen) => (
     <>
