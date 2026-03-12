@@ -1035,19 +1035,18 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     if (typeof window === 'undefined') return;
     const onWindowKeyDown = (e: KeyboardEvent) => {
       if (e.key !== 'Enter' || e.shiftKey) return;
-      if (st.scr !== 'conversation') return;
-      if (st.busy) return;
+      if (latestStateRef.current.scr !== 'conversation') return;
+      if (latestStateRef.current.busy) return;
       if (lastKeydownHandledRef.current === e.timeStamp) return;
       const el = document.getElementById('atlas-message-input') as HTMLTextAreaElement | null;
-      const value = (el?.value || st.inp).trim();
+      const value = (el?.value || latestStateRef.current.inp).trim();
       if (!value) return;
-      if (value !== st.inp) updateInput(value);
       e.preventDefault();
       void send(value);
     };
     window.addEventListener('keydown', onWindowKeyDown, { capture: true });
     return () => window.removeEventListener('keydown', onWindowKeyDown, { capture: true } as EventListenerOptions);
-  }, [send, st.busy, st.inp, st.scr, updateInput]);
+  }, [send]);
 
   const renderTalkStack = (scr: Screen) => (
     <>
