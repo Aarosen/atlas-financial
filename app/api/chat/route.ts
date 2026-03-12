@@ -473,11 +473,26 @@ Include a short, non-intrusive disclaimer once per conversation: "I'm here to he
   const emotionTag = detectEmotion(messages);
   const emotionContext = `\n\nUSER EMOTION TAG: ${emotionTag}.`;
   const disclaimerContext = `\n\nDISCLAIMER_NEEDED: ${hasDisclaimer(messages) ? 'no' : 'yes'}. Only include the disclaimer if needed.`;
+  
+  // Detect appropriate tone based on conversation context
+  const lastUserMessage = messages[messages.length - 1]?.content || '';
+  const hasProgress = messages.length > 5; // Simple heuristic: longer conversation = progress
+  const isFirstMessage = messages.length <= 1;
+  const emotionalState = emotionTag === 'anxious' || emotionTag === 'ashamed' ? 'stressed' : emotionTag === 'motivated' ? 'positive' : 'neutral';
+  const appropriateTone = detectAppropriateTone(lastUserMessage, {
+    isCrisis: false, // Simplified: crisis detection happens separately in orchestrator
+    hasProgress,
+    isFirstMessage,
+    emotionalState,
+  });
+  const personalityPrompt = generatePersonalityPrompt(appropriateTone);
+  
   const systemPrompt = type === 'extract'
     ? extractPrompt
     : trimPromptSections(
         [
           chatPrompt,
+          personalityPrompt,
           memoryContext,
           emotionContext,
           disclaimerContext,
