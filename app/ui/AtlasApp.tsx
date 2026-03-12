@@ -931,7 +931,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           onSessionState: handleSessionState,
           signal: ctrl.signal,
           memorySummary: st.memorySummary,
-          fin: st.fin,
+          fin: uf,
           sessionState: sessionStateRef.current,
         });
 
