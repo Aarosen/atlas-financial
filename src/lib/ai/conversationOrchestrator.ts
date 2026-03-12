@@ -77,6 +77,8 @@ const GOAL_PATTERNS: Array<{ goal: ConversationGoal; patterns: RegExp[] }> = [
       /\b(pay off|pay down|get out of)\b.*(debt|loan|credit card|student loan)\b/i,
       /\b(debt free|debt-free)\b/i,
       /\b(avalanche|snowball)\b/i,
+      /\b(credit card|student loan|car loan|debt|loan)\b.*\$[\d,]+/i, // User mentions debt amount
+      /\$[\d,]+.*\b(credit card|student loan|car loan|debt|loan)\b/i, // Amount followed by debt type
     ],
   },
   {
