@@ -163,6 +163,107 @@ export class ClaudeClient {
     }
   }
 
+  async chatStream(args: {
+    msgs: Array<{ role: 'user' | 'assistant'; content: string }>;
+    missing: string[];
+    onDelta: (t: string) => void;
+    onSessionState?: (state: any) => void;
+    signal?: AbortSignal;
+    memorySummary?: string | null;
+    fin?: Partial<FinancialState> | null;
+    sessionState?: Record<string, any>;
+    language?: SupportedLanguage;
+  }): Promise<{ ok: boolean; canceled: boolean }> {
+    const { msgs, missing, onDelta, onSessionState, signal, memorySummary, fin, sessionState, language } = args;
+    try {
+      const r = await fetch(this.ep, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          type: 'chat',
+          messages: msgs,
+          missing,
+          memorySummary: memorySummary ?? null,
+          fin: fin ?? null,
+          sessionState: sessionState ?? {},
+          language,
+        }),
+        signal,
+      });
+
+      if (!r.ok) {
+        const t = await r.text().catch(() => '');
+        this._lastErrorStatus = r.status;
+        this._setStatusFromHttpError(r.status);
+        throw new Error(t || `proxy_error_${r.status}`);
+      }
+
+      if (!r.body) throw new Error('stream_missing_body');
+
+      const dec = new TextDecoder();
+      const reader = r.body.getReader();
+      let carry = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        carry += dec.decode(value, { stream: true });
+
+        while (true) {
+          const idx = carry.indexOf('\n\n');
+          if (idx < 0) break;
+          const frame = carry.slice(0, idx);
+          carry = carry.slice(idx + 2);
+          const lines = frame.split('\n');
+
+          for (const ln of lines) {
+            if (!ln.startsWith('data:')) continue;
+            const payload = ln.slice(5).trim();
+            if (!payload) continue;
+            try {
+              const j = JSON.parse(payload);
+              // Handle session state events
+              if (j?.type === 'session_state' && onSessionState) {
+                onSessionState(j.state);
+              }
+              // Handle text deltas
+              if (typeof j?.delta === 'string' && j.delta) {
+                onDelta(j.delta);
+              }
+              if (j?.done) {
+                this._hadSuccess = true;
+                this._apiStatus = 'online';
+                this._lastErrorStatus = null;
+                try {
+                  reader.releaseLock();
+                } catch {
+                  // ignore
+                }
+                return { ok: true, canceled: false };
+              }
+            } catch (frameErr: any) {
+              if (frameErr?.name === 'AbortError') throw frameErr;
+              // ignore other errors (e.g. JSON parse errors)
+            }
+          }
+        }
+      }
+
+      this._hadSuccess = true;
+      this._apiStatus = 'online';
+      this._lastErrorStatus = null;
+      return { ok: true, canceled: false };
+    } catch (e: any) {
+      const canceled = String(e?.name || '').toLowerCase() === 'aborterror';
+      if (!this._hadSuccess) {
+        this._apiStatus = 'unknown';
+      } else if (this._lastErrorStatus === null) {
+        this._apiStatus = 'offline';
+      }
+      return { ok: false, canceled };
+    }
+  }
+
   async chat(
     msgs: Array<{ role: 'user' | 'assistant'; content: string }>,
     missing: string[],
