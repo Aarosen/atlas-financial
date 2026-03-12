@@ -922,24 +922,46 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
         dispatch({ type: 'STREAM_DONE' });
         
-        const askBody = adaptiveAsk.trim() || action.text;
-        const askText = preface ? `${preface}\n\n${askBody}` : askBody;
-        logReplay(
-          createReplayEntry({
-            role: 'assistant',
-            text: askText,
-            kind: 'ask',
-            questionKey: action.questionKey,
-            emotionTag: detectReplayEmotion(askText),
-            trace: buildReasoningTrace({
-              decision: 'ask',
+        // Only dispatch SEND_ASKED if streaming produced nothing
+        // The streamed content is already in the UI via STREAM_DELTA
+        if (!adaptiveAsk.trim()) {
+          const askBody = action.text;
+          const askText = preface ? `${preface}\n\n${askBody}` : askBody;
+          logReplay(
+            createReplayEntry({
+              role: 'assistant',
+              text: askText,
+              kind: 'ask',
               questionKey: action.questionKey,
-              missingCount: miss.length,
-              answeredCount: Object.keys(answeredNext || {}).length,
-            }),
-          })
-        );
-        dispatch({ type: 'SEND_ASKED', text: askText, questionKey: action.questionKey });
+              emotionTag: detectReplayEmotion(askText),
+              trace: buildReasoningTrace({
+                decision: 'ask',
+                questionKey: action.questionKey,
+                missingCount: miss.length,
+                answeredCount: Object.keys(answeredNext || {}).length,
+              }),
+            })
+          );
+          dispatch({ type: 'SEND_ASKED', text: askText, questionKey: action.questionKey });
+        } else {
+          // Stream produced content, just log the replay with what was streamed
+          const askText = preface ? `${preface}\n\n${adaptiveAsk.trim()}` : adaptiveAsk.trim();
+          logReplay(
+            createReplayEntry({
+              role: 'assistant',
+              text: askText,
+              kind: 'ask',
+              questionKey: action.questionKey,
+              emotionTag: detectReplayEmotion(askText),
+              trace: buildReasoningTrace({
+                decision: 'ask',
+                questionKey: action.questionKey,
+                missingCount: miss.length,
+                answeredCount: Object.keys(answeredNext || {}).length,
+              }),
+            })
+          );
+        }
       }
     } catch (e: any) {
       const raw = String(e?.message || 'send_failed');
