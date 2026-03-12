@@ -131,21 +131,35 @@ export function extractMetricsFromResponse(
 export function extractMetricCardFromResponse(
   response: string
 ): { text: string; card: { type: 'metric_card'; title: string; value: string; subtitle?: string; action?: string; explain?: string } | null } {
-  const jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
+  // Try multiple JSON extraction patterns
+  let jsonMatch = response.match(/```json\n([\s\S]*?)\n```/);
+  let jsonStr: string | null = null;
+  let fullMatch: string | null = null;
 
-  if (!jsonMatch) {
+  if (jsonMatch) {
+    jsonStr = jsonMatch[1];
+    fullMatch = jsonMatch[0];
+  } else {
+    // Try without markdown fence
+    jsonMatch = response.match(/\{[\s\S]*?"type"\s*:\s*"metric_card"[\s\S]*?\}/);
+    if (jsonMatch) {
+      jsonStr = jsonMatch[0];
+      fullMatch = jsonMatch[0];
+    }
+  }
+
+  if (!jsonStr) {
     return { text: response, card: null };
   }
 
   try {
-    const jsonStr = jsonMatch[1];
     const parsed = JSON.parse(jsonStr);
     if (parsed?.type !== 'metric_card' || typeof parsed.title !== 'string' || typeof parsed.value !== 'string') {
-      return { text: response.replace(/```json\n[\s\S]*?\n```/, '').trim(), card: null };
+      return { text: fullMatch ? response.replace(fullMatch, '').trim() : response, card: null };
     }
 
     return {
-      text: response.replace(/```json\n[\s\S]*?\n```/, '').trim(),
+      text: fullMatch ? response.replace(fullMatch, '').trim() : response,
       card: {
         type: 'metric_card',
         title: parsed.title,
