@@ -840,9 +840,12 @@ DISCLAIMER CADENCE:
 Include once per conversation: "I'm here to help you think through your finances — for personalized professional advice, consider consulting a financial advisor."`;
 
       // Session state block goes FIRST — it's the most critical context
+      // Calculation block is SECOND — it must never be trimmed
+      const calculationBlockSection = calculationBlock ? `\n━━━ AUTHORITATIVE CALCULATION DATA ━━━\nYOU MUST USE ONLY THE NUMBERS BELOW. DO NOT ESTIMATE OR CALCULATE INDEPENDENTLY.\n${calculationBlock}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` : '';
+      
       const promptSections: string[] = [
-        sessionStateBlock,           // ← THE CORE FIX: always first, never trimmed
-        ...(calculationBlock ? [`\n━━━ AUTHORITATIVE CALCULATION DATA ━━━\nYOU MUST USE ONLY THE NUMBERS BELOW. DO NOT ESTIMATE OR CALCULATE INDEPENDENTLY.\n${calculationBlock}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n`] : []), // ← Inject pre-calculated metrics if available
+        sessionStateBlock,           // ← Always included, never trimmed (position 0)
+        ...(calculationBlockSection ? [calculationBlockSection] : []), // ← SECOND = always preserved before other sections get trimmed
         ...(objectionBlock ? [objectionBlock] : []), // ← Inject objection handling if detected
         personaPrompt,
         memoryContext,
@@ -855,7 +858,9 @@ Include once per conversation: "I'm here to help you think through your finances
         exampleContext,
       ];
       
-      const enrichedSystemPrompt = trimPromptSections(promptSections, 4800);
+      // Trim sections but preserve session state, calculation block, and persona instructions
+      const coreBlocksLength = sessionStateBlock.length + calculationBlockSection.length;
+      const enrichedSystemPrompt = trimPromptSections(promptSections, Math.max(8000, coreBlocksLength + 4000));
 
       // Step 4: Call Claude with enriched context
       const trimmedMessages = messages.slice(-10);
