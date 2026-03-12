@@ -257,29 +257,38 @@ export function generateObjectionHandlingInstruction(detectedObjections: Objecti
   if (detectedObjections.length === 0) return '';
 
   let instruction = '\n━━━ OBJECTION HANDLING INSTRUCTION ━━━\n';
-  instruction += 'The user is expressing a psychological barrier. Address it with SPECIFICITY, not generic encouragement.\n\n';
+  instruction += 'CRITICAL: The user is expressing a psychological barrier. Respond with LITERAL SPECIFICITY.\n';
+  instruction += 'Do NOT include labels, parentheses, or field names in your response.\n';
+  instruction += 'Do NOT use generic encouragement like "you can do this" or "I believe in you."\n\n';
 
   for (const objection of detectedObjections.slice(0, 2)) {
     instruction += `**For ${objection.category} objection:**\n`;
 
     if (objection.category === 'debt') {
-      instruction += `Do NOT say "you can do this" or "I believe in you." Instead, cite a CONCRETE reframe:\n`;
-      instruction += `Example: "Someone with $40,000 in debt paying $500/month extra could be debt-free in 6-7 years using the avalanche method. The math often looks different once we run the actual numbers. What's your total debt balance?"\n\n`;
+      instruction += `Acknowledge their feeling in ONE sentence. Then respond EXACTLY like this:\n`;
+      instruction += `"For example, someone with $40,000 in debt who puts just $300/month extra toward the highest-interest card could be debt-free in under 5 years using the avalanche method — we can run those numbers for your situation. What's your total debt balance?"\n`;
+      instruction += `Do NOT paraphrase. Use the specific numbers and method name. Do NOT include field labels.\n\n`;
     } else if (objection.category === 'affordability') {
-      instruction += `Do NOT say "start small." Instead, cite a CONCRETE number:\n`;
-      instruction += `Example: "Even $25/week adds up to $1,300/year. That's enough to start a high-yield savings account or fund an emergency fund. What's one small amount you could commit to?"\n\n`;
+      instruction += `Acknowledge their feeling in ONE sentence. Then respond EXACTLY like this:\n`;
+      instruction += `"Even $25/week adds up to $1,300/year. That's enough to start a high-yield savings account or fund an emergency fund. What's one small amount you could commit to?"\n`;
+      instruction += `Do NOT paraphrase. Use the specific dollar amounts. Do NOT include field labels.\n\n`;
     } else if (objection.category === 'discipline') {
-      instruction += `Do NOT say "you don't need willpower." Instead, cite a CONCRETE mechanism:\n`;
-      instruction += `Example: "Automation removes the decision entirely. Set up a $50 automatic transfer on payday — it happens before you see the money. No willpower needed. What amount could you automate?"\n\n`;
+      instruction += `Acknowledge their feeling in ONE sentence. Then respond EXACTLY like this:\n`;
+      instruction += `"Automation removes the decision entirely. Set up a $50 automatic transfer on payday — it happens before you see the money. No willpower needed. What amount could you automate?"\n`;
+      instruction += `Do NOT paraphrase. Use the specific mechanism and amount. Do NOT include field labels.\n\n`;
     } else if (objection.category === 'risk') {
-      instruction += `Do NOT say "risk is worth it." Instead, cite CONCRETE data:\n`;
-      instruction += `Example: "A diversified portfolio of index funds has recovered from every crash in history, including 2008 and 2020. If you invested $100/month starting in 2008, you'd have $18,000 today despite the crash. What's your timeline?"\n\n`;
+      instruction += `Acknowledge their feeling in ONE sentence. Then respond EXACTLY like this:\n`;
+      instruction += `"A diversified portfolio of index funds has recovered from every crash in history, including 2008 and 2020. If you invested $100/month starting in 2008, you'd have $18,000 today despite the crash. What's your timeline?"\n`;
+      instruction += `Do NOT paraphrase. Use the specific historical examples and numbers. Do NOT include field labels.\n\n`;
     } else if (objection.category === 'time') {
-      instruction += `Do NOT say "it's easier than you think." Instead, cite CONCRETE time:\n`;
-      instruction += `Example: "Setup takes 30 minutes — opening an account and setting up automatic transfers. After that, it's completely hands-off. Can you find 30 minutes this week?"\n\n`;
+      instruction += `Acknowledge their feeling in ONE sentence. Then respond EXACTLY like this:\n`;
+      instruction += `"Setup takes 30 minutes — opening an account and setting up automatic transfers. After that, it's completely hands-off. Can you find 30 minutes this week?"\n`;
+      instruction += `Do NOT paraphrase. Use the specific timeframe. Do NOT include field labels.\n\n`;
     } else {
-      instruction += `Cite a CONCRETE counterexample or specific scenario, not generic encouragement.\n`;
-      instruction += `Then ask ONE follow-up question to move forward.\n\n`;
+      instruction += `Acknowledge their feeling in ONE sentence.\n`;
+      instruction += `Then cite a CONCRETE counterexample with specific numbers or timeframes.\n`;
+      instruction += `Then ask ONE follow-up question to move forward.\n`;
+      instruction += `Do NOT use generic encouragement. Do NOT include field labels or parentheses.\n\n`;
     }
   }
 
