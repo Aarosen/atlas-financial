@@ -12,100 +12,41 @@ import { ArrowUp, Mic, Pencil, Square } from 'lucide-react';
 import { humanizeFieldList } from '@/lib/ui/fieldLabels';
 import { MetricCardPayload } from '@/components/MetricCardPayload';
 import { extractMetricCardFromResponse } from '@/lib/ai/metricCardPrompt';
+import ReactMarkdown from 'react-markdown';
 
 function renderMessageText(text: string): ReactNode {
-  // Render message text with proper formatting for paragraphs, lists
-  const t = String(text || '').replace(/\r\n/g, '\n');
-  const lines = t.split('\n');
-
-  const blocks: Array<{ kind: 'p' | 'ul' | 'ol'; lines: string[] }> = [];
-  let cur: { kind: 'p' | 'ul' | 'ol'; lines: string[] } | null = null;
-
-  const flush = () => {
-    if (!cur) return;
-    if (cur.kind === 'p') {
-      const joined = cur.lines.join('\n').trim();
-      if (joined) blocks.push({ kind: 'p', lines: [joined] });
-    } else {
-      const items = cur.lines.map((x) => x.trim()).filter(Boolean);
-      if (items.length) blocks.push({ kind: cur.kind, lines: items });
-    }
-    cur = null;
-  };
-
-  const isUl = (s: string) => /^\s*[-*]\s+/.test(s);
-  const isOl = (s: string) => /^\s*(\d+)[.)]\s+/.test(s);
-  const stripUl = (s: string) => s.replace(/^\s*[-*]\s+/, '');
-  const stripOl = (s: string) => s.replace(/^\s*(\d+)[.)]\s+/, '');
-
-  for (const ln of lines) {
-    const line = ln ?? '';
-    const blank = line.trim().length === 0;
-    if (blank) {
-      flush();
-      continue;
-    }
-
-    if (isUl(line)) {
-      const item = stripUl(line);
-      if (!cur || cur.kind !== 'ul') {
-        flush();
-        cur = { kind: 'ul', lines: [] };
-      }
-      cur.lines.push(item);
-      continue;
-    }
-
-    if (isOl(line)) {
-      const item = stripOl(line);
-      if (!cur || cur.kind !== 'ol') {
-        flush();
-        cur = { kind: 'ol', lines: [] };
-      }
-      cur.lines.push(item);
-      continue;
-    }
-
-    if (!cur || cur.kind !== 'p') {
-      flush();
-      cur = { kind: 'p', lines: [] };
-    }
-    cur.lines.push(line);
-  }
-  flush();
-
-  if (blocks.length === 0) return <></>;
-
+  // Use react-markdown to properly render markdown including bold, italic, lists, etc.
   return (
-    <div style={{ display: 'grid', gap: 10 }}>
-      {blocks.map((b, i) => {
-        if (b.kind === 'p') {
-          return (
-            <div key={i} style={{ whiteSpace: 'pre-wrap' }}>
-              {b.lines[0]}
-            </div>
-          );
-        }
-
-        if (b.kind === 'ul') {
-          return (
-            <ul key={i} style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
-              {b.lines.map((it, j) => (
-                <li key={j}>{it}</li>
-              ))}
-            </ul>
-          );
-        }
-
-        return (
-          <ol key={i} style={{ margin: 0, paddingLeft: 18, display: 'grid', gap: 6 }}>
-            {b.lines.map((it, j) => (
-              <li key={j}>{it}</li>
-            ))}
+    <ReactMarkdown
+      components={{
+        p: ({ children }) => <div style={{ marginBottom: 8 }}>{children}</div>,
+        strong: ({ children }) => <strong style={{ fontWeight: 600 }}>{children}</strong>,
+        em: ({ children }) => <em>{children}</em>,
+        ul: ({ children }) => (
+          <ul style={{ margin: '8px 0', paddingLeft: 18, display: 'grid', gap: 6 }}>
+            {children}
+          </ul>
+        ),
+        ol: ({ children }) => (
+          <ol style={{ margin: '8px 0', paddingLeft: 18, display: 'grid', gap: 6 }}>
+            {children}
           </ol>
-        );
-      })}
-    </div>
+        ),
+        li: ({ children }) => <li style={{ marginBottom: 4 }}>{children}</li>,
+        code: ({ children }) => (
+          <code style={{ backgroundColor: '#f0f0f0', padding: '2px 6px', borderRadius: 3, fontFamily: 'monospace' }}>
+            {children}
+          </code>
+        ),
+        pre: ({ children }) => (
+          <pre style={{ backgroundColor: '#f5f5f5', padding: 12, borderRadius: 6, overflow: 'auto', marginBottom: 8 }}>
+            {children}
+          </pre>
+        ),
+      }}
+    >
+      {String(text || '')}
+    </ReactMarkdown>
   );
 }
 
