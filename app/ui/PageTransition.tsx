@@ -7,18 +7,25 @@ import type { ReactNode } from 'react';
 export default function PageTransition({ children }: { children: ReactNode }) {
   const pathname = usePathname();
   const reduce = useReducedMotion();
+  const ease: [number, number, number, number] = [0.2, 0.9, 0.2, 1];
 
-  return reduce ? (
-    <>{children}</>
-  ) : (
+  const motionProps = reduce
+    ? {
+        initial: { opacity: 1, y: 0 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 1, y: 0 },
+        transition: { duration: 0 },
+      }
+    : {
+        initial: { opacity: 0, y: 10 },
+        animate: { opacity: 1, y: 0 },
+        exit: { opacity: 0, y: -6 },
+        transition: { duration: 0.22, ease },
+      };
+
+  return (
     <AnimatePresence mode="wait" initial={false}>
-      <motion.div
-        key={pathname}
-        initial={{ opacity: 0, y: 10 }}
-        animate={{ opacity: 1, y: 0 }}
-        exit={{ opacity: 0, y: -6 }}
-        transition={{ duration: 0.22, ease: [0.2, 0.9, 0.2, 1] }}
-      >
+      <motion.div key={pathname} {...motionProps}>
         {children}
       </motion.div>
     </AnimatePresence>

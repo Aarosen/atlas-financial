@@ -1,6 +1,7 @@
 import type { ChatMessage, FinancialState, Strategy } from './types';
 import type { AtlasMode } from './atlasConversationController';
-import { generateFullOpeningMessage } from '../ai/initialGreetingEngine';
+import { generateStableOpeningMessage } from '../ai/initialGreetingEngine';
+import type { SupportedLanguage } from '@/lib/ai/slangMapper';
 
 export type Screen = 'landing' | 'conversation' | 'summary' | 'tier' | 'dashboard' | 'strategy' | 'plan' | 'settings';
 
@@ -52,20 +53,12 @@ export type ConversationEvent =
   | { type: 'SEND_ASKED'; text: string; questionKey?: keyof FinancialState }
   | { type: 'SEND_STRATEGY_READY'; baseline: Strategy }
   | { type: 'SEND_FAILED'; err: string }
-  | { type: 'RESET' };
+  | { type: 'RESET'; language?: SupportedLanguage };
 
-function createInitialAssistantMessage(): ChatMessage {
-  const timeOfDay = (() => {
-    const hour = new Date().getHours();
-    if (hour >= 5 && hour < 12) return 'morning';
-    if (hour >= 12 && hour < 17) return 'afternoon';
-    if (hour >= 17 && hour < 21) return 'evening';
-    return 'night'; // 21:00 - 04:59 (9 PM - 4:59 AM)
-  })();
-
+function createInitialAssistantMessage(language: SupportedLanguage): ChatMessage {
   return {
     r: 'a',
-    t: generateFullOpeningMessage({ timeOfDay }),
+    t: generateStableOpeningMessage(language),
   };
 }
 
@@ -84,11 +77,11 @@ export function createDefaultFin(): FinancialState {
   };
 }
 
-export function createInitialConversationState(initialScreen: Screen = 'landing'): ConversationState {
+export function createInitialConversationState(initialScreen: Screen = 'landing', language: SupportedLanguage = 'en'): ConversationState {
   return {
     scr: initialScreen,
     baseline: null,
-    msgs: [createInitialAssistantMessage()],
+    msgs: [createInitialAssistantMessage(language)],
     inp: '',
     fin: createDefaultFin(),
     pendingFin: null,
@@ -111,11 +104,13 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
     case 'NAVIGATE':
       return { ...state, scr: ev.scr };
 
-    case 'RESTORE':
-      return ev.state;
+    case 'RESTORE': {
+      return { ...ev.state, inp: state.inp };
+    }
 
-    case 'SET_INPUT':
+    case 'SET_INPUT': {
       return { ...state, inp: ev.text };
+    }
 
     case 'SET_PENDING_FIN':
       return { ...state, pendingFin: ev.fin };
@@ -224,7 +219,7 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
       return {
         scr: 'landing',
         baseline: null,
-        msgs: [createInitialAssistantMessage()],
+        msgs: [createInitialAssistantMessage(ev.language || 'en')],
         inp: '',
         fin: createDefaultFin(),
         pendingFin: null,

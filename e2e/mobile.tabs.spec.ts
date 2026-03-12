@@ -1,8 +1,10 @@
 import { expect, test } from '@playwright/test';
+import { waitForAppReady } from './helpers';
 
 test('R4: mobile tab bar preserves talk draft and exposes tab roles', async ({ page }) => {
   await page.setViewportSize({ width: 390, height: 844 });
   await page.goto('/conversation');
+  await waitForAppReady(page);
 
   const tablist = page.getByRole('tablist', { name: 'Primary' });
   await expect(tablist).toBeVisible();

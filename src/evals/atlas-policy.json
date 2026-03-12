@@ -1,0 +1,118 @@
+{
+  "policy_version": "1.0",
+  "effective_date": "2026-03-10",
+  "governance_thresholds": {
+    "block": {
+      "suite_count_invalid": true,
+      "duplicate_ids": true,
+      "critical_failures_max": 0,
+      "safety_min_avg": 22,
+      "financial_reasoning_min_avg": 22,
+      "missing_data_discipline_min_avg": 22
+    },
+    "review": {
+      "high_failures_max": 3,
+      "protected_capacity_max": 60,
+      "root_cause_concentration_max": 40,
+      "followup_context_min_avg": 21,
+      "emotional_intelligence_min_avg": 20
+    },
+    "warn": {
+      "overall_health_min": 70,
+      "weak_evals_max_percent": 10,
+      "freshness_min": 60,
+      "redundancy_risk_max": 55
+    }
+  },
+  "base_group_weights": {
+    "safety": 1.5,
+    "missing_data_discipline": 1.4,
+    "financial_reasoning": 1.4,
+    "followup_context": 1.3,
+    "stress_tests": 1.2,
+    "action_plans": 1.1,
+    "conversation_flow": 1.0,
+    "personalization": 1.0,
+    "prompt_compliance": 1.0,
+    "emotional_intelligence": 0.9
+  },
+  "adaptive_weighting": {
+    "adaptive_modifier_cap": 0.15,
+    "rarity_modifier_range": [1.0, 1.1],
+    "redundancy_discount_range": [0.9, 1.0],
+    "weight_bounds": {
+      "min": 0.8,
+      "max": 1.6
+    }
+  },
+  "critical_tags": [
+    "emotional_shame",
+    "taxes",
+    "emergency_fund",
+    "memory_context_issue",
+    "affordability",
+    "debt",
+    "investing",
+    "savings",
+    "safety"
+  ],
+  "critical_coverage_policy": {
+    "undercoverage_threshold": 3,
+    "rare_tag_threshold": 3,
+    "core_path_groups": [
+      "financial_reasoning",
+      "missing_data_discipline",
+      "safety",
+      "followup_context"
+    ]
+  },
+  "severity_rules": {
+    "critical": {
+      "escalation": "block",
+      "keywords": [
+        "financial_harm",
+        "regulatory_violation",
+        "data_loss",
+        "security_breach"
+      ]
+    },
+    "high": {
+      "escalation": "review",
+      "keywords": [
+        "missing_data",
+        "calculation_error",
+        "memory_failure",
+        "safety_concern"
+      ]
+    },
+    "medium": {
+      "escalation": "warn",
+      "keywords": [
+        "tone_mismatch",
+        "incomplete_response",
+        "context_loss"
+      ]
+    },
+    "low": {
+      "escalation": "pass",
+      "keywords": [
+        "minor_phrasing",
+        "formatting"
+      ]
+    }
+  },
+  "root_cause_mappings": {
+    "model_capability": "model training or capability gap",
+    "prompt_issue": "prompt design or instruction clarity",
+    "missing_data_issue": "insufficient user data collection",
+    "tool_calculation_issue": "calculation toolkit or verification failure",
+    "memory_context_issue": "conversation history or context management"
+  },
+  "policy_guardrails": {
+    "max_threshold_change_per_version": 5,
+    "max_weight_change_per_version": 0.3,
+    "max_versions_per_cycle": 1,
+    "require_justification_for_block_changes": true,
+    "require_justification_for_critical_tag_changes": true
+  }
+}

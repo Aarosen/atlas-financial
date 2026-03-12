@@ -1,11 +1,20 @@
 'use client';
 
-import { useState, useRef } from 'react';
+import { useEffect, useRef, useState } from 'react';
 import { ConversationScreen } from '@/screens/Conversation';
 import type { ChatMessage } from '@/lib/state/types';
 
 export default function DebugConversationPage() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light';
+    try {
+      const stored = window.localStorage.getItem('atlas:theme');
+      if (stored === 'light' || stored === 'dark') return stored;
+    } catch {
+      // ignore
+    }
+    return 'light';
+  });
   const [inp, setInp] = useState('');
   const [msgs, setMsgs] = useState<ChatMessage[]>([
     { r: 'u', t: 'My income is $4000/month.' },
@@ -17,6 +26,15 @@ export default function DebugConversationPage() {
   ]);
   const botRef = useRef<HTMLDivElement>(null);
   const caseParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('case') : null;
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      window.localStorage.setItem('atlas:theme', theme);
+    } catch {
+      // ignore
+    }
+  }, [theme]);
 
   // Generate different conversation states based on case parameter
   const getConversationState = () => {

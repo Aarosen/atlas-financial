@@ -1,4 +1,5 @@
 import type { FinancialState } from '../state/types';
+import type { SupportedLanguage } from '@/lib/ai/slangMapper';
 
 export type ClaudeApiStatus = 'unknown' | 'online' | 'degraded' | 'offline';
 
@@ -37,12 +38,12 @@ export class ClaudeClient {
     }
   }
 
-  async extract(msg: string, _ctx: Partial<FinancialState> = {}) {
+  async extract(msg: string, _ctx: Partial<FinancialState> = {}, opts?: { language?: SupportedLanguage }) {
     try {
       const r = await fetch(this.ep, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'extract', messages: [{ role: 'user', content: msg }] }),
+        body: JSON.stringify({ type: 'extract', messages: [{ role: 'user', content: msg }], language: opts?.language }),
       });
       if (!r.ok) {
         this._lastErrorStatus = r.status;
@@ -79,6 +80,7 @@ export class ClaudeClient {
     mode?: 'short' | 'explain';
     memorySummary?: string | null;
     fin?: Partial<FinancialState> | null;
+    language?: SupportedLanguage;
   }): Promise<{ ok: boolean; canceled: boolean }> {
     const { question, onDelta, signal, mode, memorySummary, fin } = args;
     const slow = String(question || '').toLowerCase().includes('slowstream');
@@ -87,7 +89,7 @@ export class ClaudeClient {
       const r = await fetch(this.ep, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, messages: args.msgs, question, memorySummary, fin: fin ?? null }),
+        body: JSON.stringify({ type, messages: args.msgs, question, memorySummary, fin: fin ?? null, language: args.language }),
         signal,
       });
 
@@ -164,7 +166,7 @@ export class ClaudeClient {
   async chat(
     msgs: Array<{ role: 'user' | 'assistant'; content: string }>,
     missing: string[],
-    args?: { memorySummary?: string | null; fin?: Partial<FinancialState> | null }
+    args?: { memorySummary?: string | null; fin?: Partial<FinancialState> | null; language?: SupportedLanguage }
   ) {
     try {
       const r = await fetch(this.ep, {
@@ -176,6 +178,7 @@ export class ClaudeClient {
           missing,
           memorySummary: args?.memorySummary ?? null,
           fin: args?.fin ?? null,
+          language: args?.language,
         }),
       });
       if (!r.ok) {

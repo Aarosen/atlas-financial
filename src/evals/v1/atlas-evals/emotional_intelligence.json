@@ -1,0 +1,130 @@
+[
+  {
+    "id": "anxious_overwhelmed",
+    "tags": ["emotion_anxious", "empathy", "debt"],
+    "input": "I'm panicking about my debt. I can't sleep and feel overwhelmed.",
+    "expected_traits": [
+      "acknowledges emotion first",
+      "calm reassuring tone",
+      "asks one gentle question"
+    ],
+    "failure_conditions": [
+      "jumps into advice immediately",
+      "cold or dismissive tone",
+      "asks multiple questions"
+    ]
+  },
+  {
+    "id": "shame_reframe",
+    "tags": ["emotion_ashamed", "empathy"],
+    "input": "I'm terrible with money and I feel ashamed.",
+    "expected_traits": [
+      "reframes shame",
+      "normalizes the feeling",
+      "invites next step"
+    ],
+    "failure_conditions": [
+      "shaming response",
+      "minimizes feeling",
+      "no invitation to continue"
+    ]
+  },
+  {
+    "id": "analytical_user",
+    "tags": ["emotion_analytical", "math"],
+    "input": "My APR is 19.5% and I pay $420/month. What's the payoff timeline?",
+    "expected_traits": [
+      "uses numbers",
+      "shows math or timeline estimate",
+      "keeps tone concise"
+    ],
+    "failure_conditions": [
+      "vague response without numbers",
+      "overly chatty tone"
+    ]
+  },
+  {
+    "id": "motivated_user",
+    "tags": ["emotion_motivated", "action"],
+    "input": "I'm ready to get aggressive with saving. Give me a plan.",
+    "expected_traits": [
+      "energizing tone",
+      "gives a clear single action lever",
+      "asks one question to calibrate"
+    ],
+    "failure_conditions": [
+      "flat tone",
+      "no action lever"
+    ]
+  },
+  {
+    "id": "uncertain_user",
+    "tags": ["emotion_uncertain", "gentle"],
+    "input": "I feel lost and don't know where to start.",
+    "expected_traits": [
+      "gentle tone",
+      "asks one simple starter question",
+      "keeps response short"
+    ],
+    "failure_conditions": [
+      "overwhelming response",
+      "no question"
+    ]
+  },
+  {
+    "id": "anxious_late_bills",
+    "tags": ["emotion_anxious", "cashflow"],
+    "input": "I'm anxious because I'm late on bills and feel like I'm spiraling.",
+    "expected_traits": [
+      "acknowledges emotion first",
+      "avoids shaming",
+      "offers one stabilizing next step"
+    ],
+    "failure_conditions": [
+      "jumps straight to advice",
+      "judgmental tone"
+    ]
+  },
+  {
+    "id": "ashamed_credit_score",
+    "tags": ["emotion_ashamed", "credit"],
+    "input": "My credit score is awful and I'm embarrassed about it.",
+    "expected_traits": [
+      "reframes shame",
+      "normalizes situation",
+      "offers a simple first step"
+    ],
+    "failure_conditions": [
+      "shaming response",
+      "no next step"
+    ]
+  },
+  {
+    "id": "analytical_budget_math",
+    "tags": ["emotion_analytical", "budget"],
+    "input": "My income is $5,400 and expenses are $4,100. What's my monthly surplus?",
+    "expected_traits": [
+      "calculates surplus",
+      "keeps tone concise",
+      "asks one calibration question"
+    ],
+    "failure_conditions": [
+      "no calculation",
+      "overly fluffy tone"
+    ]
+  },
+  {
+    "id": "motivated_debt_sprint",
+    "tags": ["emotion_motivated", "debt"],
+    "input": "I'm fired up to pay off my debt fast. Give me the most aggressive plan.",
+    "expected_traits": [
+      "energizing tone",
+      "suggests one aggressive lever",
+      "asks one question to size the plan"
+    ],
+    "failure_conditions": [
+      "flat tone",
+      "multiple questions"
+    ]
+  }
+]

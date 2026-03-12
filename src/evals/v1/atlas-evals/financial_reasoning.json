@@ -1,0 +1,255 @@
+[
+  {
+    "id": "debt_vs_investment",
+    "tags": ["debt", "interest", "tradeoff"],
+    "input": "I have $6,000 in credit card debt at 24% interest. Should I invest or pay the debt?",
+    "expected_traits": [
+      "prioritizes paying high interest debt",
+      "explains compounding interest",
+      "does not recommend investing first"
+    ],
+    "failure_conditions": [
+      "recommends investing before debt payoff",
+      "ignores interest rate",
+      "gives generic advice without explanation"
+    ]
+  },
+  {
+    "id": "savings_rate",
+    "tags": ["savings", "cashflow"],
+    "input": "I make $5,000/month after tax and spend $4,800. Am I doing okay financially?",
+    "expected_traits": [
+      "identifies low savings rate",
+      "calculates savings amount",
+      "suggests improvement lever"
+    ],
+    "failure_conditions": [
+      "says you're doing great without numbers",
+      "does not calculate savings"
+    ]
+  },
+  {
+    "id": "emergency_fund",
+    "tags": ["emergency_fund", "safety"],
+    "input": "My monthly expenses are $2,300. How big should my emergency fund be?",
+    "expected_traits": [
+      "calculates target based on expenses",
+      "provides reasoning",
+      "gives actionable saving strategy"
+    ],
+    "failure_conditions": [
+      "gives a range without tying to expenses",
+      "no next step"
+    ]
+  },
+  {
+    "id": "debt_avalanche_math",
+    "tags": ["debt", "math", "interest"],
+    "input": "I owe $4,000 at 24% APR and $6,000 at 7%. I can pay $300 extra. Which should I target?",
+    "expected_traits": [
+      "prioritizes highest interest debt",
+      "explains interest cost difference",
+      "keeps minimums on other debts"
+    ],
+    "failure_conditions": [
+      "targets lower rate debt first without reason",
+      "suggests stopping minimum payments"
+    ]
+  },
+  {
+    "id": "emergency_fund_variable_income",
+    "tags": ["emergency_fund", "income_variability"],
+    "input": "I freelance and my monthly expenses are about $2,800. How much should I keep for emergencies?",
+    "expected_traits": [
+      "recommends higher months for variable income",
+      "ties target to expenses",
+      "suggests gradual build plan"
+    ],
+    "failure_conditions": [
+      "gives generic 3 months without adjustment",
+      "no link to expenses"
+    ]
+  },
+  {
+    "id": "savings_vs_spending_ratio",
+    "tags": ["savings", "ratio"],
+    "input": "My take-home is $4,200 and I save $300. Is that good?",
+    "expected_traits": [
+      "calculates savings rate",
+      "benchmarks savings rate",
+      "suggests one improvement lever"
+    ],
+    "failure_conditions": [
+      "no savings rate calculation",
+      "no benchmark"
+    ]
+  },
+  {
+    "id": "balance_transfer_math",
+    "tags": ["debt", "interest", "math"],
+    "input": "I can move my $5,000 balance to a 0% card for 12 months with a 3% fee. Is that worth it?",
+    "expected_traits": [
+      "calculates transfer fee",
+      "explains interest savings",
+      "flags payoff deadline risk"
+    ],
+    "failure_conditions": [
+      "ignores transfer fee",
+      "no comparison to interest cost"
+    ]
+  },
+  {
+    "id": "credit_utilization",
+    "tags": ["credit", "ratio"],
+    "input": "My credit limit is $6,000 and I usually carry $2,200. Is that hurting my score?",
+    "expected_traits": [
+      "calculates utilization percentage",
+      "benchmarks against 30%",
+      "suggests lowering utilization"
+    ],
+    "failure_conditions": [
+      "no utilization math",
+      "no benchmark"
+    ]
+  },
+  {
+    "id": "student_loan_rate_threshold",
+    "tags": ["debt", "tradeoff"],
+    "input": "My student loan rate is 4.2%. Should I pay extra or invest?",
+    "expected_traits": [
+      "compares rate vs expected returns",
+      "notes risk and preference",
+      "avoids definitive investment advice"
+    ],
+    "failure_conditions": [
+      "definitive investment recommendation",
+      "ignores interest rate"
+    ]
+  },
+  {
+    "id": "apr_min_payment_cost",
+    "tags": ["debt", "math"],
+    "input": "My card is $3,200 at 25% APR and the minimum is $85. How much is that costing me?",
+    "expected_traits": [
+      "estimates interest cost",
+      "explains why minimums are slow",
+      "suggests a higher payment"
+    ],
+    "failure_conditions": [
+      "no cost estimate",
+      "no explanation"
+    ]
+  },
+  {
+    "id": "rent_ratio_reasoning",
+    "tags": ["housing", "ratio"],
+    "input": "I make $4,800 take-home and rent is $2,100. Is that too high?",
+    "expected_traits": [
+      "calculates rent ratio",
+      "benchmarks against typical range",
+      "suggests one lever"
+    ],
+    "failure_conditions": [
+      "no ratio",
+      "no benchmark"
+    ]
+  },
+  {
+    "id": "bnpl_cashflow",
+    "tags": ["cashflow", "bnpl"],
+    "input": "I use buy-now-pay-later for clothes and gym gear. Is that okay?",
+    "expected_traits": [
+      "flags cashflow risk",
+      "asks about total BNPL payments",
+      "suggests a cap"
+    ],
+    "failure_conditions": [
+      "encourages BNPL",
+      "no questions asked"
+    ]
+  },
+  {
+    "id": "car_total_cost",
+    "tags": ["auto", "tradeoff"],
+    "input": "I can afford $500/month for a car payment. Is that reasonable?",
+    "expected_traits": [
+      "asks for income or expenses",
+      "mentions insurance/maintenance",
+      "avoids approving without context"
+    ],
+    "failure_conditions": [
+      "approves without data",
+      "ignores total cost"
+    ]
+  },
+  {
+    "id": "emergency_fund_dependents",
+    "tags": ["emergency_fund", "family"],
+    "input": "I have a toddler and monthly expenses are about $3,400. How much should I keep in savings?",
+    "expected_traits": [
+      "recommends higher buffer for dependents",
+      "ties to expenses",
+      "suggests a build plan"
+    ],
+    "failure_conditions": [
+      "generic answer without dependents consideration",
+      "no plan"
+    ]
+  },
+  {
+    "id": "roth_vs_traditional_basic",
+    "tags": ["retirement", "tax"],
+    "input": "I'm 27 and make $72k. Roth or traditional 401k?",
+    "expected_traits": [
+      "explains tax bracket tradeoff",
+      "asks about current vs future tax rate",
+      "avoids absolute recommendation"
+    ],
+    "failure_conditions": [
+      "absolute recommendation without questions",
+      "no tax tradeoff explanation"
+    ]
+  },
+  {
+    "id": "savings_goal_timeline",
+    "tags": ["savings", "math"],
+    "input": "I want $8,000 for a move in 10 months. I can save $500/month. Am I on track?",
+    "expected_traits": [
+      "calculates total savings",
+      "states gap or surplus",
+      "suggests adjustment"
+    ],
+    "failure_conditions": [
+      "no math",
+      "no clear on-track answer"
+    ]
+  },
+  {
+    "id": "side_hustle_income_volatility",
+    "tags": ["income", "variability"],
+    "input": "My side hustle brings in $700 some months and $0 others. Should I rely on it for rent?",
+    "expected_traits": [
+      "flags volatility risk",
+      "suggests buffering",
+      "avoids relying on unstable income"
+    ],
+    "failure_conditions": [
+      "encourages reliance without buffer",
+      "no volatility mention"
+    ]
+  },
+  {
+    "id": "hsa_value",
+    "tags": ["health", "tax"],
+    "input": "Is it worth using an HSA if I’m on a high-deductible plan?",
+    "expected_traits": [
+      "mentions triple tax advantage",
+      "asks about cashflow to cover deductible",
+      "keeps educational framing"
+    ],
+    "failure_conditions": [
+      "no tax advantage mention",
+      "gives directive without context"
+    ]
+  }
+]

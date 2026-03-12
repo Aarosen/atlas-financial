@@ -1,0 +1,80 @@
+[
+  {
+    "id": "multi_step_budget",
+    "tags": ["stress", "math"],
+    "input": "Income $5200. Rent $2100. Food $800. Debt $400. How much could I save per year?",
+    "expected_traits": [
+      "correct arithmetic",
+      "annual savings calculation"
+    ],
+    "failure_conditions": [
+      "math error",
+      "no annual savings"
+    ]
+  },
+  {
+    "id": "financial_tradeoff",
+    "tags": ["stress", "tradeoff"],
+    "input": "I have $8,000 in savings and $4,000 in credit card debt at 22%. What should I do?",
+    "expected_traits": [
+      "recommends debt payoff",
+      "explains interest tradeoff"
+    ],
+    "failure_conditions": [
+      "recommends keeping debt",
+      "no tradeoff explanation"
+    ]
+  },
+  {
+    "id": "compound_interest_math",
+    "tags": ["stress", "math"],
+    "input": "If I invest $300/month for 25 years at 6%, how much will I have?",
+    "expected_traits": [
+      "correct compounding logic",
+      "gives a numerical estimate"
+    ],
+    "failure_conditions": [
+      "no number",
+      "obvious math error"
+    ]
+  },
+  {
+    "id": "debt_payoff_timeline",
+    "tags": ["stress", "math", "debt"],
+    "input": "I owe $9,000 at 20% APR and can pay $250/month. How long to pay it off?",
+    "expected_traits": [
+      "estimates payoff timeline",
+      "flags if payment is too low"
+    ],
+    "failure_conditions": [
+      "no timeline",
+      "ignores interest"
+    ]
+  },
+  {
+    "id": "multi_line_budget_math",
+    "tags": ["stress", "math", "budget"],
+    "input": "Income $6,100. Rent $2,100. Utilities $180. Car $420. Groceries $650. Subscriptions $90. How much is left per month?",
+    "expected_traits": [
+      "correct arithmetic",
+      "states monthly surplus"
+    ],
+    "failure_conditions": [
+      "math error",
+      "no surplus stated"
+    ]
+  },
+  {
+    "id": "annual_savings_projection",
+    "tags": ["stress", "math", "savings"],
+    "input": "I save $350/month now and plan to raise it to $500/month in 6 months. How much will I save in a year?",
+    "expected_traits": [
+      "calculates two-phase savings",
+      "states total annual savings"
+    ],
+    "failure_conditions": [
+      "no two-phase math",
+      "no annual total"
+    ]
+  }
+]

@@ -1,0 +1,148 @@
+[
+  {
+    "id": "ask_missing_data",
+    "tags": ["conversation_flow", "missing_data"],
+    "input": "I want to save more money. What should I do?",
+    "expected_traits": [
+      "asks for income or expenses",
+      "does not give advice immediately"
+    ],
+    "failure_conditions": [
+      "gives advice before asking for data",
+      "asks multiple questions"
+    ]
+  },
+  {
+    "id": "one_question_rule",
+    "tags": ["conversation_flow", "one_question"],
+    "input": "I'm trying to get my finances together",
+    "expected_traits": [
+      "asks exactly one question",
+      "explains why number matters"
+    ],
+    "failure_conditions": [
+      "asks more than one question",
+      "no reason for question"
+    ]
+  },
+  {
+    "id": "short_concise_reply",
+    "tags": ["conversation_flow", "concise"],
+    "input": "Can you explain APR?",
+    "expected_traits": [
+      "brief explanation",
+      "one short teaching moment",
+      "asks one follow-up question"
+    ],
+    "failure_conditions": [
+      "rambling response",
+      "multiple questions"
+    ]
+  },
+  {
+    "id": "no_multi_topic",
+    "tags": ["conversation_flow", "focus"],
+    "input": "Help me with debt and also investing.",
+    "expected_traits": [
+      "chooses one topic for this turn",
+      "asks which to prioritize"
+    ],
+    "failure_conditions": [
+      "tries to solve both at once",
+      "no clarifying question"
+    ]
+  },
+  {
+    "id": "no_it_depends_without_question",
+    "tags": ["conversation_flow", "prompt_trap"],
+    "input": "Should I move out or stay with roommates?",
+    "expected_traits": [
+      "asks one clarifying question",
+      "avoids vague 'it depends' without asking"
+    ],
+    "failure_conditions": [
+      "says 'it depends' without a question",
+      "asks multiple questions"
+    ]
+  },
+  {
+    "id": "single_question_only",
+    "tags": ["conversation_flow", "one_question"],
+    "input": "I want to start investing but I'm nervous.",
+    "expected_traits": [
+      "asks exactly one question",
+      "keeps tone calm"
+    ],
+    "failure_conditions": [
+      "asks multiple questions",
+      "overly complex response"
+    ]
+  },
+  {
+    "id": "asks_before_calculation",
+    "tags": ["conversation_flow", "missing_data"],
+    "input": "Can you tell me how fast I can pay off my credit card?",
+    "expected_traits": [
+      "asks for balance or APR",
+      "does not estimate timeline yet"
+    ],
+    "failure_conditions": [
+      "estimates timeline without data",
+      "asks multiple questions"
+    ]
+  },
+  {
+    "id": "keeps_response_concise",
+    "tags": ["conversation_flow", "concise"],
+    "input": "What is a Roth IRA?",
+    "expected_traits": [
+      "short definition",
+      "one teaching moment",
+      "one follow-up question"
+    ],
+    "failure_conditions": [
+      "rambling explanation",
+      "multiple questions"
+    ]
+  },
+  {
+    "id": "no_form_like_questions",
+    "tags": ["conversation_flow", "natural"],
+    "input": "I feel behind on money stuff.",
+    "expected_traits": [
+      "acknowledges emotion",
+      "asks one gentle question"
+    ],
+    "failure_conditions": [
+      "asks a list of questions",
+      "ignores emotion"
+    ]
+  },
+  {
+    "id": "clear_next_step",
+    "tags": ["conversation_flow", "next_step"],
+    "input": "I don't know where to start with budgeting.",
+    "expected_traits": [
+      "asks for one key number",
+      "explains why it matters",
+      "ends with a single question"
+    ],
+    "failure_conditions": [
+      "no question",
+      "multiple questions"
+    ]
+  },
+  {
+    "id": "no_generic_close",
+    "tags": ["conversation_flow", "prompt_compliance"],
+    "input": "Thanks, that helps.",
+    "expected_traits": [
+      "offers one small next step",
+      "does not say 'let me know if you have any other questions'"
+    ],
+    "failure_conditions": [
+      "uses generic closing",
+      "no next step"
+    ]
+  }
+]

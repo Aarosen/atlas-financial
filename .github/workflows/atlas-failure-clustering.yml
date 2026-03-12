@@ -1,0 +1,35 @@
+name: Atlas Failure Clustering
+
+on:
+  schedule:
+    - cron: "0 9 * * 1" # Weekly on Monday 09:00 UTC
+  workflow_dispatch:
+
+jobs:
+  cluster-failures:
+    runs-on: ubuntu-latest
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Setup Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+          cache: npm
+
+      - name: Install dependencies
+        run: npm ci
+
+      - name: Run failure clustering
+        run: |
+          cd src/evals
+          npm run eval:failure:cluster
+
+      - name: Upload failure clustering artifacts
+        uses: actions/upload-artifact@v4
+        with:
+          name: atlas-failure-clustering
+          path: |
+            src/evals/atlas-failure-clusters.md
+            src/evals/atlas-eval-candidates.json

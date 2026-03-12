@@ -20,14 +20,11 @@ export function LanguageSelector({
         value={currentLanguage}
         onChange={(e) => onLanguageChange(e.target.value as SupportedLanguage)}
         aria-label="Language"
+        className="btn btnSecondary btnMd"
         style={{
-          padding: '8px 12px',
-          borderRadius: '6px',
-          border: '1px solid var(--ink3)',
-          backgroundColor: 'var(--bg)',
-          color: 'var(--ink)',
-          fontSize: '14px',
-          fontWeight: 500,
+          appearance: 'none',
+          WebkitAppearance: 'none',
+          paddingRight: 32,
           cursor: 'pointer',
         }}
       >

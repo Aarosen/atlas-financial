@@ -1,6 +1,6 @@
 'use client';
 
-import { useState } from 'react';
+import { useEffect, useState } from 'react';
 import { Button } from '@/components/Buttons';
 import { Card } from '@/components/Card';
 import { Textarea } from '@/components/TextInput';
@@ -8,7 +8,25 @@ import { IconButton } from '@/components/IconButton';
 import { Sun, Moon } from 'lucide-react';
 
 export default function DebugUIPage() {
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light';
+    try {
+      const stored = window.localStorage.getItem('atlas:theme');
+      if (stored === 'light' || stored === 'dark') return stored;
+    } catch {
+      // ignore
+    }
+    return 'light';
+  });
+
+  useEffect(() => {
+    document.documentElement.setAttribute('data-theme', theme);
+    try {
+      window.localStorage.setItem('atlas:theme', theme);
+    } catch {
+      // ignore
+    }
+  }, [theme]);
 
   return (
     <div style={{ padding: '40px', background: 'var(--bg)', minHeight: '100vh' }}>

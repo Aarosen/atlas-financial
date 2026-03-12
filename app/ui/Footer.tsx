@@ -104,8 +104,8 @@ export default function Footer() {
                 {section.title}
               </h3>
               <ul style={{ display: 'flex', flexDirection: 'column', gap: '16px', listStyle: 'none', padding: 0, margin: 0 }}>
-                {section.items.map((item) => (
-                  <li key={item.href}>
+                {section.items.map((item, idx) => (
+                  <li key={`${section.title}-${item.label}-${idx}`}>
                     <button
                       onClick={() => window.location.href = item.href}
                       className="atlasClickCard"

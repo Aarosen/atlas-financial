@@ -1,0 +1,155 @@
+[
+  {
+    "id": "asks_before_advising",
+    "tags": ["missing_data", "one_question", "guardrail"],
+    "input": "I want to get my finances together. What should I do?",
+    "expected_traits": [
+      "asks for income or expenses",
+      "does not give advice before asking",
+      "asks exactly one question"
+    ],
+    "failure_conditions": [
+      "gives advice before asking",
+      "asks multiple questions",
+      "fails to ask for a number"
+    ]
+  },
+  {
+    "id": "explains_why_number_matters",
+    "tags": ["missing_data", "explain_why"],
+    "input": "Can you help me budget?",
+    "expected_traits": [
+      "asks for a missing number",
+      "explains why the number matters"
+    ],
+    "failure_conditions": [
+      "asks without explaining why",
+      "does not ask for a number"
+    ]
+  },
+  {
+    "id": "no_reask_known_info",
+    "tags": ["missing_data", "followup"],
+    "turns": [
+      {"role": "user", "content": "My take-home pay is $4,800 and rent is $1,900."},
+      {"role": "user", "content": "How much should I save each month?"}
+    ],
+    "expected_traits": [
+      "uses provided income and rent",
+      "does not ask for income again",
+      "asks at most one follow-up question"
+    ],
+    "failure_conditions": [
+      "re-asks income",
+      "asks more than one question"
+    ]
+  },
+  {
+    "id": "single_question_enforcement",
+    "tags": ["missing_data", "one_question"],
+    "input": "I need help paying off debt.",
+    "expected_traits": [
+      "asks exactly one question",
+      "question is about debt amount or interest rate"
+    ],
+    "failure_conditions": [
+      "asks multiple questions",
+      "asks unrelated question"
+    ]
+  },
+  {
+    "id": "complete_picture_signaling",
+    "tags": ["missing_data", "readiness"],
+    "input": "Here are my numbers: income $6,200, essentials $3,500, savings $4,000, debt $2,000 at 18%.",
+    "expected_traits": [
+      "acknowledges enough info",
+      "does not ask for more missing data immediately"
+    ],
+    "failure_conditions": [
+      "asks for unrelated missing data",
+      "ignores provided numbers"
+    ]
+  },
+  {
+    "id": "ask_income_first",
+    "tags": ["missing_data", "income"],
+    "input": "I need help with my budget but don't know where to start.",
+    "expected_traits": [
+      "asks for monthly take-home income",
+      "explains why income matters",
+      "asks exactly one question"
+    ],
+    "failure_conditions": [
+      "gives advice before asking",
+      "asks multiple questions"
+    ]
+  },
+  {
+    "id": "ask_expenses_then_pause",
+    "tags": ["missing_data", "expenses"],
+    "input": "I'm spending too much but I don't know how to fix it.",
+    "expected_traits": [
+      "asks for essentials or total expenses",
+      "does not prescribe a plan yet"
+    ],
+    "failure_conditions": [
+      "prescribes a plan before asking for numbers",
+      "asks more than one question"
+    ]
+  },
+  {
+    "id": "no_reask_savings",
+    "tags": ["missing_data", "followup"],
+    "turns": [
+      {"role": "user", "content": "I have $3,500 saved and take home $4,900."},
+      {"role": "user", "content": "Should I build emergency fund or invest?"}
+    ],
+    "expected_traits": [
+      "uses savings and income",
+      "does not ask for savings again"
+    ],
+    "failure_conditions": [
+      "re-asks savings",
+      "ignores provided data"
+    ]
+  },
+  {
+    "id": "avoid_it_depends_without_question",
+    "tags": ["missing_data", "prompt_trap"],
+    "input": "Should I pay off debt or save?",
+    "expected_traits": [
+      "asks for interest rate or debt amount",
+      "avoids generic 'it depends' without a question"
+    ],
+    "failure_conditions": [
+      "says 'it depends' without asking",
+      "no question"
+    ]
+  },
+  {
+    "id": "single_question_followup",
+    "tags": ["missing_data", "one_question"],
+    "input": "Can I afford a $450 monthly car payment?",
+    "expected_traits": [
+      "asks for take-home income or monthly expenses",
+      "asks only one question"
+    ],
+    "failure_conditions": [
+      "asks multiple questions",
+      "gives affordability answer without data"
+    ]
+  },
+  {
+    "id": "dont_ask_all_fields",
+    "tags": ["missing_data", "conversation_flow"],
+    "input": "I want help paying off my credit card.",
+    "expected_traits": [
+      "asks for balance or APR",
+      "does not ask for multiple fields at once"
+    ],
+    "failure_conditions": [
+      "asks for income, expenses, and debt in one message",
+      "no single focused question"
+    ]
+  }
+]

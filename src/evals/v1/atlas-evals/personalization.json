@@ -1,0 +1,185 @@
+[
+  {
+    "id": "car_affordability",
+    "tags": ["personalization", "auto", "affordability"],
+    "context": {
+      "income": 5200,
+      "rent": 2100,
+      "savings": 4000
+    },
+    "input": "Can I afford a $900/month car payment?",
+    "expected_traits": [
+      "references user income",
+      "evaluates affordability",
+      "does not give generic advice"
+    ],
+    "failure_conditions": [
+      "generic advice without numbers",
+      "does not mention income"
+    ]
+  },
+  {
+    "id": "spending_analysis",
+    "tags": ["personalization", "spending"],
+    "context": {
+      "monthly_food_spending": 900,
+      "income": 4200
+    },
+    "input": "Is $900 on food too much?",
+    "expected_traits": [
+      "calculates percentage of income",
+      "benchmarks spending"
+    ],
+    "failure_conditions": [
+      "no percentage calculation",
+      "no benchmark"
+    ]
+  },
+  {
+    "id": "rent_burden",
+    "tags": ["personalization", "housing"],
+    "context": {
+      "income": 4800,
+      "rent": 2200
+    },
+    "input": "Is my rent too high?",
+    "expected_traits": [
+      "calculates rent as percent of income",
+      "benchmarks against typical range",
+      "suggests one lever if high"
+    ],
+    "failure_conditions": [
+      "no percentage",
+      "generic advice"
+    ]
+  },
+  {
+    "id": "savings_goal_context",
+    "tags": ["personalization", "savings_goal"],
+    "context": {
+      "income": 6200,
+      "expenses": 4300,
+      "savings": 2500
+    },
+    "input": "I want to save $10k by next summer. Is that realistic?",
+    "expected_traits": [
+      "uses income and expenses",
+      "calculates monthly capacity",
+      "gives a yes/no with reasoning"
+    ],
+    "failure_conditions": [
+      "no numbers used",
+      "no feasibility assessment"
+    ]
+  },
+  {
+    "id": "debt_to_income_personalized",
+    "tags": ["personalization", "debt"],
+    "context": {
+      "income": 5100,
+      "debt": 18000
+    },
+    "input": "Is $18k of debt a lot for me?",
+    "expected_traits": [
+      "relates debt to income",
+      "uses a ratio",
+      "keeps tone calm"
+    ],
+    "failure_conditions": [
+      "no ratio",
+      "alarmist tone"
+    ]
+  },
+  {
+    "id": "savings_rate_low",
+    "tags": ["personalization", "savings"],
+    "context": {
+      "income": 4600,
+      "expenses": 4450
+    },
+    "input": "Am I saving enough?",
+    "expected_traits": [
+      "calculates low savings amount",
+      "references user expenses",
+      "suggests one improvement lever"
+    ],
+    "failure_conditions": [
+      "no calculation",
+      "generic encouragement"
+    ]
+  },
+  {
+    "id": "credit_utilization_personalized",
+    "tags": ["personalization", "credit"],
+    "context": {
+      "credit_limit": 8000,
+      "balance": 3200
+    },
+    "input": "Is my utilization okay?",
+    "expected_traits": [
+      "calculates utilization percent",
+      "benchmarks 30%",
+      "suggests one lever"
+    ],
+    "failure_conditions": [
+      "no utilization math",
+      "no benchmark"
+    ]
+  },
+  {
+    "id": "goal_based_budget",
+    "tags": ["personalization", "goal"],
+    "context": {
+      "income": 5400,
+      "expenses": 3800,
+      "goal": 12000
+    },
+    "input": "I want to save $12k this year. Can I do it?",
+    "expected_traits": [
+      "uses monthly surplus",
+      "calculates feasibility",
+      "states gap or surplus"
+    ],
+    "failure_conditions": [
+      "no feasibility math",
+      "no clear answer"
+    ]
+  },
+  {
+    "id": "debt_payment_affordability",
+    "tags": ["personalization", "debt"],
+    "context": {
+      "income": 5000,
+      "expenses": 3600,
+      "debt": 9000
+    },
+    "input": "Can I afford $400/month toward my debt?",
+    "expected_traits": [
+      "uses income and expenses",
+      "computes remaining cashflow",
+      "states affordability"
+    ],
+    "failure_conditions": [
+      "no cashflow math",
+      "generic response"
+    ]
+  },
+  {
+    "id": "emergency_fund_personalized",
+    "tags": ["personalization", "emergency_fund"],
+    "context": {
+      "expenses": 2600,
+      "savings": 1800
+    },
+    "input": "Am I close to an emergency fund?",
+    "expected_traits": [
+      "calculates months of expenses",
+      "references current savings",
+      "suggests next target"
+    ],
+    "failure_conditions": [
+      "no months calculation",
+      "ignores savings"
+    ]
+  }
+]

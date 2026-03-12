@@ -18,6 +18,7 @@ import { runTaxJudge }          from "./evals/llm/judgeTax";
 import { runInvestmentJudge }   from "./evals/llm/judgeInvestment";
 import { runRetirementJudge }   from "./evals/llm/judgeRetirement";
 import { printReport }          from "./reports/report";
+import { runAtlasV1Suite }      from "./v1/runner";
 
 // ── Test dataset — replace with your real Atlas I/O ─────────────────────────
 // In production: pipe Atlas's actual responses through this runner.
@@ -260,8 +261,12 @@ function getDimensionName(dim: string): string {
 const mode = (process.argv.find(a => a.startsWith("--mode=")) ?? "--mode=offline")
   .replace("--mode=", "") as EvalMode;
 
-runEvals(mode).then(report => {
+runEvals(mode).then(async report => {
   printReport(report);
+
+  if (mode !== "offline") {
+    await runAtlasV1Suite();
+  }
 
   // Gate mode: exit with error code if blockers exist (blocks CI/CD)
   if (mode === "gate" && !report.gatePass) {

@@ -1,0 +1,198 @@
+[
+  {
+    "id": "savings_goal",
+    "tags": ["savings_goal", "action_plan"],
+    "input": "I want to save $15,000 in one year. My take home pay is $5,200 and I spend $4,200.",
+    "expected_traits": [
+      "calculates monthly savings target",
+      "uses user's numbers",
+      "suggests one clear action lever"
+    ],
+    "failure_conditions": [
+      "no monthly target",
+      "ignores income or spending"
+    ]
+  },
+  {
+    "id": "debt_plan",
+    "tags": ["debt", "action_plan"],
+    "input": "I have $12,000 in credit card debt and I can afford $500/month to pay it down.",
+    "expected_traits": [
+      "estimates payoff timeline",
+      "suggests prioritization",
+      "gives concrete payment plan"
+    ],
+    "failure_conditions": [
+      "no timeline",
+      "no plan"
+    ]
+  },
+  {
+    "id": "emergency_fund_plan",
+    "tags": ["emergency_fund", "action_plan"],
+    "input": "I only have $600 saved. My essentials are $2,000/month. Help me build an emergency fund.",
+    "expected_traits": [
+      "calculates target based on expenses",
+      "sets a starter milestone",
+      "suggests a weekly or monthly savings action"
+    ],
+    "failure_conditions": [
+      "no target",
+      "no starter milestone"
+    ]
+  },
+  {
+    "id": "income_boost_plan",
+    "tags": ["income", "action_plan"],
+    "input": "My income is $3,900 and expenses are $3,700. What should I do?",
+    "expected_traits": [
+      "calculates slim surplus",
+      "recommends one specific income lever",
+      "includes next step"
+    ],
+    "failure_conditions": [
+      "no calculation",
+      "multiple unrelated levers"
+    ]
+  },
+  {
+    "id": "debt_payoff_with_budget",
+    "tags": ["debt", "budget", "action_plan"],
+    "input": "I can put $250 toward debt each month. What's my plan?",
+    "expected_traits": [
+      "summarizes monthly payment plan",
+      "asks for debt total or rate if missing",
+      "keeps to one question"
+    ],
+    "failure_conditions": [
+      "no plan",
+      "asks multiple questions"
+    ]
+  },
+  {
+    "id": "paycheck_buffer",
+    "tags": ["cashflow", "action_plan"],
+    "input": "I'm living paycheck to paycheck and always overdraft. What should I do?",
+    "expected_traits": [
+      "suggests a small starter buffer",
+      "gives a weekly or per-paycheck amount",
+      "keeps tone supportive"
+    ],
+    "failure_conditions": [
+      "no starter buffer",
+      "overly complex plan"
+    ]
+  },
+  {
+    "id": "cut_spending_plan",
+    "tags": ["spending", "action_plan"],
+    "input": "I spend about $600/month eating out and want to cut back.",
+    "expected_traits": [
+      "suggests a specific target",
+      "offers one practical lever",
+      "sets a near-term checkpoint"
+    ],
+    "failure_conditions": [
+      "no target",
+      "multiple unrelated levers"
+    ]
+  },
+  {
+    "id": "savings_automation",
+    "tags": ["savings", "action_plan"],
+    "input": "I keep forgetting to save. How do I make it automatic?",
+    "expected_traits": [
+      "recommends auto-transfer",
+      "suggests a small starter amount",
+      "asks one question about payday"
+    ],
+    "failure_conditions": [
+      "no automation suggestion",
+      "asks multiple questions"
+    ]
+  },
+  {
+    "id": "rent_increase_plan",
+    "tags": ["housing", "action_plan"],
+    "input": "My rent is going up $200 next month. What should I do?",
+    "expected_traits": [
+      "calculates monthly impact",
+      "offers one clear action lever",
+      "asks one follow-up question"
+    ],
+    "failure_conditions": [
+      "no impact calculation",
+      "no action lever"
+    ]
+  },
+  {
+    "id": "side_hustle_plan",
+    "tags": ["income", "action_plan"],
+    "input": "I want to add $400/month in income. Where do I start?",
+    "expected_traits": [
+      "suggests one realistic income lever",
+      "sets a near-term action step",
+      "keeps scope tight"
+    ],
+    "failure_conditions": [
+      "gives a long list of ideas",
+      "no concrete next step"
+    ]
+  },
+  {
+    "id": "credit_score_rebuild",
+    "tags": ["credit", "action_plan"],
+    "input": "My credit score is 590. What should I do first?",
+    "expected_traits": [
+      "prioritizes payment history and utilization",
+      "suggests one immediate action",
+      "avoids guaranteeing score gains"
+    ],
+    "failure_conditions": [
+      "guarantees score improvement",
+      "no clear first step"
+    ]
+  },
+  {
+    "id": "student_loan_strategy",
+    "tags": ["debt", "student_loans", "action_plan"],
+    "input": "I owe $22k in student loans at 5%. How should I tackle it?",
+    "expected_traits": [
+      "suggests a payment strategy",
+      "asks about monthly budget or payment capacity",
+      "keeps to one question"
+    ],
+    "failure_conditions": [
+      "no strategy",
+      "asks multiple questions"
+    ]
+  },
+  {
+    "id": "car_purchase_plan",
+    "tags": ["auto", "action_plan"],
+    "input": "I want to buy a used car for around $12k. How should I plan for it?",
+    "expected_traits": [
+      "suggests down payment target",
+      "gives a monthly savings amount",
+      "asks one question about timeline"
+    ],
+    "failure_conditions": [
+      "no down payment guidance",
+      "no timeline question"
+    ]
+  },
+  {
+    "id": "subscription_cleanup_plan",
+    "tags": ["spending", "action_plan"],
+    "input": "My subscriptions are out of control. How do I cut them down?",
+    "expected_traits": [
+      "suggests a quick audit",
+      "sets a concrete target",
+      "offers one next step"
+    ],
+    "failure_conditions": [
+      "no concrete target",
+      "multiple unrelated levers"
+    ]
+  }
+]
