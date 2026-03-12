@@ -769,7 +769,7 @@ export function ConversationScreen({
                     id="atlas-message-input"
                     name="message"
                     data-app-hydrated={appHydrated ? 'true' : 'false'}
-                    defaultValue={inp}
+                    value={inp}
                     autoFocus
                     onChange={(e) => onChangeInp(e.target.value)}
                     onInput={(e) => onChangeInp((e.currentTarget as HTMLTextAreaElement).value)}
