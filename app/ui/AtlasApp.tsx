@@ -119,6 +119,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const streamIdRef = useRef(0);
   const lastKeydownHandledRef = useRef<number | null>(null);
   const lastGreetingLanguageRef = useRef<SupportedLanguage | null>(null);
+  const sessionStateRef = useRef<Record<string, any>>({});
   const [st, dispatch] = useReducer(
     conversationReducer,
     initialScreen,
@@ -596,6 +597,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   const missing = useCallback((f: FinancialState) => NEED.filter((k) => f[k] === null || f[k] === undefined), []);
 
+  const handleSessionState = useCallback((state: Record<string, any>) => {
+    setSessionState(state);
+    sessionStateRef.current = state;
+  }, []);
+
   const doSend = useCallback(
     async (base: typeof st, ut: string) => {
       inputDraftRef.current = '';
@@ -747,14 +753,19 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               ...am,
               { role: 'assistant' as const, content: streamed.trim() || '' },
             ];
-            const followupText = (
-              await claude.chat(followupMsgs, missBefore as string[], {
-                memorySummary: st.memorySummary,
-                fin: st.fin,
-              })
-            ).trim();
+            let followupText = '';
+            await claude.chatStream({
+              msgs: followupMsgs,
+              missing: missBefore as string[],
+              memorySummary: st.memorySummary,
+              fin: st.fin,
+              sessionState: sessionStateRef.current,
+              onDelta: (t) => { followupText += t; },
+              onSessionState: handleSessionState,
+              signal: ctrl.signal,
+            });
             const fallbackText = resumeQ?.text || 'What would help you most right now?';
-            const askText = followupText || fallbackText;
+            const askText = followupText.trim() || fallbackText;
             logReplay(
               createReplayEntry({
                 role: 'assistant',
@@ -888,14 +899,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             adaptiveAsk += t;
             dispatch({ type: 'STREAM_DELTA', delta: t });
           },
-          onSessionState: (state) => {
-            // Update sessionState when orchestrator sends it
-            setSessionState(state);
-          },
+          onSessionState: handleSessionState,
           signal: ctrl.signal,
           memorySummary: st.memorySummary,
           fin: st.fin,
-          sessionState,
+          sessionState: sessionStateRef.current,
         });
 
         if (streamIdRef.current !== myStreamId) {

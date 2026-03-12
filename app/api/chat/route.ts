@@ -289,9 +289,10 @@ export async function POST(req: Request) {
   }
 
   if (type === 'chat') {
-    if (!missing || !Array.isArray(missing) || missing.length === 0) {
-      return jsonError(400, 'missing array is required for chat');
+    if (!missing || !Array.isArray(missing)) {
+      return jsonError(400, 'missing must be an array');
     }
+    // Note: missing.length === 0 is valid — orchestrator handles discovery completion
   }
 
   if (type === 'answer' || type === 'answer_stream' || type === 'answer_explain' || type === 'answer_explain_stream') {
