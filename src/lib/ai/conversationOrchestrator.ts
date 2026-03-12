@@ -9,6 +9,7 @@
  */
 
 import { detectObjections, generateObjectionHandlingInstruction, type Objection } from './objectionHandlingEngine';
+import { calculateFinancials, formatAffordabilityBlock, formatEmergencyFundBlock } from './financialCalculations';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -331,6 +332,7 @@ export interface OrchestratorOutput {
   shouldCalculate: boolean;        // True when ready to show numbers
   objectionBlock?: string;         // Inject if objections detected
   detectedObjections?: Objection[]; // For logging/analysis
+  calculationBlock?: string;       // Inject pre-calculated financial metrics
 }
 
 export function orchestrate(input: OrchestratorInput): OrchestratorOutput {
@@ -370,5 +372,17 @@ export function orchestrate(input: OrchestratorInput): OrchestratorOutput {
     objectionBlock = buildObjectionBlock(detectedObjections, lastUserMessage);
   }
 
-  return { sessionStateBlock, missingFields, state, shouldCalculate, objectionBlock, detectedObjections };
+  // Run deterministic calculations if we have enough data
+  let calculationBlock: string | undefined;
+  if (shouldCalculate) {
+    const calculations = calculateFinancials(financialProfile, goal);
+    
+    if (calculations.affordability) {
+      calculationBlock = formatAffordabilityBlock(calculations.affordability);
+    } else if (calculations.emergencyFund) {
+      calculationBlock = formatEmergencyFundBlock(calculations.emergencyFund);
+    }
+  }
+
+  return { sessionStateBlock, missingFields, state, shouldCalculate, objectionBlock, detectedObjections, calculationBlock };
 }

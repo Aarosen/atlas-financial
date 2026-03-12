@@ -717,7 +717,7 @@ Return ONLY the rewritten text.`;
 
       // Step 2: Run the orchestrator
       // This analyzes conversation state and builds a session context block
-      const { sessionStateBlock, missingFields: orchestratorMissingFields, state, objectionBlock } = orchestrate({
+      const { sessionStateBlock, missingFields: orchestratorMissingFields, state, objectionBlock, calculationBlock } = orchestrate({
         messages: conversationHistory,
         financialProfile,
         previousState: sessionState as any,
@@ -818,6 +818,7 @@ Include once per conversation: "I'm here to help you think through your finances
       // Session state block goes FIRST — it's the most critical context
       const promptSections: string[] = [
         sessionStateBlock,           // ← THE CORE FIX: always first, never trimmed
+        ...(calculationBlock ? [calculationBlock] : []), // ← Inject pre-calculated metrics if available
         ...(objectionBlock ? [objectionBlock] : []), // ← Inject objection handling if detected
         personaPrompt,
         memoryContext,
