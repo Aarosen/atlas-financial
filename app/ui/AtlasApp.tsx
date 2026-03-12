@@ -753,6 +753,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               ...am,
               { role: 'assistant' as const, content: streamed.trim() || '' },
             ];
+            const followupCtrl = new AbortController();
+            streamAbortRef.current = followupCtrl;
+            
             let followupText = '';
             await claude.chatStream({
               msgs: followupMsgs,
@@ -762,8 +765,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               sessionState: sessionStateRef.current,
               onDelta: (t) => { followupText += t; },
               onSessionState: handleSessionState,
-              signal: ctrl.signal,
+              signal: followupCtrl.signal,
             });
+            streamAbortRef.current = null;
+            
             const fallbackText = resumeQ?.text || 'What would help you most right now?';
             const askText = followupText.trim() || fallbackText;
             logReplay(
