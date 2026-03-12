@@ -594,16 +594,26 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   }, [st.scr]);
 
   const missing = useCallback((f: FinancialState) => {
-    // For debt_payoff goal, don't require totalSavings
-    const goal = sessionStateRef.current?.goal;
-    const fieldsToCheck = goal === 'debt_payoff' 
-      ? NEED.filter(k => k !== 'totalSavings')
-      : NEED;
+    // Use goal-specific required fields matching conversationOrchestrator.ts
+    const goal = sessionStateRef.current?.goal || 'general_guidance';
+    
+    // Map of goal-specific required fields (must match conversationOrchestrator.ts REQUIRED_FIELDS)
+    const requiredByGoal: Record<string, Array<keyof FinancialState>> = {
+      affordability_check: ['monthlyIncome', 'essentialExpenses'],
+      emergency_fund: ['monthlyIncome', 'essentialExpenses', 'totalSavings'],
+      debt_payoff: ['monthlyIncome', 'essentialExpenses', 'highInterestDebt', 'lowInterestDebt'],
+      budget_build: ['monthlyIncome', 'essentialExpenses'],
+      investment_start: ['monthlyIncome', 'essentialExpenses', 'totalSavings'],
+      retirement_planning: ['monthlyIncome', 'essentialExpenses', 'totalSavings'],
+      general_guidance: ['monthlyIncome'],
+    };
+    
+    const fieldsToCheck = requiredByGoal[goal] || NEED;
     
     return fieldsToCheck.filter((k) => {
       const value = f[k];
-      // For lowInterestDebt: null = missing, 0 = explicitly none (valid answer)
-      if (k === 'lowInterestDebt') {
+      // For debt fields: null/undefined = missing, 0 = explicitly none (valid answer)
+      if (k === 'lowInterestDebt' || k === 'highInterestDebt') {
         return value === null || value === undefined;
       }
       // For other fields: undefined, null, or zero = missing
