@@ -225,7 +225,7 @@ function getPhaseInstructions(
     case 'greeting':
       return 'Open warmly. Ask ONE grounding question to understand what brought them here today. Do not ask for numbers yet.';
     case 'discovery':
-      return `Ask for the first missing field only: "${missingFields[0]}". Explain in parentheses why you need it. Accept approximate values warmly.`;
+      return `Ask for the first missing field only: "${missingFields[0]}". Keep it conversational and warm. Accept approximate values.`;
     case 'analysis':
       return `You have enough data. Run the calculation for ${goal.replace(/_/g, ' ')}. Show specific numbers, not ranges. Then offer one next step and one scenario.`;
     case 'guidance':
