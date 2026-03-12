@@ -157,7 +157,11 @@ export function getMissingFields(goal: ConversationGoal, profile: FinancialProfi
   return required
     .filter((field) => {
       const value = profile[field];
-      // Missing if undefined, null, or zero (for numeric fields)
+      // For lowInterestDebt: null = missing, 0 = explicitly none (valid answer)
+      if (field === 'lowInterestDebt') {
+        return value === undefined || value === null;
+      }
+      // For other numeric fields: undefined, null, or zero = missing
       return value === undefined || value === null || (typeof value === 'number' && value === 0);
     })
     .map((field) => FIELD_LABELS[field]);
