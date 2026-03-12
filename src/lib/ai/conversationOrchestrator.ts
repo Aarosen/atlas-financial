@@ -178,6 +178,7 @@ export function detectPhase(
   goal: ConversationGoal
 ): SessionPhase {
   if (turnCount === 0) return 'greeting';
+  if (turnCount === 1) return 'discovery'; // Always discovery on turn 1 to ask one field at a time
   if (missingFields.length > 0) return 'discovery';
 
   // All required fields are known
