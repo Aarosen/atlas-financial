@@ -240,7 +240,7 @@ function getPhaseInstructions(
     case 'greeting':
       return 'Open warmly. Ask ONE grounding question to understand what brought them here today. Do not ask for numbers yet.';
     case 'discovery':
-      return `CRITICAL: Ask ONLY for "${missingFields[0]}" in this response. Do NOT ask about any other missing fields. Do NOT ask follow-up questions. Do NOT ask "is that correct?" Keep it conversational and warm. Accept approximate values. Do not use parentheses to explain why you need it. Your entire response should be focused on getting this one piece of information.`;
+      return `CRITICAL: Ask ONLY for "${missingFields[0]}" in this response. Do NOT ask about any other missing fields. Do NOT ask follow-up questions. Do NOT ask "is that correct?" Do NOT use bullet lists. Do NOT use multiple paragraphs. Do NOT include emotional preamble or coaching. Your response must be: one sentence acknowledging what they've shared (if applicable), then one sentence asking for the missing field. That's it. Keep it conversational and warm. Accept approximate values. Do not use parentheses to explain why you need it.`;
     case 'analysis':
       return `You have enough data. Run the calculation for ${goal.replace(/_/g, ' ')}. Show specific numbers, not ranges. Then offer one next step and one scenario.`;
     case 'guidance':

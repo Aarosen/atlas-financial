@@ -140,8 +140,8 @@ export function extractMetricCardFromResponse(
     jsonStr = jsonMatch[1];
     fullMatch = jsonMatch[0];
   } else {
-    // Try without markdown fence
-    jsonMatch = response.match(/\{[\s\S]*?"type"\s*:\s*"metric_card"[\s\S]*?\}/);
+    // Try without markdown fence - look for metrics object
+    jsonMatch = response.match(/\{[\s\S]*?"metrics"\s*:\s*\{[\s\S]*?\}\s*\}/);
     if (jsonMatch) {
       jsonStr = jsonMatch[0];
       fullMatch = jsonMatch[0];
@@ -154,21 +154,30 @@ export function extractMetricCardFromResponse(
 
   try {
     const parsed = JSON.parse(jsonStr);
-    if (parsed?.type !== 'metric_card' || typeof parsed.title !== 'string' || typeof parsed.value !== 'string') {
+    
+    // Handle metrics object format (Claude's actual output)
+    if (parsed?.metrics && typeof parsed.metrics === 'object') {
+      // Don't render metrics as a card - just remove from text
+      // Metrics are handled separately by the UI
       return { text: fullMatch ? response.replace(fullMatch, '').trim() : response, card: null };
     }
+    
+    // Handle metric_card format (legacy)
+    if (parsed?.type === 'metric_card' && typeof parsed.title === 'string' && typeof parsed.value === 'string') {
+      return {
+        text: fullMatch ? response.replace(fullMatch, '').trim() : response,
+        card: {
+          type: 'metric_card',
+          title: parsed.title,
+          value: parsed.value,
+          subtitle: typeof parsed.subtitle === 'string' ? parsed.subtitle : undefined,
+          action: typeof parsed.action === 'string' ? parsed.action : undefined,
+          explain: typeof parsed.explain === 'string' ? parsed.explain : undefined,
+        },
+      };
+    }
 
-    return {
-      text: fullMatch ? response.replace(fullMatch, '').trim() : response,
-      card: {
-        type: 'metric_card',
-        title: parsed.title,
-        value: parsed.value,
-        subtitle: typeof parsed.subtitle === 'string' ? parsed.subtitle : undefined,
-        action: typeof parsed.action === 'string' ? parsed.action : undefined,
-        explain: typeof parsed.explain === 'string' ? parsed.explain : undefined,
-      },
-    };
+    return { text: fullMatch ? response.replace(fullMatch, '').trim() : response, card: null };
   } catch {
     return { text: response, card: null };
   }
