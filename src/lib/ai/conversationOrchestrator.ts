@@ -10,6 +10,7 @@
 
 import { detectObjections, generateObjectionHandlingInstruction, type Objection } from './objectionHandlingEngine';
 import { calculateFinancials, formatAffordabilityBlock, formatEmergencyFundBlock } from './financialCalculations';
+import { formatDebtPayoffBlock } from './debtPayoffCalculations';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -383,6 +384,8 @@ export function orchestrate(input: OrchestratorInput): OrchestratorOutput {
       calculationBlock = formatAffordabilityBlock(calculations.affordability);
     } else if (calculations.emergencyFund) {
       calculationBlock = formatEmergencyFundBlock(calculations.emergencyFund);
+    } else if (calculations.debtPayoff) {
+      calculationBlock = formatDebtPayoffBlock(calculations.debtPayoff);
     }
   }
 

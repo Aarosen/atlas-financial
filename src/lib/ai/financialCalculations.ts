@@ -6,6 +6,7 @@
  */
 
 import type { FinancialProfile } from './conversationOrchestrator';
+import { compareDebtStrategies, formatDebtPayoffBlock, type Debt, type DebtPayoffComparison } from './debtPayoffCalculations';
 
 const EMERGENCY_FUND_TARGET_MONTHS = 4;
 
@@ -31,6 +32,7 @@ export interface EmergencyFundCalculation {
 export interface FinancialCalculationsResult {
   affordability?: AffordabilityCalculation;
   emergencyFund?: EmergencyFundCalculation;
+  debtPayoff?: DebtPayoffComparison;
 }
 
 /**
@@ -188,7 +190,47 @@ export function calculateFinancials(
     );
   }
 
+  // Debt payoff
+  if (goal === 'debt_payoff') {
+    const debts = buildDebtsArray(profile);
+    if (debts.length > 0 && profile.monthlyIncome && profile.essentialExpenses) {
+      const discretionary = profile.monthlyIncome - profile.essentialExpenses;
+      if (discretionary > 0) {
+        result.debtPayoff = compareDebtStrategies(debts, discretionary);
+      }
+    }
+  }
+
   return result;
+}
+
+/**
+ * Build debts array from financial profile
+ */
+function buildDebtsArray(profile: FinancialProfile): Debt[] {
+  const debts: Debt[] = [];
+
+  const highInterestDebt = profile.highInterestDebt ?? 0;
+  if (highInterestDebt > 0) {
+    debts.push({
+      name: 'High-interest debt',
+      balance: highInterestDebt,
+      interestRate: 18.5, // Default assumption for credit cards
+      minimumPayment: (highInterestDebt * 0.02) || 25, // 2% minimum
+    });
+  }
+
+  const lowInterestDebt = profile.lowInterestDebt ?? 0;
+  if (lowInterestDebt > 0) {
+    debts.push({
+      name: 'Low-interest debt',
+      balance: lowInterestDebt,
+      interestRate: 5.5, // Default assumption for personal loans
+      minimumPayment: (lowInterestDebt * 0.01) || 25, // 1% minimum
+    });
+  }
+
+  return debts;
 }
 
 /**
