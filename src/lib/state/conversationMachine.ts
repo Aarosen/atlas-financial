@@ -105,7 +105,7 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
       return { ...state, scr: ev.scr };
 
     case 'RESTORE': {
-      return { ...ev.state, inp: state.inp };
+      return ev.state;
     }
 
     case 'SET_INPUT': {

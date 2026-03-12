@@ -275,13 +275,20 @@ export function classifyInterruption(userText: string): InterruptionType {
 
   if (t.includes('?')) {
     // Goal-oriented questions should route to orchestrator, not explain mode
-    const isGoalQuestion =
+    // But avoid matching "what is X?" educational questions
+    let isGoalQuestion =
       /\bcan i afford\b/i.test(t) ||
       /\bshould i\b/i.test(t) ||
       /\bhow (much|do i|can i|should i)\b/i.test(t) ||
       /\bwhat (should|would|can|is the best)\b/i.test(t) ||
-      /\b(afford|budget|save|invest|pay off|debt|retire|emergency fund)\b/i.test(t) ||
       /\bam i (on track|okay|good|saving enough)\b/i.test(t);
+
+    // Also match goal-oriented keywords but NOT in "what is X?" format
+    if (!isGoalQuestion && !/^what\s+is\b/i.test(t)) {
+      if (/\b(afford|budget|save|invest|pay off|debt|retire|emergency fund)\b/i.test(t)) {
+        isGoalQuestion = true;
+      }
+    }
 
     if (isGoalQuestion) return 'answer_to_question';
 
