@@ -717,7 +717,7 @@ Return ONLY the rewritten text.`;
 
       // Step 2: Run the orchestrator
       // This analyzes conversation state and builds a session context block
-      const { sessionStateBlock, missingFields: orchestratorMissingFields, state } = orchestrate({
+      const { sessionStateBlock, missingFields: orchestratorMissingFields, state, objectionBlock } = orchestrate({
         messages: conversationHistory,
         financialProfile,
         previousState: sessionState as any,
@@ -816,21 +816,21 @@ DISCLAIMER CADENCE:
 Include once per conversation: "I'm here to help you think through your finances — for personalized professional advice, consider consulting a financial advisor."`;
 
       // Session state block goes FIRST — it's the most critical context
-      const enrichedSystemPrompt = trimPromptSections(
-        [
-          sessionStateBlock,           // ← THE CORE FIX: always first, never trimmed
-          personaPrompt,
-          memoryContext,
-          emotionContext,
-          disclaimerContext,
-          agentContext,
-          advancedContext,
-          comprehensionContext,
-          languageContext,
-          exampleContext,
-        ],
-        4800  // slightly larger budget since state block is compact
-      );
+      const promptSections: string[] = [
+        sessionStateBlock,           // ← THE CORE FIX: always first, never trimmed
+        ...(objectionBlock ? [objectionBlock] : []), // ← Inject objection handling if detected
+        personaPrompt,
+        memoryContext,
+        emotionContext,
+        disclaimerContext,
+        agentContext,
+        advancedContext,
+        comprehensionContext,
+        languageContext,
+        exampleContext,
+      ];
+      
+      const enrichedSystemPrompt = trimPromptSections(promptSections, 4800);
 
       // Step 4: Call Claude with enriched context
       const trimmedMessages = messages.slice(-10);

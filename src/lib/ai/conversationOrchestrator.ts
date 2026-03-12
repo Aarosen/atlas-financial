@@ -8,6 +8,8 @@
  * DROP-IN REPLACEMENT for the chat handler in route.ts
  */
 
+import { detectObjections, type Objection } from './objectionHandlingEngine';
+
 // ─── Types ────────────────────────────────────────────────────────────────────
 
 export type SessionPhase = 'greeting' | 'discovery' | 'analysis' | 'guidance' | 'action';
@@ -288,6 +290,27 @@ export function detectUrgency(
   return 'calm';
 }
 
+// ─── Objection Handling ───────────────────────────────────────────────────────
+
+function buildObjectionBlock(detectedObjections: Objection[], userMessage: string): string {
+  if (detectedObjections.length === 0) return '';
+
+  let block = '\n━━━ PSYCHOLOGICAL BARRIER DETECTED ━━━\n';
+  block += 'The user is expressing a concern or objection. Address this BEFORE asking for more data.\n\n';
+
+  for (const objection of detectedObjections.slice(0, 2)) {
+    // Only address top 2 objections
+    block += `**${objection.concern}**\n`;
+    block += `Response: ${objection.proactiveResponse}\n\n`;
+  }
+
+  block += 'INSTRUCTION: Acknowledge the objection by name, reframe with one concrete counterexample or small win, then ask the next discovery question.\n';
+  block += 'Do NOT ask for data before addressing the objection — it will feel tone-deaf.\n';
+  block += '━━━━━━━━━━━━━━━━━━━━━━━━━━\n';
+
+  return block;
+}
+
 // ─── Main Orchestrator ────────────────────────────────────────────────────────
 
 export interface OrchestratorInput {
@@ -301,6 +324,8 @@ export interface OrchestratorOutput {
   missingFields: string[];         // Pass as `missing` to the prompt template
   state: SessionState;             // Store this client-side for next turn
   shouldCalculate: boolean;        // True when ready to show numbers
+  objectionBlock?: string;         // Inject if objections detected
+  detectedObjections?: Objection[]; // For logging/analysis
 }
 
 export function orchestrate(input: OrchestratorInput): OrchestratorOutput {
@@ -312,6 +337,13 @@ export function orchestrate(input: OrchestratorInput): OrchestratorOutput {
   const phase = detectPhase(turnCount, missingFields, financialProfile, goal);
   const openLoops = detectOpenLoops(messages, previousState?.openLoops ?? []);
   const urgencyLevel = detectUrgency(financialProfile, messages);
+
+  // Detect objections in the last user message
+  const lastUserMessage = messages
+    .slice()
+    .reverse()
+    .find((m) => m.role === 'user')?.content || '';
+  const detectedObjections = detectObjections(lastUserMessage);
 
   const state: SessionState = {
     goal,
@@ -327,5 +359,11 @@ export function orchestrate(input: OrchestratorInput): OrchestratorOutput {
   const sessionStateBlock = buildSessionStateBlock(state);
   const shouldCalculate = missingFields.length === 0 && phase !== 'greeting';
 
-  return { sessionStateBlock, missingFields, state, shouldCalculate };
+  // Build objection block if objections detected
+  let objectionBlock: string | undefined;
+  if (detectedObjections.length > 0) {
+    objectionBlock = buildObjectionBlock(detectedObjections, lastUserMessage);
+  }
+
+  return { sessionStateBlock, missingFields, state, shouldCalculate, objectionBlock, detectedObjections };
 }
