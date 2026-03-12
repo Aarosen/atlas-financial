@@ -127,6 +127,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     (screen) => createInitialConversationState(screen)
   );
   const latestStateRef = useRef(st);
+  const finRef = useRef<FinancialState>(st.fin);
   const inputDraftRef = useRef('');
   const hasUserInteractedRef = useRef(false);
 
@@ -134,6 +135,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   useEffect(() => {
     latestStateRef.current = st;
+    finRef.current = st.fin;
   }, [st]);
 
   const updateInput = useCallback(
@@ -785,7 +787,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               msgs: followupMsgs,
               missing: missBefore as string[],
               memorySummary: st.memorySummary,
-              fin: st.fin,
+              fin: finRef.current,
               sessionState: sessionStateRef.current,
               onDelta: (t) => { followupText += t; },
               onSessionState: handleSessionState,
@@ -931,7 +933,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           onSessionState: handleSessionState,
           signal: ctrl.signal,
           memorySummary: st.memorySummary,
-          fin: uf,
+          fin: finRef.current,
           sessionState: sessionStateRef.current,
         });
 
