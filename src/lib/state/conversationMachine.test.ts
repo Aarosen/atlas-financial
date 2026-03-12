@@ -10,11 +10,11 @@ describe('conversationMachine', () => {
     expect(st.msgs.length).toBeGreaterThan(0);
   });
 
-  it('RESTORE returns the provided snapshot state', () => {
+  it('RESTORE returns the provided snapshot state with cleared input', () => {
     const st0 = { ...createInitialConversationState('conversation'), inp: 'x' };
     const st1 = conversationReducer(st0, { type: 'SEND_START', text: 'hi' });
     const st2 = conversationReducer(st1, { type: 'RESTORE', state: st0 });
-    expect(st2).toEqual(st0);
+    expect(st2).toEqual({ ...st0, inp: '' });
   });
 
   it('SEND_START appends user message, clears input, and sets busy', () => {
