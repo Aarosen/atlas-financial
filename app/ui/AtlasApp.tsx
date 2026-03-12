@@ -338,10 +338,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       }
     }
     if (!draft) return;
-    const el = document.getElementById('atlas-message-input') as HTMLTextAreaElement | null;
-    if (el && el.value !== draft) {
-      el.value = draft;
-    }
+    // Only restore if React state is empty (don't override user's current input)
     if (draft !== st.inp) updateInput(draft);
   }, [st.inp, updateInput]);
 
@@ -994,14 +991,16 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         const ut = String((overrideText ?? st.inp) || '').trim();
         if (!ut) return;
 
-        // Clear input immediately before sending
-        updateInput('');
-        // Also clear localStorage draft so the restore effect doesn't re-populate it
+        // Clear localStorage BEFORE updating state so the restore effect sees empty storage
         try {
           window.localStorage.removeItem('atlas:talkDraft');
         } catch {
           // ignore
         }
+        inputDraftRef.current = '';
+        
+        // Clear input immediately before sending
+        updateInput('');
 
         if (editingLast && lastSendSnapshotRef.current) {
           const snap = lastSendSnapshotRef.current;
