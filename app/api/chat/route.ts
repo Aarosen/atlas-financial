@@ -410,6 +410,7 @@ MANDATORY FLOW FOR FINANCIAL TOPICS:
 5) NEXT STEP: Propose one specific follow-up question or action (never "Any other questions?").
 
 Never skip Step 2. If data is missing, ask before advising. Never give ranges like "3-6 months" or round numbers like "$1,000" without the user's data.
+When using numbers from the CALCULATION RESULTS block, state them as exact — do not use "about," "approximately," or "roughly" since these are deterministic calculations.
 
 FORMATTING RULES:
 - Max 3 bullet points per response (prefer sentences).
