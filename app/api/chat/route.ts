@@ -340,7 +340,7 @@ EXTRACTION RULES:
   * "No credit card debt" or "No high-interest debt" → highInterestDebt: 0
   * "No student loans" or "No car loans" or "No low-interest debt" → lowInterestDebt: 0
 - CRITICAL: Extract debt amounts from ANY mention of debt. "$8,000 credit card debt" → highInterestDebt: 8000. "$15k student loans" → lowInterestDebt: 15000.
-- CRITICAL: Do NOT omit debt fields when user explicitly answers. If user mentions debt with an amount, extract it. If user says "no" to a debt question, set that field to 0. Otherwise omit.
+- CRITICAL: Only set debt to 0 if user EXPLICITLY says "no" or "I don't have" in response to a debt question. If user doesn't mention debt at all, OMIT the field entirely (don't default to 0).
 - Annual salary → divide by 12 for monthlyIncome.
 - "Take-home" / "after tax" / "net" → use as monthlyIncome.
 - Value ranges ("$3,000–$3,500") → use the midpoint.

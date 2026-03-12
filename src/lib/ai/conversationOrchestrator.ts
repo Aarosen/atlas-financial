@@ -196,7 +196,14 @@ export function detectPhase(
 
 export function buildSessionStateBlock(state: SessionState): string {
   const profileLines = Object.entries(state.profile)
-    .filter(([, v]) => v !== undefined && v !== null)
+    .filter(([k, v]) => {
+      // Exclude undefined and null
+      if (v === undefined || v === null) return false;
+      // For debt fields, exclude 0 (means not yet answered, not explicitly "no debt")
+      // Only include if it's a non-zero debt amount or a non-debt field
+      if ((k === 'highInterestDebt' || k === 'lowInterestDebt') && v === 0) return false;
+      return true;
+    })
     .map(([k, v]) => `  ${k}: ${v}`)
     .join('\n');
 
@@ -240,9 +247,9 @@ function getPhaseInstructions(
     case 'greeting':
       return 'Open warmly. Ask ONE grounding question to understand what brought them here today. Do not ask for numbers yet.';
     case 'discovery':
-      return `CRITICAL: Ask ONLY for "${missingFields[0]}" in this response. Do NOT ask about any other missing fields. Do NOT ask follow-up questions. Do NOT ask "is that correct?" Do NOT use bullet lists. Do NOT use multiple paragraphs. Do NOT include emotional preamble or coaching. Your response must be: one sentence acknowledging what they've shared (if applicable), then one sentence asking for the missing field. That's it. Keep it conversational and warm. Accept approximate values. Do not use parentheses to explain why you need it.`;
+      return `CRITICAL: Ask ONLY for "${missingFields[0]}" in this response. Do NOT ask about any other missing fields. Do NOT ask follow-up questions. Do NOT ask "is that correct?" Do NOT use bullet lists. Do NOT use multiple paragraphs. Do NOT include emotional preamble or coaching. Your response must be: one sentence acknowledging what they've shared (if applicable), then one sentence asking for the missing field. That's it. Keep it conversational and warm. Accept approximate values. Do not use parentheses to explain why you need it. Do NOT summarize or list what you already know. Do NOT show any financial figures you have collected.`;
     case 'analysis':
-      return `You have enough data. Run the calculation for ${goal.replace(/_/g, ' ')}. Show specific numbers, not ranges. Then offer one next step and one scenario.`;
+      return `You have enough data. Run the calculation for ${goal.replace(/_/g, ' ')}. Show specific numbers, not ranges. Do NOT summarize known fields in a bullet list. Do NOT recap what you know. Just show the calculation results and one next step.`;
     case 'guidance':
       return 'Provide a clear recommendation with a single action and concrete amount/cadence. End with one follow-up question that deepens understanding.';
     case 'action':
