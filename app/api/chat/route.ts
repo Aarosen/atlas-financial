@@ -330,7 +330,8 @@ EXTRACTION RULES:
 - Never infer, estimate, or fabricate values not present in the text.
 - If a user says "about $4k" or "roughly $4,000" — extract 4000.
 - "I have no savings" → totalSavings: 0. "No debt" or "No other debt" → highInterestDebt: 0, lowInterestDebt: 0.
-- CRITICAL: Do NOT extract debt fields as 0 unless the user explicitly says they have no debt. Omit debt fields entirely if not mentioned.
+- CRITICAL: Extract debt amounts from ANY mention of debt. "$8,000 credit card debt" → highInterestDebt: 8000. "$15k student loans" → lowInterestDebt: 15000.
+- CRITICAL: Do NOT omit debt fields. If user mentions debt with an amount, extract it. If user says "no debt", set both to 0. Otherwise omit.
 - Annual salary → divide by 12 for monthlyIncome.
 - "Take-home" / "after tax" / "net" → use as monthlyIncome.
 - Value ranges ("$3,000–$3,500") → use the midpoint.
