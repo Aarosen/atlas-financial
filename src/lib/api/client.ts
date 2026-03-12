@@ -11,10 +11,9 @@ export class ClaudeClient {
 
   async statusCheck(): Promise<{ configured: boolean } | null> {
     try {
-      const r = await fetch(this.ep, {
+      const r = await fetch('/api/status', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'status' }),
       });
       if (!r.ok) {
         this._lastErrorStatus = r.status;
@@ -22,7 +21,7 @@ export class ClaudeClient {
         return null;
       }
       const d = await r.json().catch(() => ({}));
-      // If our own API endpoint is reachable and configured, we consider AI "online".
+      // If the status endpoint is reachable and configured, we consider AI "online".
       if (d?.configured) {
         this._hadSuccess = true;
         this._apiStatus = 'online';

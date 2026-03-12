@@ -629,10 +629,6 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         void db.set('feedback', createFeedbackEntry({ responseId: `resp_${Date.now()}`, rating }));
       }
 
-      if (typeof window !== 'undefined') {
-        console.log('[doSend] kind:', kind, 'text:', ut.slice(0, 50));
-      }
-
       logReplay(createReplayEntry({ role: 'user', text: ut, kind, emotionTag: detectReplayEmotion(ut) }));
 
       const detectedAction = detectAction(ut);

@@ -262,13 +262,8 @@ export async function POST(req: Request) {
     sessionState?: Record<string, any>;
   };
 
-  if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'answer_explain', 'answer_explain_stream', 'status'].includes(type)) {
+  if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'answer_explain', 'answer_explain_stream'].includes(type)) {
     return jsonError(400, 'Invalid request type.');
-  }
-
-  if (type === 'status') {
-    if (!apiKey) return notConfigured();
-    return jsonOk({ configured: true });
   }
 
   if (!apiKey) {
