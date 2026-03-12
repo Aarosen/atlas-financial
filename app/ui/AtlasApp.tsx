@@ -593,7 +593,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     }
   }, [st.scr]);
 
-  const missing = useCallback((f: FinancialState) => NEED.filter((k) => f[k] === null || f[k] === undefined), []);
+  const missing = useCallback((f: FinancialState) => NEED.filter((k) => {
+    const value = f[k];
+    return value === null || value === undefined || (typeof value === 'number' && value === 0);
+  }), []);
 
   const handleSessionState = useCallback((state: Record<string, any>) => {
     setSessionState(state);

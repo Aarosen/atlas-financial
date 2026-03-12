@@ -772,7 +772,7 @@ Read the emotional register and match it:
 
 CONVERSATION APPROACH:
 - Ask ONE question at a time. Never stack multiple questions in a single message.
-- When asking for a number, briefly explain why it matters in parentheses.
+- When asking for a number, briefly explain why it matters in natural language, not parentheses.
 - Accept approximate numbers immediately and warmly.
 - Never re-ask for information already provided.
 - The conversation goal is gathering these missing fields: ${resolvedMissingFields}
