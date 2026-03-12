@@ -864,12 +864,26 @@ Include once per conversation: "I'm here to help you think through your finances
 
       // Step 4: Call Claude with enriched context
       const trimmedMessages = messages.slice(-10);
+      
+      // If calculation block exists, use prefill pattern: inject it as assistant message
+      // This forces Claude to continue from the calculation output instead of generating its own numbers
+      let messagesToSend = trimmedMessages;
+      if (calculationBlock) {
+        messagesToSend = [
+          ...trimmedMessages,
+          {
+            role: 'assistant' as const,
+            content: `[CALCULATION COMPLETE]\n${calculationBlock}\n\nNow let me explain these results in plain language:`
+          }
+        ];
+      }
+      
       let response = await callAnthropicStream({
         apiKey,
         model: usedModel,
         maxTokens: 900,
         system: enrichedSystemPrompt,
-        messages: trimmedMessages,
+        messages: messagesToSend,
       });
 
       // Model fallback logic
