@@ -42,17 +42,47 @@ interface PolicyReport {
 }
 
 function readCurrentPolicy(): any {
-  const policyPath = path.join(process.cwd(), "src/evals/atlas-policy.json");
-  if (!fs.existsSync(policyPath)) {
-    throw new Error("Policy file not found");
+  // Try multiple path strategies to handle different working directories
+  const possiblePaths = [
+    path.join(process.cwd(), "src/evals/atlas-policy.json"),
+    path.join(process.cwd(), "atlas-policy.json"),
+    path.join(__dirname, "../atlas-policy.json"),
+    path.join(__dirname, "../../atlas-policy.json"),
+  ];
+  
+  let policyPath: string | null = null;
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      policyPath = p;
+      break;
+    }
+  }
+  
+  if (!policyPath) {
+    throw new Error(`Policy file not found. Tried: ${possiblePaths.join(", ")}`);
   }
   const raw = fs.readFileSync(policyPath, "utf-8");
   return JSON.parse(raw);
 }
 
 function readPolicyHistory(): PolicyVersion[] {
-  const historyPath = path.join(process.cwd(), "src/evals/policy-history.jsonl");
-  if (!fs.existsSync(historyPath)) return [];
+  // Try multiple path strategies to handle different working directories
+  const possiblePaths = [
+    path.join(process.cwd(), "src/evals/policy-history.jsonl"),
+    path.join(process.cwd(), "policy-history.jsonl"),
+    path.join(__dirname, "../policy-history.jsonl"),
+    path.join(__dirname, "../../policy-history.jsonl"),
+  ];
+  
+  let historyPath: string | null = null;
+  for (const p of possiblePaths) {
+    if (fs.existsSync(p)) {
+      historyPath = p;
+      break;
+    }
+  }
+  
+  if (!historyPath) return [];
   const lines = fs.readFileSync(historyPath, "utf-8").split("\n").filter((l) => l.trim());
   return lines.map((l) => JSON.parse(l) as PolicyVersion);
 }
