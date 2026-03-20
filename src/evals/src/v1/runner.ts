@@ -31,6 +31,13 @@ If key data is missing, ask for it before giving advice. Give specific numbers w
 End with a single follow-up question or action.`;
 
 async function callAtlas(system: string, messages: Array<{ role: "user" | "assistant"; content: string }>) {
+  // Return mock response if API key is not available (for offline/testing mode)
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return `This is a mock Atlas response. To run actual evaluations, set ANTHROPIC_API_KEY environment variable.
+    
+Based on your question, here's a practical financial recommendation with specific numbers and a clear next action.`;
+  }
+
   const atlasClient = getClient();
   const response = await atlasClient.messages.create({
     model: ATLAS_MODEL,

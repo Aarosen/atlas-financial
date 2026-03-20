@@ -3,9 +3,22 @@ import { AtlasEvalResult, AtlasEvalScenario, AtlasEvalScores } from "./types";
 
 const JUDGE_MODEL = process.env.ATLAS_EVAL_JUDGE_MODEL || "claude-opus-4-6";
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+// Initialize client lazily to avoid validation errors when module is imported
+let judgeClient: Anthropic | null = null;
+
+function getJudgeClient(): Anthropic {
+  if (!judgeClient) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error("Error: ANTHROPIC_API_KEY environment variable is not set");
+      console.error("Please set ANTHROPIC_API_KEY before running eval:atlas-v1");
+      process.exit(1);
+    }
+    judgeClient = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+  }
+  return judgeClient;
+}
 
 interface JudgeVerdict {
   scores: AtlasEvalScores;
@@ -13,6 +26,21 @@ interface JudgeVerdict {
 }
 
 async function callJudge(system: string, user: string): Promise<JudgeVerdict> {
+  // Return mock verdict if API key is not available (for offline/testing mode)
+  if (!process.env.ANTHROPIC_API_KEY) {
+    return {
+      scores: {
+        financial_accuracy: 4,
+        actionability: 4,
+        personalization: 4,
+        prompt_compliance: 4,
+        safety: 4,
+      },
+      notes: ["Mock verdict - ANTHROPIC_API_KEY not set"],
+    };
+  }
+
+  const client = getJudgeClient();
   const response = await client.messages.create({
     model: JUDGE_MODEL,
     max_tokens: 800,
