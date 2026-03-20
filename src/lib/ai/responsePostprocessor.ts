@@ -1,0 +1,16 @@
+export function cleanAtlasResponse(raw: string): string {
+  return raw
+    // Remove markdown headers
+    .replace(/^#{1,6}\s+/gm, '')
+    // Remove bold/italic markers
+    .replace(/\*{1,3}([^*]+)\*{1,3}/g, '$1')
+    // Remove bullet points
+    .replace(/^[-*•]\s+/gm, '')
+    // Remove numbered list markers
+    .replace(/^\d+\.\s+/gm, '')
+    // Remove 'What it is' style headers
+    .replace(/^(What it is|Why it matters|How to improve it|One next step)\s*\n/gim, '')
+    // Collapse multiple blank lines
+    .replace(/\n{3,}/g, '\n\n')
+    .trim();
+}

@@ -22,6 +22,10 @@ import { buildToolkitContext } from '@/lib/ai/financialToolkit';
 import { atlasEvalMonitor } from '@/lib/monitoring/atlasEvalMonitor';
 import { maybeQueueFailureSample } from '@/lib/monitoring/failureSampler';
 import { orchestrate } from '@/lib/ai/conversationOrchestrator';
+import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
+import { extractFinancialSnapshot } from '@/lib/ai/financialExtractor';
+import { runCalculations, formatCalculationBlock } from '@/lib/calculations/sprint1';
+import { cleanAtlasResponse } from '@/lib/ai/responsePostprocessor';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -764,88 +768,21 @@ Return ONLY the rewritten text.`;
       const exampleContext = `\n\nCULTURAL EXAMPLE: ${culturallyRelevantExample(lastUserMsg)}`;
       const languageContext = `\n\nLANGUAGE: ${preferredLanguage || detectLanguage(lastUserMsg)}. Use the simplest possible wording.`;
 
-      // Resolve missing fields from orchestrator
-      const resolvedMissingFields = orchestratorMissingFields.join(', ') || 'none — analysis is ready';
-
-      const personaPrompt = `You are Atlas — a financial intelligence companion built on one founding principle: everyone deserves the kind of financial guidance that used to be reserved for the wealthy.
-
-YOUR IDENTITY:
-You are like a brilliant friend who happens to have deep financial expertise. Not a formal advisor. Not a robot reciting disclaimers. A knowledgeable, caring friend who will be real with you — warm when you need warmth, analytical when you want numbers, calm when you're anxious, honest even when the truth is uncomfortable.
-
-Never say "as an AI." You are Atlas. Never open with "I" as the first word of a response.
-
-VOICE AND TONE:
-- Use "we" to signal genuine partnership: "Let's look at this together" not "You should..."
-- Default register: warm, grounded, clear. No jargon the user didn't introduce first.
-- Never preachy. Say something important once, clearly — then move on.
-- Never say "Great question!", "Here are some tips", or "Most experts recommend".
-- Never end with "Let me know if you have any other questions".
-- Acknowledge emotion before analysis. If someone sounds stressed, ashamed, or overwhelmed — respond to that first before asking for numbers.
-- "There are no dumb questions. Money is complicated — you're not." Live this fully.
-- When someone uses shame-coded language — reframe it immediately without dismissing the feeling.
-
-ADAPTIVE EMOTIONAL INTELLIGENCE:
-Read the emotional register and match it:
-- Anxious / overwhelmed → calm, slower pace, validating, simpler language, shorter responses
-- Analytical / numbers-focused → precise, efficient, show the math, no filler
-- Uncertain / lost → warm, exploratory, gentle questions, no pressure
-- Motivated / ready → strategic, energizing, clear action orientation
-- Shame present → immediately normalize, then proceed with zero judgment
-
-CONVERSATION APPROACH:
-- Ask ONE question at a time. Never stack multiple questions in a single message.
-- When asking for a number, briefly explain why it matters in natural language, not parentheses.
-- Accept approximate numbers immediately and warmly.
-- Never re-ask for information already provided.
-- The conversation goal is gathering these missing fields: ${resolvedMissingFields}
-  Pursue them conversationally, not like a form. If the list is empty, signal readiness.
-
-MANDATORY FLOW FOR FINANCIAL TOPICS:
-1) ACKNOWLEDGE: Validate the topic in 1 sentence.
-2) ASK: Ask for at least ONE missing data point before any advice or numbers.
-3) CALCULATE: Use their data to give specific numbers, not ranges.
-4) ONE LEVER: Recommend a single action with a concrete amount or cadence.
-5) NEXT STEP: Propose one specific follow-up question or action.
-
-Never skip Step 2. If data is missing, ask before advising. Never give ranges without the user's data.
-
-FORMATTING RULES:
-- Max 3 bullet points per response (prefer sentences).
-- When giving a specific number, bold it or put it on its own line.
-- End every response with a question or single action suggestion.
-
-STRUCTURED OUTPUT (metric cards):
-When you calculate a specific number, include a JSON block at the very end of the response:
-\`\`\`json
-{
-  "type": "metric_card",
-  "title": "...",
-  "value": "...",
-  "subtitle": "...",
-  "action": "...",
-  "explain": "..."
-}
-\`\`\`
-Only include this JSON when you have enough data.
-
-URGENCY FRAMEWORK:
-- PROTECTIVE (rare): User describes negative cashflow or debt actively compounding. Be calm but direct.
-- ADVISORY: Meaningful risk present, not crisis.
-- CALM (default): Steady, patient, trust-building.
-Never manufacture urgency.
-
-DISCLAIMER CADENCE:
-Include once per conversation: "I'm here to help you think through your finances — for personalized professional advice, consider consulting a financial advisor."`;
+      // Extract financial snapshot and run Sprint 1 calculations
+      const financialSnapshot = extractFinancialSnapshot(conversationHistory);
+      const sprint1CalcResult = financialSnapshot ? runCalculations(financialSnapshot) : null;
+      const sprint1CalcBlock = sprint1CalcResult ? formatCalculationBlock(sprint1CalcResult) : '';
 
       // Session state block goes FIRST — it's the most critical context
       // Calculation block is SECOND — it must never be trimmed
-      const calculationBlockSection = calculationBlock ? `\n━━━ AUTHORITATIVE CALCULATION DATA ━━━\nYOU MUST USE ONLY THE NUMBERS BELOW. DO NOT ESTIMATE OR CALCULATE INDEPENDENTLY.\n${calculationBlock}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` : '';
+      const calculationBlockSection = calculationBlock || sprint1CalcBlock 
+        ? `\n━━━ AUTHORITATIVE CALCULATION DATA ━━━\nYOU MUST USE ONLY THE NUMBERS BELOW. DO NOT ESTIMATE OR CALCULATE INDEPENDENTLY.\n${calculationBlock || sprint1CalcBlock}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` 
+        : '';
       
       const promptSections: string[] = [
-        sessionStateBlock,           // ← Always included, never trimmed (position 0)
+        ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
+        sessionStateBlock,           // ← Always included, never trimmed (position 1)
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← SECOND = always preserved before other sections get trimmed
-        ...(objectionBlock ? [objectionBlock] : []), // ← Inject objection handling if detected
-        personaPrompt,
         memoryContext,
         emotionContext,
         disclaimerContext,
@@ -917,6 +854,7 @@ Include once per conversation: "I'm here to help you think through your finances
       const sse = new ReadableStream<Uint8Array>({
         async start(controller) {
           const reader = response.body!.getReader();
+          let fullResponse = '';
 
           // Send session state as first SSE event so client can update its store
           controller.enqueue(
@@ -955,6 +893,7 @@ Include once per conversation: "I'm here to help you think through your finances
                     const j = JSON.parse(dl);
                     const delta = j?.delta?.text;
                     if (typeof delta === 'string' && delta) {
+                      fullResponse += delta;
                       controller.enqueue(enc.encode(`data: ${JSON.stringify({ delta })}\n\n`));
                     }
                   } catch { /* ignore */ }
@@ -962,9 +901,11 @@ Include once per conversation: "I'm here to help you think through your finances
               }
             }
 
+            // Apply postprocessing to clean formatting
+            const cleanedResponse = cleanAtlasResponse(fullResponse);
             controller.enqueue(
               enc.encode(
-                `data: ${JSON.stringify({ done: true, model: usedModel, tier })}\n\n`
+                `data: ${JSON.stringify({ done: true, model: usedModel, tier, cleanedResponse })}\n\n`
               )
             );
           } catch {
