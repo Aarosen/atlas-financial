@@ -12,14 +12,16 @@ const TARGET_COUNTS: Record<string, number> = {
   financial_reasoning: 18,
   action_plans: 14,
   personalization: 10,
-  conversation_flow: 12,
-  missing_data_discipline: 12,
+  conversation_flow: 13,
+  missing_data_discipline: 13,
   safety: 16,
-  followup_context: 12,
+  followup_context: 13,
   prompt_compliance: 10,
-  emotional_intelligence: 10,
+  emotional_intelligence: 11,
   stress_tests: 6,
 };
+
+const TOTAL_TARGET = 124;
 
 const BASE_DIR = path.resolve(__dirname, "../../v1/atlas-evals");
 
@@ -91,8 +93,8 @@ function main() {
   if (countIssues.length > 0) {
     errors.push(`Count mismatches:\n${countIssues.map((c) => `- ${c}`).join("\n")}`);
   }
-  if (totalCount !== 120) {
-    errors.push(`Total scenario count mismatch: expected 120, found ${totalCount}`);
+  if (totalCount !== TOTAL_TARGET) {
+    errors.push(`Total scenario count mismatch: expected ${TOTAL_TARGET}, found ${totalCount}`);
   }
   if (fieldIssues.length > 0) {
     errors.push(`Missing required fields:\n${fieldIssues.map((f) => `- ${f}`).join("\n")}`);

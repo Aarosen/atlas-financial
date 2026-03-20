@@ -179,13 +179,13 @@ function generateCandidates(liveSuite: Map<string, LiveEval[]>): RetirementCandi
   const candidates: RetirementCandidate[] = [];
 
   liveSuite.forEach((evals, group) => {
-    evals.forEach((eval) => {
+    evals.forEach((evalCase) => {
       let candidate: RetirementCandidate | null = null;
 
-      const promotedReplacement = findPromotedReplacements(eval.id, group, liveSuite);
+      const promotedReplacement = findPromotedReplacements(evalCase.id, group, liveSuite);
       if (promotedReplacement) {
         candidate = {
-          live_case_id: eval.id,
+          live_case_id: evalCase.id,
           group,
           reason: "superseded_by_promoted_case",
           evidence: `Replaced by promoted draft ${promotedReplacement}`,
@@ -193,18 +193,18 @@ function generateCandidates(liveSuite: Map<string, LiveEval[]>): RetirementCandi
         };
       }
 
-      if (!candidate && isWeakCase(eval)) {
+      if (!candidate && isWeakCase(evalCase)) {
         candidate = {
-          live_case_id: eval.id,
+          live_case_id: evalCase.id,
           group,
           reason: "weak_case",
           evidence: "Missing required fields, tags, or realistic prompt",
         };
       }
 
-      if (!candidate && isStaleCase(eval)) {
+      if (!candidate && isStaleCase(evalCase)) {
         candidate = {
-          live_case_id: eval.id,
+          live_case_id: evalCase.id,
           group,
           reason: "stale",
           evidence: "Case is >12 months old and may not reflect current product behavior",
@@ -212,10 +212,10 @@ function generateCandidates(liveSuite: Map<string, LiveEval[]>): RetirementCandi
       }
 
       if (!candidate) {
-        const similarId = findSimilarCases(eval.id, eval.input, group, liveSuite);
+        const similarId = findSimilarCases(evalCase.id, evalCase.input, group, liveSuite);
         if (similarId) {
           candidate = {
-            live_case_id: eval.id,
+            live_case_id: evalCase.id,
             group,
             reason: "redundant",
             evidence: `Highly similar to existing case ${similarId}`,
@@ -225,7 +225,7 @@ function generateCandidates(liveSuite: Map<string, LiveEval[]>): RetirementCandi
       }
 
       if (candidate) {
-        const tagsAtRisk = checkTagImpact(eval.id, group, liveSuite);
+        const tagsAtRisk = checkTagImpact(evalCase.id, group, liveSuite);
         if (tagsAtRisk.length > 0) {
           candidate.tags_at_risk = tagsAtRisk;
         }

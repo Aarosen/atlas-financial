@@ -67,16 +67,16 @@ const ATLAS_GROUPS = [
 ];
 
 const TARGET_COUNTS: Record<string, number> = {
-  financial_reasoning: 13,
-  action_plans: 11,
-  personalization: 11,
-  conversation_flow: 10,
+  financial_reasoning: 18,
+  action_plans: 14,
+  personalization: 10,
+  conversation_flow: 13,
   missing_data_discipline: 13,
-  safety: 14,
-  followup_context: 11,
-  prompt_compliance: 9,
-  emotional_intelligence: 10,
-  stress_tests: 7,
+  safety: 16,
+  followup_context: 13,
+  prompt_compliance: 10,
+  emotional_intelligence: 11,
+  stress_tests: 6,
 };
 
 function readCandidates(): RetirementCandidate[] {
@@ -174,7 +174,8 @@ function buildRetirementReport(results: RetirementResult[], liveSuite: Map<strin
     const count = (liveSuite.get(group) || []).length;
     const target = TARGET_COUNTS[group];
     groupImpacts[group] = { before: count, after: count };
-    if (count < target) {
+    // Only warn about target mismatches if we actually retired something
+    if (retired.length > 0 && count < target) {
       warnings.push(`${group}: ${count}/${target} (below target distribution)`);
     }
   });

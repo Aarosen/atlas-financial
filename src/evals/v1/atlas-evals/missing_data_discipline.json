@@ -151,5 +151,35 @@
       "asks for income, expenses, and debt in one message",
       "no single focused question"
     ]
+  },
+  {
+    "id": "missing_data_zero_income_no_loop",
+    "tags": ["missing_data", "zero_values", "guardrail"],
+    "input": "I have no income right now.",
+    "expected_traits": [
+      "acknowledges the situation",
+      "does not ask for income again",
+      "asks about expenses or circumstances"
+    ],
+    "failure_conditions": [
+      "asks 'What is your monthly income?' again",
+      "infinite loop on income",
+      "ignores zero income statement"
+    ]
+  },
+  {
+    "id": "missing_data_approximate_numbers",
+    "tags": ["missing_data", "approximation"],
+    "input": "I spend around $3000 a month, give or take.",
+    "expected_traits": [
+      "accepts approximate number",
+      "does not ask for exact amount",
+      "proceeds with analysis"
+    ],
+    "failure_conditions": [
+      "asks for exact number",
+      "rejects approximation",
+      "stalls conversation"
+    ]
   }
 ]

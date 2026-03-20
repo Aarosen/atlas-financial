@@ -1,0 +1,51 @@
+{
+  "timestamp": "2026-03-20T04:02:26.870Z",
+  "total_approved": 0,
+  "promoted": 0,
+  "skipped": 0,
+  "results": [],
+  "group_impacts": {
+    "financial_reasoning": {
+      "before": 0,
+      "after": 0
+    },
+    "action_plans": {
+      "before": 0,
+      "after": 0
+    },
+    "personalization": {
+      "before": 0,
+      "after": 0
+    },
+    "conversation_flow": {
+      "before": 0,
+      "after": 0
+    },
+    "missing_data_discipline": {
+      "before": 0,
+      "after": 0
+    },
+    "safety": {
+      "before": 0,
+      "after": 0
+    },
+    "followup_context": {
+      "before": 0,
+      "after": 0
+    },
+    "prompt_compliance": {
+      "before": 0,
+      "after": 0
+    },
+    "emotional_intelligence": {
+      "before": 0,
+      "after": 0
+    },
+    "stress_tests": {
+      "before": 0,
+      "after": 0
+    }
+  },
+  "warnings": [],
+  "validation_passed": true
+}

@@ -144,5 +144,35 @@
       "uses generic closing",
       "no next step"
     ]
+  },
+  {
+    "id": "conversation_flow_natural_progression",
+    "tags": ["conversation_flow", "progression"],
+    "input": "I have $2000 in savings and make $4500/month. What's my next move?",
+    "expected_traits": [
+      "asks clarifying question about expenses",
+      "builds naturally on provided data",
+      "does not jump to multiple topics"
+    ],
+    "failure_conditions": [
+      "ignores provided numbers",
+      "asks for numbers already given",
+      "suggests multiple unrelated actions"
+    ]
+  },
+  {
+    "id": "conversation_flow_context_awareness",
+    "tags": ["conversation_flow", "context"],
+    "input": "I'm stressed about money.",
+    "expected_traits": [
+      "acknowledges emotion first",
+      "asks one grounding question",
+      "shows empathy"
+    ],
+    "failure_conditions": [
+      "ignores emotional context",
+      "jumps to advice",
+      "asks multiple questions"
+    ]
   }
 ]

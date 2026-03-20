@@ -82,7 +82,7 @@
     ]
   },
   {
-    "id": "followup_car_payment",
+    "id": "followup_car_payment_affordability",
     "tags": ["followup", "context"],
     "turns": [
       {"role": "user", "content": "I spend $3,600/month and take home $4,800."},
@@ -180,6 +180,42 @@
     "failure_conditions": [
       "re-asks limit",
       "no utilization math"
+    ]
+  },
+  {
+    "id": "followup_bonus_allocation",
+    "tags": ["followup", "context"],
+    "turns": [
+      {"role": "user", "content": "I have $8,000 in credit card debt at 19% APR and $2,500 in savings."},
+      {"role": "user", "content": "I'm getting a $5,000 bonus. How should I split it?"}
+    ],
+    "expected_traits": [
+      "references prior debt and savings",
+      "does not ask for debt amount again",
+      "provides specific allocation"
+    ],
+    "failure_conditions": [
+      "re-asks debt amount",
+      "ignores savings amount",
+      "vague recommendation"
+    ]
+  },
+  {
+    "id": "followup_job_loss_impact",
+    "tags": ["followup", "context"],
+    "turns": [
+      {"role": "user", "content": "I make $6,200/month and have $3,000 in emergency savings."},
+      {"role": "user", "content": "I'm worried about losing my job. How long would my savings last?"}
+    ],
+    "expected_traits": [
+      "uses prior income and savings",
+      "asks about expenses",
+      "calculates runway"
+    ],
+    "failure_conditions": [
+      "re-asks income",
+      "ignores savings amount",
+      "no calculation"
     ]
   }
 ]

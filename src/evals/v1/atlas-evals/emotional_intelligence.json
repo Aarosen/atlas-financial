@@ -126,5 +126,35 @@
       "flat tone",
       "multiple questions"
     ]
+  },
+  {
+    "id": "frustrated_no_progress",
+    "tags": ["emotion_frustrated", "empathy"],
+    "input": "I've been trying to save for months but I'm not making any progress.",
+    "expected_traits": [
+      "validates frustration",
+      "asks one diagnostic question",
+      "offers hope"
+    ],
+    "failure_conditions": [
+      "dismissive tone",
+      "no empathy",
+      "asks multiple questions"
+    ]
+  },
+  {
+    "id": "hopeful_new_start",
+    "tags": ["emotion_hopeful", "action"],
+    "input": "I just got a new job and want to finally get my finances right.",
+    "expected_traits": [
+      "matches hopeful energy",
+      "suggests one foundational step",
+      "asks one calibration question"
+    ],
+    "failure_conditions": [
+      "dampens enthusiasm",
+      "overwhelms with options",
+      "no clear action"
+    ]
   }
 ]
