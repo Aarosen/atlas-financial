@@ -8,6 +8,13 @@ import { AtlasEvalCategorySummary, AtlasEvalReport, AtlasEvalScores } from "./ty
 const ATLAS_MODEL = process.env.ATLAS_EVAL_MODEL || "claude-3-haiku-20240307";
 const TARGET_SCORE = 22;
 
+// Validate API key is available
+if (!process.env.ANTHROPIC_API_KEY) {
+  console.error("Error: ANTHROPIC_API_KEY environment variable is not set");
+  console.error("Please set ANTHROPIC_API_KEY before running eval:atlas-v1");
+  process.exit(1);
+}
+
 const client = new Anthropic({
   apiKey: process.env.ANTHROPIC_API_KEY,
 });
