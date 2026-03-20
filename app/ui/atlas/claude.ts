@@ -55,12 +55,46 @@ export class Claude {
         this._setStatusFromHttpError(r.status);
         throw new Error(t || `proxy_error_${r.status}`);
       }
-      const d = await r.json();
-      if (d.error) throw new Error(d.error);
+
+      // Read SSE stream instead of JSON
+      const reader = r.body?.getReader();
+      if (!reader) throw new Error('no_stream');
+      
+      const dec = new TextDecoder();
+      let fullText = '';
+      let carry = '';
+
+      while (true) {
+        const { value, done } = await reader.read();
+        if (done) break;
+        
+        const chunk = dec.decode(value, { stream: true });
+        carry += chunk;
+
+        // Process complete SSE frames
+        while (true) {
+          const idx = carry.indexOf('\n\n');
+          if (idx < 0) break;
+          
+          const frame = carry.slice(0, idx);
+          carry = carry.slice(idx + 2);
+
+          const lines = frame.split('\n');
+          for (const line of lines) {
+            if (!line.startsWith('data: ')) continue;
+            try {
+              const j = JSON.parse(line.slice(6));
+              if (j.delta) fullText += j.delta;
+              if (j.done) break;
+            } catch { /* ignore parse errors */ }
+          }
+        }
+      }
+
       this._hadSuccess = true;
       this._apiStatus = 'online';
       this._lastErrorStatus = null;
-      return (d.text as string) || this._fallbackQuestion(missing[0]);
+      return fullText || this._fallbackQuestion(missing[0]);
     } catch {
       if (!this._hadSuccess) {
         this._apiStatus = 'unknown';

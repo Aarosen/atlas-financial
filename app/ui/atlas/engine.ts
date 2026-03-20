@@ -6,16 +6,16 @@ export class Engine {
   }
 
   private _calc(d: Partial<FinancialState>) {
-    const inc = d.monthlyIncome || 0;
-    const ess = d.essentialExpenses || 0;
-    const dp = d.monthlyDebtPayments || 0;
-    const hiD = d.highInterestDebt || 0;
-    const loD = d.lowInterestDebt || 0;
-    const sav = d.totalSavings || 0;
+    const inc = d.monthlyIncome ?? 0;
+    const ess = d.essentialExpenses ?? 0;
+    const dp = d.monthlyDebtPayments ?? 0;
+    const hiD = d.highInterestDebt ?? 0;
+    const loD = d.lowInterestDebt ?? 0;
+    const sav = d.totalSavings ?? 0;
 
     const bufMo = ess > 0 ? sav / ess : 0;
     const net = inc - ess - dp;
-    const disc = (d as any).discretionaryExpenses || Math.max(0, net * 0.28);
+    const disc = (d as any).discretionaryExpenses ?? Math.max(0, net * 0.28);
     const futAmt = Math.max(0, net - disc);
     const futPct = inc > 0 ? futAmt / inc : 0;
 
