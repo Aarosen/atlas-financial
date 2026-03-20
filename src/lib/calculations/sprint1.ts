@@ -18,8 +18,8 @@ export interface CalculationResult {
 }
 
 export function runCalculations(data: Partial<FinancialSnapshot>): CalculationResult | null {
-  if (data.monthlyIncome === undefined && data.monthlyIncome !== 0) return null;
-  if (data.monthlyFixedExpenses === undefined && data.monthlyFixedExpenses !== 0) return null;
+  if (data.monthlyIncome === undefined || data.monthlyIncome === null) return null;
+  if (data.monthlyFixedExpenses === undefined || data.monthlyFixedExpenses === null) return null;
 
   const monthlyIncome = data.monthlyIncome ?? 0;
   const fixedExpenses = data.monthlyFixedExpenses ?? 0;
