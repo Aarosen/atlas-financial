@@ -8,16 +8,22 @@ import { AtlasEvalCategorySummary, AtlasEvalReport, AtlasEvalScores } from "./ty
 const ATLAS_MODEL = process.env.ATLAS_EVAL_MODEL || "claude-3-haiku-20240307";
 const TARGET_SCORE = 22;
 
-// Validate API key is available
-if (!process.env.ANTHROPIC_API_KEY) {
-  console.error("Error: ANTHROPIC_API_KEY environment variable is not set");
-  console.error("Please set ANTHROPIC_API_KEY before running eval:atlas-v1");
-  process.exit(1);
-}
+// Initialize client lazily to avoid validation errors in offline mode
+let client: Anthropic | null = null;
 
-const client = new Anthropic({
-  apiKey: process.env.ANTHROPIC_API_KEY,
-});
+function getClient(): Anthropic {
+  if (!client) {
+    if (!process.env.ANTHROPIC_API_KEY) {
+      console.error("Error: ANTHROPIC_API_KEY environment variable is not set");
+      console.error("Please set ANTHROPIC_API_KEY before running eval:atlas-v1");
+      process.exit(1);
+    }
+    client = new Anthropic({
+      apiKey: process.env.ANTHROPIC_API_KEY,
+    });
+  }
+  return client;
+}
 
 const ATLAS_SYSTEM_PROMPT = `You are Atlas, a financial intelligence companion for US young professionals (22–35).
 Be warm, clear, and practical. Never say \"as an AI\". Ask ONE question at a time.
@@ -25,7 +31,8 @@ If key data is missing, ask for it before giving advice. Give specific numbers w
 End with a single follow-up question or action.`;
 
 async function callAtlas(system: string, messages: Array<{ role: "user" | "assistant"; content: string }>) {
-  const response = await client.messages.create({
+  const atlasClient = getClient();
+  const response = await atlasClient.messages.create({
     model: ATLAS_MODEL,
     max_tokens: 700,
     system,
