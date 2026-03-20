@@ -788,7 +788,13 @@ Return ONLY the rewritten text.`;
                     const delta = j?.delta?.text;
                     if (typeof delta === 'string' && delta) {
                       fullResponse += delta;
-                      controller.enqueue(enc.encode(`data: ${JSON.stringify({ delta })}\n\n`));
+                      // Clean calculation result tags from each delta before sending to frontend
+                      const cleanDelta = delta
+                        .replace(/\[CALCULATION_RESULTS[^\]]*\]/g, '')
+                        .replace(/\[END_CALCULATIONS\]/g, '');
+                      if (cleanDelta) {
+                        controller.enqueue(enc.encode(`data: ${JSON.stringify({ delta: cleanDelta })}\n\n`));
+                      }
                     }
                   } catch { /* ignore */ }
                 }
