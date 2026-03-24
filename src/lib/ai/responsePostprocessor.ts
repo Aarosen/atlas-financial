@@ -1,7 +1,8 @@
 export function cleanAtlasResponse(raw: string): string {
   return raw
-    // Remove calculation result block delimiters
+    // Remove calculation result block delimiters (all variations)
     .replace(/\[CALCULATION_RESULTS[^\]]*\]/g, '')
+    .replace(/\[CALCULATION_RESULTS\]/g, '')
     .replace(/\[END_CALCULATIONS\]/g, '')
     // Remove markdown headers
     .replace(/^#{1,6}\s+/gm, '')
