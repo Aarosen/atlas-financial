@@ -656,7 +656,9 @@ Return ONLY the rewritten text.`;
       // The session state block is injected first so it's never trimmed away
       const emotionTag = detectEmotion(messages);
       const emotionContext = `\n\nUSER EMOTION TAG: ${emotionTag}.`;
-      const disclaimerContext = `\n\nDISCLAIMER_NEEDED: ${hasDisclaimer(messages) ? 'no' : 'yes'}.`;
+      // For crisis entries on first message, don't show disclaimer mid-conversation
+      const isCrisisFirstMessage = crisisSignal && messages.length === 1;
+      const disclaimerContext = `\n\nDISCLAIMER_NEEDED: ${isCrisisFirstMessage || hasDisclaimer(messages) ? 'no' : 'yes'}.`;
       const memoryContext = memorySummary ? `\n\nUSER MEMORY SUMMARY:\n${String(memorySummary).trim()}` : '';
       const agentContext = lastUserMsg
         ? `\n\nPRIMARY AGENT: ${routeAgentForText(lastUserMsg).label}.`
