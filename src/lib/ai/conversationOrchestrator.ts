@@ -11,6 +11,7 @@
 import { detectObjections, generateObjectionHandlingInstruction, type Objection } from './objectionHandlingEngine';
 import { calculateFinancials, formatAffordabilityBlock, formatEmergencyFundBlock } from './financialCalculations';
 import { formatDebtPayoffBlock } from './debtPayoffCalculations';
+import { classifyUserIntent, type UserIntent, type EntryPoint } from './intentClassifier';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -50,6 +51,8 @@ export interface SessionState {
   turnCount: number;
   hasGreeted: boolean;
   urgencyLevel: 'calm' | 'advisory' | 'protective';
+  entryPoint?: EntryPoint;
+  userIntent?: UserIntent;
 }
 
 // ─── Goal Detection ───────────────────────────────────────────────────────────
@@ -252,18 +255,19 @@ ${missingSection}
 ${loopSection ? '\n' + loopSection : ''}
 
 PHASE INSTRUCTIONS:
-${getPhaseInstructions(state.phase, state.missingFields, state.goal)}
+${getPhaseInstructions(state.phase, state.missingFields, state.goal, state.entryPoint)}
 ━━━━━━━━━━━━━━━━━━━━━━━━━━`.trim();
 }
 
 function getPhaseInstructions(
   phase: SessionPhase,
   missingFields: string[],
-  goal: ConversationGoal
+  goal: ConversationGoal,
+  entryPoint?: EntryPoint
 ): string {
   switch (phase) {
     case 'greeting':
-      return 'Open warmly. Ask ONE grounding question to understand what brought them here today. Do not ask for numbers yet.';
+      return getGreetingInstruction(entryPoint);
     case 'discovery':
       return `The next missing piece of information is: "${missingFields[0]}". Gather this naturally in conversation — do not use a form-style question. Stay in Atlas voice. Ask warmly and specifically. Accept approximate values. Do not explain why you need it. Keep the conversation flowing naturally.`;
     case 'analysis':
@@ -274,6 +278,25 @@ function getPhaseInstructions(
       return 'Confirm the action plan. Summarize what was decided. Propose the single most important next move.';
     default:
       return 'Continue the conversation naturally.';
+  }
+}
+
+function getGreetingInstruction(entryPoint?: EntryPoint): string {
+  switch (entryPoint) {
+    case 'crisis':
+      return 'The user is in financial distress. Acknowledge the emotion FIRST in one sentence. Do not ask for numbers yet. Say something like: "That sounds really stressful — let\'s figure out exactly what\'s happening." Then ask ONE grounding question to understand the situation.';
+    case 'shame':
+      return 'The user expressed embarrassment about money. Normalize it completely FIRST: "Most people were never taught this — it\'s not a character flaw, it\'s a gap." Then ask what specifically is feeling off or worrying them.';
+    case 'milestone':
+      return 'The user has good news or a life change. Match their energy. Say something like: "That\'s a real opportunity — let\'s make sure you use it well." Then ask what they\'re thinking about doing with it.';
+    case 'vague_stress':
+      return 'The user knows something is wrong but can\'t name it. Don\'t ask for income yet. Ask: "When you think about money, what\'s the feeling that comes up most — stress about what\'s coming in, what\'s going out, or what you don\'t have saved?"';
+    case 'specific_goal':
+      return 'The user has a clear goal or question. Acknowledge it specifically. Then ask one clarifying question to understand their timeline or constraints.';
+    case 'question':
+      return 'The user is asking for advice or information. Answer their question directly, then ask one follow-up to understand their broader situation.';
+    default:
+      return 'Open warmly. Ask ONE grounding question to understand what brought them here today. Do not ask for numbers yet.';
   }
 }
 
