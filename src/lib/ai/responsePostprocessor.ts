@@ -1,5 +1,9 @@
 export function cleanAtlasResponse(raw: string): string {
   return raw
+    // Remove profile block delimiters (all variations)
+    .replace(/\[ATLAS_USER_PROFILE\][\s\S]*?\[END_PROFILE\]/g, '')
+    .replace(/\[ATLAS_USER_PROFILE\]/g, '')
+    .replace(/\[END_PROFILE\]/g, '')
     // Remove calculation result block delimiters (all variations)
     .replace(/\[CALCULATION_RESULTS[^\]]*\]/g, '')
     .replace(/\[CALCULATION_RESULTS\]/g, '')

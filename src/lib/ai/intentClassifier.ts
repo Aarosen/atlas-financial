@@ -96,12 +96,32 @@ EXAMPLES:
 
 "Just got a $20k raise, what should I do with it?" →
 {
-  "primary_goal": "general",
+  "primary_goal": "savings_goal",
   "emotional_state": "motivated",
   "life_event": "raise",
   "entry_point": "milestone",
   "urgency": "near_term",
   "confidence": 0.9
+}
+
+"I just got promoted and want to make smarter money decisions" →
+{
+  "primary_goal": "budget",
+  "emotional_state": "motivated",
+  "life_event": "raise",
+  "entry_point": "milestone",
+  "urgency": "near_term",
+  "confidence": 0.85
+}
+
+"Finally got my first job, how do I manage my money?" →
+{
+  "primary_goal": "budget",
+  "emotional_state": "motivated",
+  "life_event": "none",
+  "entry_point": "milestone",
+  "urgency": "near_term",
+  "confidence": 0.8
 }
 
 "My kid starts college in 2 years" →
@@ -116,12 +136,42 @@ EXAMPLES:
 
 "I'm embarrassed I don't have more saved at my age" →
 {
-  "primary_goal": "general",
+  "primary_goal": "savings_goal",
   "emotional_state": "ashamed",
   "life_event": "none",
   "entry_point": "shame",
   "urgency": "long_term",
   "confidence": 0.85
+}
+
+"My parents never talked about money and I feel lost" →
+{
+  "primary_goal": "budget",
+  "emotional_state": "ashamed",
+  "life_event": "none",
+  "entry_point": "shame",
+  "urgency": "long_term",
+  "confidence": 0.8
+}
+
+"I'm 35 and have no idea what I'm doing with money" →
+{
+  "primary_goal": "budget",
+  "emotional_state": "ashamed",
+  "life_event": "none",
+  "entry_point": "shame",
+  "urgency": "near_term",
+  "confidence": 0.85
+}
+
+"I feel stupid about money" →
+{
+  "primary_goal": "general",
+  "emotional_state": "ashamed",
+  "life_event": "none",
+  "entry_point": "shame",
+  "urgency": "long_term",
+  "confidence": 0.75
 }
 
 "My car needs $3,000 in repairs and I don't have it" →
