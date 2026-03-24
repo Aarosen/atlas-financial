@@ -389,34 +389,32 @@ export function detectCrisisSignals(
 export function generateCrisisResponse(signal: CrisisSignal): string {
   let response = '';
 
+  // Plain prose instead of markdown - urgency comes through language, not formatting
   if (signal.level === 'critical') {
-    response += `🚨 **IMMEDIATE ACTION REQUIRED**\n\n`;
     response += `I'm detecting a critical financial emergency: ${signal.description}\n\n`;
+    response += `This needs immediate action right now.\n\n`;
   } else if (signal.level === 'urgent') {
-    response += `⚠️ **URGENT SITUATION**\n\n`;
     response += `I'm detecting an urgent situation: ${signal.description}\n\n`;
+    response += `This needs attention soon.\n\n`;
   } else {
-    response += `⚠️ **WARNING**\n\n`;
     response += `I'm noticing: ${signal.description}\n\n`;
   }
 
-  response += `**Immediate Actions:**\n`;
+  response += `Here are the immediate actions to take:\n`;
   for (const action of signal.immediateActions) {
-    response += `- ${action}\n`;
+    response += `${action}\n`;
   }
 
-  response += `\n**Resources Available Right Now:**\n`;
+  response += `\nResources available right now:\n`;
   for (const resource of signal.resources) {
-    response += `\n**${resource.name}**\n`;
-    response += `${resource.description}\n`;
-    if (resource.phone) response += `📞 ${resource.phone}\n`;
-    if (resource.url) response += `🌐 ${resource.url}\n`;
-    response += `⏰ ${resource.availability}\n`;
+    response += `\n${resource.name}: ${resource.description}`;
+    if (resource.phone) response += ` Phone: ${resource.phone}`;
+    if (resource.url) response += ` Website: ${resource.url}`;
+    response += ` Available: ${resource.availability}\n`;
   }
 
   if (signal.escalateToHuman) {
-    response += `\n**I'm connecting you with a human advisor who specializes in crisis situations.**\n`;
-    response += `They will be able to provide personalized guidance and support.\n`;
+    response += `\nI'm connecting you with a human advisor who specializes in crisis situations. They will be able to provide personalized guidance and support.\n`;
   }
 
   return response;

@@ -11,7 +11,7 @@
 import { detectObjections, generateObjectionHandlingInstruction, type Objection } from './objectionHandlingEngine';
 import { calculateFinancials, formatAffordabilityBlock, formatEmergencyFundBlock } from './financialCalculations';
 import { formatDebtPayoffBlock } from './debtPayoffCalculations';
-import { classifyUserIntent, type UserIntent, type EntryPoint } from './intentClassifier';
+import { classifyUserIntent, type UserIntent, type EntryPoint, type PrimaryGoal } from './intentClassifier';
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -109,6 +109,29 @@ const GOAL_PATTERNS: Array<{ goal: ConversationGoal; patterns: RegExp[] }> = [
   },
 ];
 
+// Map semantic intent classifier goals to conversation goals
+function mapIntentToGoal(primaryGoal: PrimaryGoal): ConversationGoal {
+  switch (primaryGoal) {
+    case 'emergency_fund':
+      return 'emergency_fund';
+    case 'debt_payoff':
+      return 'debt_payoff';
+    case 'budget':
+      return 'budget_build';
+    case 'savings_goal':
+      return 'investment_start'; // Use investment_start as closest match for savings goals
+    case 'income_gap':
+      return 'general_guidance'; // Income gap is a general guidance topic
+    case 'major_purchase':
+      return 'affordability_check';
+    case 'retirement':
+      return 'retirement_planning';
+    case 'general':
+    default:
+      return 'general_guidance';
+  }
+}
+
 export function detectGoal(
   messages: Array<{ role: string; content: string }>,
   existingGoal: ConversationGoal = 'unknown'
@@ -116,6 +139,7 @@ export function detectGoal(
   // Don't override an established goal unless conversation clearly shifts
   if (existingGoal !== 'unknown' && existingGoal !== 'general_guidance') return existingGoal;
 
+  // For subsequent messages, use regex patterns as fallback
   const recentText = messages
     .slice(-4)
     .filter((m) => m.role === 'user')
@@ -127,6 +151,32 @@ export function detectGoal(
   }
 
   return existingGoal === 'unknown' ? 'general_guidance' : existingGoal;
+}
+
+// Async version for first-message semantic intent classification
+export async function detectGoalWithIntent(
+  messages: Array<{ role: string; content: string }>,
+  existingGoal: ConversationGoal = 'unknown'
+): Promise<ConversationGoal> {
+  // Don't override an established goal unless conversation clearly shifts
+  if (existingGoal !== 'unknown' && existingGoal !== 'general_guidance') return existingGoal;
+
+  const userMessages = messages.filter((m) => m.role === 'user');
+  
+  // On first message, use semantic intent classifier for superior accuracy
+  if (userMessages.length === 1) {
+    try {
+      const firstUserMessage = String(userMessages[0].content || '');
+      const intent = await classifyUserIntent(firstUserMessage);
+      return mapIntentToGoal(intent.primary_goal);
+    } catch (e) {
+      console.error('Intent classification error, falling back to regex:', e);
+      // Fall through to regex-based detection
+    }
+  }
+
+  // Fall back to synchronous regex-based detection
+  return detectGoal(messages, existingGoal);
 }
 
 // ─── Required Fields Per Goal ─────────────────────────────────────────────────

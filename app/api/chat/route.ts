@@ -26,6 +26,8 @@ import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
 import { extractFinancialSnapshot } from '@/lib/ai/financialExtractor';
 import { runCalculations, formatCalculationBlock } from '@/lib/calculations/sprint1';
 import { cleanAtlasResponse } from '@/lib/ai/responsePostprocessor';
+import { classifyUserIntent } from '@/lib/ai/intentClassifier';
+import { buildSystemPrompt } from '@/lib/ai/systemPromptBuilder';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -408,14 +410,14 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
     isFirstMessage,
     emotionalState,
   });
-  const personalityPrompt = generatePersonalityPrompt(appropriateTone);
+  // Note: personalityPrompt removed - ATLAS_SYSTEM_PROMPT already defines personality completely
+  // Tone detection (appropriateTone) can be used to adjust sessionStateBlock instructions instead
   
   const systemPrompt = type === 'extract'
     ? extractPrompt
     : trimPromptSections(
         [
           ATLAS_SYSTEM_PROMPT,
-          personalityPrompt,
           memoryContext,
           emotionContext,
           disclaimerContext,
@@ -629,8 +631,10 @@ Return ONLY the rewritten text.`;
       const crisisSignal = detectCrisisSignals(lastUserMsg, conversationHistory, financialProfile as any);
       if (crisisSignal) {
         const crisisResponse = generateCrisisResponse(crisisSignal);
+        // Route crisis response through cleanAtlasResponse to remove any markdown formatting
+        const cleanedCrisisResponse = cleanAtlasResponse(crisisResponse);
         return jsonOk({
-          text: crisisResponse,
+          text: cleanedCrisisResponse,
           source: 'atlas_crisis',
           model: usedModel,
           tier,
