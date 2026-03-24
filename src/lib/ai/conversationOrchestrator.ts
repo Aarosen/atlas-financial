@@ -448,11 +448,29 @@ export interface OrchestratorOutput {
   calculationBlock?: string;       // Inject pre-calculated financial metrics
 }
 
-export function orchestrate(input: OrchestratorInput): OrchestratorOutput {
+export async function orchestrate(input: OrchestratorInput): Promise<OrchestratorOutput> {
   const { messages, financialProfile, previousState, answered } = input;
 
   const turnCount = messages.filter((m) => m.role === 'user').length;
-  const goal = detectGoal(messages, previousState?.goal ?? 'unknown');
+  
+  // Use semantic intent classifier on first message for superior accuracy
+  const goal = await detectGoalWithIntent(messages, previousState?.goal ?? 'unknown');
+  
+  // Get entry point from intent classification on first message only
+  let entryPoint: EntryPoint | undefined;
+  if (turnCount === 1 && !previousState?.entryPoint) {
+    try {
+      const firstMsg = messages.filter(m => m.role === 'user')[0]?.content || '';
+      const intent = await classifyUserIntent(firstMsg);
+      entryPoint = intent.entry_point;
+    } catch (e) {
+      console.error('Entry point classification error:', e);
+      // Fall back to undefined, which will use default greeting
+    }
+  } else {
+    entryPoint = previousState?.entryPoint;
+  }
+  
   const missingFields = getMissingFields(goal, financialProfile, answered);
   const phase = detectPhase(turnCount, missingFields, financialProfile, goal);
   const openLoops = detectOpenLoops(messages, previousState?.openLoops ?? []);
@@ -474,6 +492,8 @@ export function orchestrate(input: OrchestratorInput): OrchestratorOutput {
     turnCount,
     hasGreeted: turnCount > 0,
     urgencyLevel,
+    entryPoint,
+    userIntent: undefined, // Could be populated if needed for logging
   };
 
   const sessionStateBlock = buildSessionStateBlock(state);

@@ -644,7 +644,8 @@ Return ONLY the rewritten text.`;
 
       // Step 2: Run the orchestrator
       // This analyzes conversation state and builds a session context block
-      const { sessionStateBlock, missingFields: orchestratorMissingFields, state, objectionBlock, calculationBlock } = orchestrate({
+      // Now uses semantic intent classifier on first message for superior accuracy
+      const { sessionStateBlock, missingFields: orchestratorMissingFields, state, objectionBlock, calculationBlock } = await orchestrate({
         messages: conversationHistory,
         financialProfile,
         previousState: sessionState as any,
