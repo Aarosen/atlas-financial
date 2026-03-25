@@ -32,10 +32,10 @@ import {
   buildCompanionSystemPromptContext, 
   processUserMessageForCompanion, 
   processAtlasResponseForCompanion, 
-  endCompanionSession, 
-  initializeCompanionSession 
+  endCompanionSession 
 } from '@/lib/ai/companionIntegration';
 import { loadUserContext } from '@/lib/db/userContext';
+import { initializeConversationSession } from '@/lib/db/supabaseIntegration';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -265,7 +265,7 @@ export async function POST(req: Request) {
     return jsonError(400, 'Invalid JSON body');
   }
 
-  const { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion, answered, userId, sessionId } = body as {
+  let { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion, answered, userId, sessionId } = body as {
     type?: string;
     messages?: any[];
     missing?: string[];
@@ -280,6 +280,20 @@ export async function POST(req: Request) {
     userId?: string;
     sessionId?: string;
   };
+
+  // COMPANION INTEGRATION: Initialize session if userId provided but sessionId not yet established
+  // This creates a new conversation session in Supabase and returns sessionId for all subsequent calls
+  if (userId && !sessionId && type === 'chat' && messages && messages.length <= 1) {
+    try {
+      const newSession = await initializeConversationSession(userId);
+      sessionId = newSession.id;
+      // Return sessionId to frontend so it can be passed in subsequent requests
+      console.log(`[companion] Initialized session ${sessionId} for user ${userId}`);
+    } catch (error) {
+      console.error('Error initializing companion session:', error);
+      // Continue without session initialization if it fails
+    }
+  }
 
   if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'answer_explain', 'answer_explain_stream'].includes(type)) {
     return jsonError(400, 'Invalid request type.');
