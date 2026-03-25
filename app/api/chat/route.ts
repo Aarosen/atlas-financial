@@ -627,6 +627,19 @@ Return ONLY the rewritten text.`;
       const conversationHistory = messages || [];
       const financialProfile = { ...(fin || {}), ...(extractedFields || {}) };
 
+      // Track answered fields when extractor successfully extracts them
+      // This prevents infinite loops when user provides zero income or other falsy values
+      const updatedAnswered = { ...(answered || {}) };
+      if (extractedFields?.monthlyIncome !== undefined && extractedFields.monthlyIncome !== null) {
+        updatedAnswered.monthlyIncome = true;
+      }
+      if (extractedFields?.essentialExpenses !== undefined && extractedFields.essentialExpenses !== null) {
+        updatedAnswered.essentialExpenses = true;
+      }
+      if (extractedFields?.totalSavings !== undefined && extractedFields.totalSavings !== null) {
+        updatedAnswered.totalSavings = true;
+      }
+
       // Step 1: Crisis check first (safety gate)
       const crisisSignal = detectCrisisSignals(lastUserMsg, conversationHistory, financialProfile as any);
       if (crisisSignal) {
@@ -649,7 +662,7 @@ Return ONLY the rewritten text.`;
         messages: conversationHistory,
         financialProfile,
         previousState: sessionState as any,
-        answered: answered || {},
+        answered: updatedAnswered,
       });
 
       // Step 3: Build enriched system prompt with session state block FIRST

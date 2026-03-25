@@ -64,10 +64,11 @@ function assessConfidence(matchedText: string, fullText: string): number {
     return 0.85;
   }
   
-  // Low confidence: number appears near emotional language
+  // Low confidence: number appears near emotional language or life event keywords
   // "paycheck to paycheck" or "drowning in debt" = 0.3
-  if (/paycheck|drowning|struggling|broke|desperate|crisis|emergency/i.test(fullText)) {
-    return 0.3;
+  // "$20k raise" should not be treated as income = 0.2
+  if (/paycheck|drowning|struggling|broke|desperate|crisis|emergency|raise|bonus|promotion|annual increase/i.test(fullText)) {
+    return 0.2;
   }
   
   // Medium confidence: number with context keyword but not explicit

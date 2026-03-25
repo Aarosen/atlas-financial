@@ -384,38 +384,54 @@ export function detectCrisisSignals(
 }
 
 /**
- * Generate crisis response
+ * Generate crisis response - produces rich prose that survives postprocessing
+ * Never use markdown or formatting that will be stripped away
  */
 export function generateCrisisResponse(signal: CrisisSignal): string {
   let response = '';
 
-  // Plain prose instead of markdown - urgency comes through language, not formatting
+  // Open with empathy and acknowledgment
   if (signal.level === 'critical') {
-    response += `I'm detecting a critical financial emergency: ${signal.description}\n\n`;
-    response += `This needs immediate action right now.\n\n`;
+    response += `I hear you. A critical financial emergency like ${signal.description} is genuinely scary, and the fact that you're reaching out right now shows real strength.\n\n`;
   } else if (signal.level === 'urgent') {
-    response += `I'm detecting an urgent situation: ${signal.description}\n\n`;
-    response += `This needs attention soon.\n\n`;
+    response += `I understand. ${signal.description} is a serious situation that needs attention, and I'm here to help you think through it clearly.\n\n`;
   } else {
-    response += `I'm noticing: ${signal.description}\n\n`;
+    response += `I'm noticing something important: ${signal.description}. Let me help you work through this.\n\n`;
   }
 
-  response += `Here are the immediate actions to take:\n`;
-  for (const action of signal.immediateActions) {
-    response += `${action}\n`;
+  // Immediate actions - plain prose, not a list
+  if (signal.immediateActions.length > 0) {
+    response += `Here's what to do right now. `;
+    response += signal.immediateActions.map((action, i) => {
+      if (i === signal.immediateActions.length - 1) {
+        return `And finally, ${action.toLowerCase().replace(/^[A-Z]/, c => c.toLowerCase())}.`;
+      }
+      return `First, ${action.toLowerCase().replace(/^[A-Z]/, c => c.toLowerCase())}.`;
+    }).join(' ');
+    response += '\n\n';
   }
 
-  response += `\nResources available right now:\n`;
-  for (const resource of signal.resources) {
-    response += `\n${resource.name}: ${resource.description}`;
-    if (resource.phone) response += ` Phone: ${resource.phone}`;
-    if (resource.url) response += ` Website: ${resource.url}`;
-    response += ` Available: ${resource.availability}\n`;
+  // Resources - prose format with full details
+  if (signal.resources.length > 0) {
+    response += `You have immediate resources available. `;
+    const resourceDescriptions = signal.resources.map(resource => {
+      let desc = `${resource.name} can help with ${resource.description}`;
+      if (resource.phone) desc += ` — call ${resource.phone}`;
+      if (resource.url) desc += ` or visit ${resource.url}`;
+      desc += `. They're available ${resource.availability}.`;
+      return desc;
+    });
+    response += resourceDescriptions.join(' ');
+    response += '\n\n';
   }
 
+  // Escalation message if needed
   if (signal.escalateToHuman) {
-    response += `\nI'm connecting you with a human advisor who specializes in crisis situations. They will be able to provide personalized guidance and support.\n`;
+    response += `Given the severity of your situation, I'm recommending you connect with a financial counselor or advisor who can provide personalized guidance specific to your circumstances. They can help you create a concrete action plan and provide ongoing support.\n\n`;
   }
+
+  // Closing with next step
+  response += `You're not alone in this. Take the first action today, even if it's just one phone call. That momentum matters.`;
 
   return response;
 }
