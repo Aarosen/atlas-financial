@@ -358,6 +358,7 @@ EXTRACTION RULES:
   * "No student loans" or "No car loans" or "No low-interest debt" → lowInterestDebt: 0
 - CRITICAL: Extract debt amounts from ANY mention of debt. "$8,000 credit card debt" → highInterestDebt: 8000. "$15k student loans" → lowInterestDebt: 15000.
 - CRITICAL: Only set debt to 0 if user EXPLICITLY says "no" or "I don't have" in response to a debt question. If user doesn't mention debt at all, OMIT the field entirely (don't default to 0).
+- CRITICAL: "I have $X left over" or "I have $X surplus" or "after essentials I have $X" → this is SURPLUS, NOT income. Extract as essentialExpenses = (monthlyIncome - surplus). Do NOT extract as monthlyIncome.
 - Annual salary → divide by 12 for monthlyIncome.
 - "Take-home" / "after tax" / "net" → use as monthlyIncome.
 - Value ranges ("$3,000–$3,500") → use the midpoint.
@@ -652,9 +653,14 @@ Return ONLY the rewritten text.`;
 
       // COMPANION INTEGRATION: Process user message for commitments
       // This detects if user is committing to or completing actions
-      if (userId) {
+      if (userId && sessionId) {
         try {
-          await processUserMessageForCompanion(userId, lastUserMsg, apiKey);
+          const { commitment } = await processUserMessageForCompanion(userId, lastUserMsg, apiKey);
+          // Handle the commitment (update action status if detected)
+          if (commitment.commitment_detected) {
+            const { handleUserCommitment } = await import('@/lib/ai/companionIntegration');
+            await handleUserCommitment(userId, sessionId, commitment, apiKey);
+          }
         } catch (error) {
           console.error('Error processing user message for companion:', error);
           // Continue without companion processing if it fails
@@ -691,7 +697,8 @@ Return ONLY the rewritten text.`;
       let companionContext = '';
       if (userId) {
         try {
-          companionContext = await buildCompanionSystemPromptContext(userId, lastUserMsg, extractedFields || {});
+          const isFirstMessage = messages.length <= 1;
+          companionContext = await buildCompanionSystemPromptContext(userId, lastUserMsg, extractedFields || {}, isFirstMessage);
         } catch (error) {
           console.error('Error building companion context:', error);
           // Continue without companion context if it fails

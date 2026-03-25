@@ -22,7 +22,8 @@ import { createAction, updateActionStatus } from '@/lib/db/supabaseRepository';
 export async function buildCompanionSystemPromptContext(
   userId: string,
   userMessage: string,
-  extractedFields: Record<string, any>
+  extractedFields: Record<string, any>,
+  isFirstMessage: boolean = false
 ): Promise<string> {
   try {
     // Load user context from Supabase
@@ -31,7 +32,7 @@ export async function buildCompanionSystemPromptContext(
     let contextBlocks: string[] = [];
 
     // 1. Accountability block (if open commitments exist)
-    if (userContext.openActions.length > 0) {
+    if (!isFirstMessage && userContext.openActions && userContext.openActions.length > 0) {
       const accountabilityBlock = buildAccountabilityBlockEngine(userContext.openActions);
       if (accountabilityBlock) {
         contextBlocks.push(accountabilityBlock);
@@ -187,6 +188,7 @@ export async function processAtlasResponseForCompanion(
  */
 export async function handleUserCommitment(
   userId: string,
+  sessionId: string,
   commitment: any,
   apiKey: string
 ): Promise<void> {
@@ -195,22 +197,55 @@ export async function handleUserCommitment(
       return;
     }
 
-    // Find most recent recommended action
-    // This would require querying the database for the most recent action
-    // For now, this is a placeholder for the logic
+    // Find most recent recommended action for this user
+    // Query for the most recent action with status 'recommended' or 'committed'
+    const recentActions = await getRecentActions(userId, sessionId);
+    if (recentActions.length === 0) {
+      return;
+    }
+
+    const mostRecentAction = recentActions[0];
 
     if (commitment.commitment_type === 'will_do') {
       // Mark action as committed
-      // await updateActionStatus(actionId, 'committed');
+      await updateActionStatus(mostRecentAction.id, 'committed');
     } else if (commitment.commitment_type === 'done') {
       // Mark action as completed
-      // await updateActionStatus(actionId, 'completed', commitment.user_notes, commitment.user_reported_amount);
+      await updateActionStatus(
+        mostRecentAction.id,
+        'completed',
+        commitment.user_notes || undefined,
+        commitment.user_reported_amount || undefined
+      );
     } else if (commitment.commitment_type === 'partial') {
       // Mark action as partial
-      // await updateActionStatus(actionId, 'partial', commitment.user_notes, commitment.user_reported_amount);
+      await updateActionStatus(
+        mostRecentAction.id,
+        'partial',
+        commitment.user_notes || undefined,
+        commitment.user_reported_amount || undefined
+      );
     }
   } catch (error) {
     console.error('Error handling user commitment:', error);
+  }
+}
+
+/**
+ * Get recent actions for a user in current session
+ */
+async function getRecentActions(userId: string, sessionId: string): Promise<any[]> {
+  try {
+    // This would query Supabase for recent actions
+    // For now, return empty array if Supabase is not configured
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+      return [];
+    }
+    // Query would be implemented here
+    return [];
+  } catch (error) {
+    console.error('Error getting recent actions:', error);
+    return [];
   }
 }
 
