@@ -896,10 +896,10 @@ Return ONLY the rewritten text.`;
                 `data: ${JSON.stringify({ type: 'replace', text: cleanedResponse })}\n\n`
               )
             );
-            // Also send done event with metadata
+            // Also send done event with metadata (include sessionId for frontend tracking)
             controller.enqueue(
               enc.encode(
-                `data: ${JSON.stringify({ done: true, model: usedModel, tier })}\n\n`
+                `data: ${JSON.stringify({ done: true, model: usedModel, tier, sessionId })}\n\n`
               )
             );
           } catch {
