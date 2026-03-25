@@ -1,0 +1,431 @@
+{
+  "companion_evals": {
+    "description": "Multi-session companion behavior evals - test whether Atlas remembers, follows up, adapts, and progresses users",
+    "evals": [
+      {
+        "id": "companion_accountability_followup",
+        "name": "Accountability Follow-up on Open Commitments",
+        "description": "Test whether Atlas correctly opens with accountability when open commitments exist",
+        "type": "multi_session",
+        "sessions": [
+          {
+            "session_num": 1,
+            "user_input": "I have $8,000 in credit card debt at 22.99% APR and $2,000 in savings. I make $4,500/month and spend $2,500 on essentials.",
+            "expected_outputs": [
+              "Specific action recommended (e.g., $1,800/month transfer)",
+              "Action is tracked as 'recommended'",
+              "Check-in date is set (35 days)"
+            ],
+            "setup": "User provides financial data, Atlas recommends action"
+          },
+          {
+            "session_num": 2,
+            "days_elapsed": 18,
+            "user_input": "Hey, I'm back.",
+            "expected_outputs": [
+              "Atlas opens with accountability check-in FIRST",
+              "References the $1,800/month transfer commitment",
+              "Asks 'How did that go?' before any new topic",
+              "Does NOT introduce new analysis or recommendations until commitment is addressed"
+            ],
+            "setup": "User returns 18 days later. Open action exists with check_in_due_at in past"
+          },
+          {
+            "session_num": 3,
+            "days_elapsed": 35,
+            "user_input": "I set up $600/month instead of the full $1,800. I was nervous about the full amount.",
+            "expected_outputs": [
+              "Action marked as 'partial' (not 'completed')",
+              "Atlas acknowledges the partial win: 'Six hundred dollars is real'",
+              "Asks what made the full amount feel out of reach",
+              "Adjusts recommendation based on user's constraint"
+            ],
+            "setup": "User responds to accountability check-in with partial completion"
+          }
+        ],
+        "pass_criteria": {
+          "session_2_accountability_first": "Atlas's first response addresses the open commitment before any new topic",
+          "session_3_partial_handling": "Atlas marks action as partial and adjusts strategy rather than re-explaining"
+        }
+      },
+      {
+        "id": "companion_progress_reporting",
+        "name": "Progress Reporting and Trajectory",
+        "description": "Test whether Atlas correctly references progress data and shows trajectory",
+        "type": "multi_session",
+        "sessions": [
+          {
+            "session_num": 1,
+            "user_input": "I have $15,000 in credit card debt and $500 in savings. I make $3,500/month and spend $2,200 on essentials.",
+            "expected_outputs": [
+              "Financial snapshot created",
+              "Debt payoff plan recommended"
+            ],
+            "setup": "Session 1: Baseline financial state captured"
+          },
+          {
+            "session_num": 2,
+            "days_elapsed": 60,
+            "user_input": "I've been paying $800/month toward the debt. How am I doing?",
+            "expected_outputs": [
+              "New snapshot created showing $15,000 - $4,800 = $10,200 remaining",
+              "Atlas references progress specifically: 'You've paid off $4,800 in 60 days'",
+              "Shows trajectory: 'At this rate, you're about 12-13 months from zero'",
+              "Does NOT make up progress numbers"
+            ],
+            "setup": "Snapshots show $4,800 paid over 60 days"
+          },
+          {
+            "session_num": 3,
+            "days_elapsed": 120,
+            "user_input": "Still working on the debt. What's my progress?",
+            "expected_outputs": [
+              "Snapshot shows $10,200 - $1,600 = $8,600 remaining (assuming $800/month for 2 months)",
+              "Atlas shows cumulative progress: 'You've eliminated $6,400 in 120 days'",
+              "Trajectory updated: 'At this pace, about 10-11 months remaining'",
+              "Acknowledges momentum: 'You're on track'"
+            ],
+            "setup": "Multiple snapshots show consistent progress"
+          }
+        ],
+        "pass_criteria": {
+          "session_2_progress_specific": "Atlas references specific dollar amounts and timeline from snapshots",
+          "session_3_trajectory_updated": "Trajectory recalculated based on latest snapshot, not guessed"
+        }
+      },
+      {
+        "id": "companion_milestone_acknowledgment",
+        "name": "Milestone Acknowledgment Before New Topics",
+        "description": "Test whether Atlas acknowledges milestones before moving to new topics",
+        "type": "multi_session",
+        "sessions": [
+          {
+            "session_num": 1,
+            "user_input": "I have $8,000 in debt. I want to pay it off.",
+            "expected_outputs": [
+              "Goal created: 'Pay off $8,000 debt'",
+              "Milestones auto-generated: 25% ($2k), 50% ($4k), 75% ($6k), 100% ($8k)"
+            ],
+            "setup": "Goal with milestones created"
+          },
+          {
+            "session_num": 2,
+            "days_elapsed": 90,
+            "snapshot_data": {
+              "high_interest_debt": 4000
+            },
+            "user_input": "What should I do next?",
+            "expected_outputs": [
+              "Milestone 50% detected as achieved (debt went from $8k to $4k)",
+              "Atlas's FIRST response acknowledges milestone: 'You've paid off half that card. Four thousand dollars gone.'",
+              "Celebrates specifically: 'That's real money that used to be costing you interest every month, and now it's not.'",
+              "ONLY AFTER acknowledgment does Atlas answer the 'what next' question"
+            ],
+            "setup": "Snapshot shows 50% milestone achieved but not yet acknowledged"
+          }
+        ],
+        "pass_criteria": {
+          "session_2_milestone_first": "Milestone acknowledgment is the FIRST response before any new topic",
+          "session_2_specific_celebration": "Atlas names the goal, names the dollar amount, names the progress"
+        }
+      },
+      {
+        "id": "companion_behavioral_adaptation",
+        "name": "Behavioral Adaptation Across Sessions",
+        "description": "Test whether Atlas adapts tone and recommendations based on user behavior patterns",
+        "type": "multi_session",
+        "sessions": [
+          {
+            "session_num": 1,
+            "user_input": "I have $5,000 in debt. I'll pay it off.",
+            "expected_outputs": [
+              "Action recommended: $500/month toward debt",
+              "User commits: 'I'll do it'"
+            ],
+            "setup": "First commitment tracked"
+          },
+          {
+            "session_num": 2,
+            "days_elapsed": 45,
+            "user_input": "I didn't get to the payment yet.",
+            "expected_outputs": [
+              "Action marked as 'abandoned'",
+              "Behavioral profile updated: 0/1 follow-through"
+            ],
+            "setup": "First commitment not completed"
+          },
+          {
+            "session_num": 3,
+            "days_elapsed": 60,
+            "user_input": "OK I'm ready to try again.",
+            "expected_outputs": [
+              "Action recommended: ONE action only (not multiple options)",
+              "Tone shifts to stronger accountability: 'Let's figure out what got in the way last time'",
+              "Recommendation is simpler/more manual: 'Transfer $300 manually each Friday' (not automatic)"
+            ],
+            "setup": "Behavioral profile shows 0% follow-through. Adaptation rules applied"
+          },
+          {
+            "session_num": 4,
+            "days_elapsed": 75,
+            "user_input": "I did the transfers for 2 weeks then stopped.",
+            "expected_outputs": [
+              "Action marked as 'partial'",
+              "Behavioral profile: 1/2 commitments (50% follow-through)",
+              "Atlas acknowledges pattern: 'You're getting closer. Let's figure out what makes it hard to sustain'",
+              "Recommendation adjusted: 'Start with $150/week instead of $300. Build the habit first.'"
+            ],
+            "setup": "Behavioral profile shows emerging pattern of partial follow-through"
+          }
+        ],
+        "pass_criteria": {
+          "session_3_adaptation": "Recommendation is simpler and tone is stronger accountability vs session 1",
+          "session_4_pattern_naming": "Atlas names the pattern directly without judgment"
+        }
+      },
+      {
+        "id": "companion_roadmap_explanation",
+        "name": "Roadmap Explanation When Asked",
+        "description": "Test whether Atlas explains the next phase when user asks 'what's next'",
+        "type": "multi_session",
+        "sessions": [
+          {
+            "session_num": 1,
+            "user_input": "I have $8,000 in credit card debt and $1,000 in savings. I make $4,000/month and spend $2,500 on essentials.",
+            "expected_outputs": [
+              "Current phase detected: Phase 3 (Eliminate High-Interest Debt)",
+              "Recommendation: Pay off the credit card"
+            ],
+            "setup": "User in Phase 3 of waterfall"
+          },
+          {
+            "session_num": 2,
+            "days_elapsed": 180,
+            "snapshot_data": {
+              "high_interest_debt": 0,
+              "total_savings": 1000
+            },
+            "user_input": "The card is paid off! What comes next?",
+            "expected_outputs": [
+              "Phase transition detected: Phase 3 → Phase 4",
+              "Atlas describes Phase 4 specifically: 'Now we build your emergency fund. You need 3-6 months of expenses as a safety net. That's $7,500 to $12,500 for you.'",
+              "Gives next action: 'Redirect the $800/month you were paying toward debt → now goes to savings.'",
+              "Does NOT present the full 6-phase roadmap unprompted"
+            ],
+            "setup": "Phase transition detected, user asks 'what's next'"
+          }
+        ],
+        "pass_criteria": {
+          "session_2_phase_description": "Next phase described with user-specific numbers",
+          "session_2_no_full_roadmap": "Atlas does not present all 6 phases unprompted"
+        }
+      },
+      {
+        "id": "companion_escalation_triggers",
+        "name": "Escalation Triggers for Complexity and Crisis",
+        "description": "Test whether Atlas correctly escalates when it detects complexity or crisis",
+        "type": "multi_session",
+        "sessions": [
+          {
+            "session_num": 1,
+            "user_input": "I have $50,000 in student loans and I'm wondering about a backdoor Roth conversion strategy.",
+            "expected_outputs": [
+              "Escalation signal triggered: financial_complexity",
+              "Atlas response: 'That's a question I want to handle carefully — it's in the territory where the specifics matter enormously and getting them wrong has real consequences. A CPA who can look at your full picture is the right person for this.'"
+            ],
+            "setup": "Tax optimization question detected"
+          },
+          {
+            "session_num": 2,
+            "user_input": "I'm drowning in debt and I can't sleep anymore. I feel hopeless.",
+            "expected_outputs": [
+              "Escalation signal triggered: emotional_crisis",
+              "Atlas response includes crisis resources and suggests financial therapist",
+              "Does NOT attempt to solve the emotional crisis with financial advice alone"
+            ],
+            "setup": "Emotional distress indicators detected"
+          },
+          {
+            "session_num": 3,
+            "user_input": "I've been trying for 6 months but nothing is changing. I don't know what's wrong with me.",
+            "expected_outputs": [
+              "Escalation signal triggered: stagnation_pattern (if user has <25% follow-through over 6 months)",
+              "Atlas response: 'We've been at this for a while and I want to be honest with you. The pattern I'm seeing suggests something is making it hard to move forward, and it might not be the financial strategy itself. Sometimes talking to someone — whether a financial coach or a therapist — helps unlock what's actually in the way.'"
+            ],
+            "setup": "Stagnation detected with low follow-through rate"
+          }
+        ],
+        "pass_criteria": {
+          "session_1_complexity_escalation": "Atlas acknowledges and hands off, does not attempt to answer",
+          "session_2_crisis_escalation": "Atlas provides crisis resources and suggests appropriate support",
+          "session_3_stagnation_escalation": "Atlas names the pattern and suggests deeper support"
+        }
+      },
+      {
+        "id": "companion_multi_goal_coordination",
+        "name": "Multi-Goal Coordination and Sequencing",
+        "description": "Test whether Atlas handles multiple goals intelligently using the waterfall",
+        "type": "multi_session",
+        "sessions": [
+          {
+            "session_num": 1,
+            "user_input": "I have $8,000 in credit card debt, $2,000 in savings, and I want to start investing. I make $4,500/month and spend $2,500 on essentials.",
+            "expected_outputs": [
+              "Primary goal detected: Pay off credit card (Phase 3)",
+              "Secondary goal noted: Investing (Phase 6)",
+              "Atlas response: 'Investing is absolutely on the roadmap. Once this card is gone — about 10 months at this pace — that's when we shift there. I've noted it. We won't lose track of it.'"
+            ],
+            "setup": "Multiple goals detected, sequenced by waterfall"
+          },
+          {
+            "session_num": 2,
+            "days_elapsed": 300,
+            "snapshot_data": {
+              "high_interest_debt": 0
+            },
+            "user_input": "I'm ready to start investing now.",
+            "expected_outputs": [
+              "Phase transition: Phase 3 → Phase 4 (Full Emergency Fund)",
+              "Atlas explains: 'You've paid off the card. Now we build your emergency fund to 3-6 months. Once that's done, investing is next.'",
+              "Secondary goal (investing) is now queued for Phase 6, not Phase 3"
+            ],
+            "setup": "Primary goal complete, secondary goal moves to next available phase"
+          }
+        ],
+        "pass_criteria": {
+          "session_1_secondary_goal_deferred": "Secondary goal acknowledged and explicitly deferred",
+          "session_2_goal_sequencing": "Secondary goal surfaces at correct phase, not before"
+        }
+      },
+      {
+        "id": "companion_continuity_across_10_sessions",
+        "name": "Long-Term Continuity Across 10 Sessions",
+        "description": "Test whether Atlas maintains coherent, progressing relationship across 10 sessions over 6 months",
+        "type": "multi_session",
+        "sessions": [
+          {
+            "session_num": 1,
+            "days_elapsed": 0,
+            "user_input": "I have $15,000 in debt, $500 in savings, $3,500/month income, $2,200 essential expenses.",
+            "expected_outputs": [
+              "Goal created: Pay off $15,000 debt",
+              "Action recommended: $1,000/month toward debt",
+              "User commits"
+            ]
+          },
+          {
+            "session_num": 2,
+            "days_elapsed": 30,
+            "user_input": "I've been paying $1,000/month. What's next?",
+            "expected_outputs": [
+              "Accountability check-in first",
+              "User confirms: 'Yes, I did it'",
+              "Action marked as 'completed'",
+              "Progress shown: '$1,000 paid, $14,000 remaining'"
+            ]
+          },
+          {
+            "session_num": 3,
+            "days_elapsed": 60,
+            "user_input": "Still going strong.",
+            "expected_outputs": [
+              "Behavioral profile updated: 2/2 commitments (100% follow-through)",
+              "Tone shifts to peer-level partnership",
+              "Longer-range planning introduced"
+            ]
+          },
+          {
+            "session_num": 4,
+            "days_elapsed": 90,
+            "user_input": "I want to increase to $1,500/month.",
+            "expected_outputs": [
+              "Atlas acknowledges increased commitment",
+              "Recalculates timeline: 'At $1,500/month, you're 10 months from zero'",
+              "Milestone 25% should be approaching"
+            ]
+          },
+          {
+            "session_num": 5,
+            "days_elapsed": 120,
+            "snapshot_data": {
+              "high_interest_debt": 9000
+            },
+            "user_input": "How am I doing?",
+            "expected_outputs": [
+              "Milestone 40% detected (paid $6,000)",
+              "Atlas celebrates: 'You've paid off $6,000 in 4 months. That's $1,500/month discipline. You're on pace to be done in 6 more months.'",
+              "Shows trajectory: 'At this rate, you'll hit zero by month 10 total'"
+            ]
+          },
+          {
+            "session_num": 6,
+            "days_elapsed": 150,
+            "user_input": "I got a $500 raise. Should I increase the debt payment?",
+            "expected_outputs": [
+              "Atlas references prior commitment: 'You've been consistent at $1,500/month for 5 months'",
+              "Suggests: 'Put the $500 raise toward debt. That gets you to zero in 5 months instead of 6.'",
+              "Asks about secondary goal: 'Once this is done, what's next for you?'"
+            ]
+          },
+          {
+            "session_num": 7,
+            "days_elapsed": 180,
+            "snapshot_data": {
+              "high_interest_debt": 3000
+            },
+            "user_input": "Almost there!",
+            "expected_outputs": [
+              "Milestone 80% detected",
+              "Atlas: 'You've paid off $12,000 in 6 months. You're 2 months from zero. That's real.'",
+              "Introduces Phase 4: 'Once this card is gone, we shift to building your emergency fund. You'll have the same $2,000/month to redirect.'"
+            ]
+          },
+          {
+            "session_num": 8,
+            "days_elapsed": 210,
+            "snapshot_data": {
+              "high_interest_debt": 0
+            },
+            "user_input": "It's done!",
+            "expected_outputs": [
+              "Phase transition: Phase 3 → Phase 4",
+              "Milestone 100% acknowledged: 'The card is paid off. That's $15,000 gone. That's not a small thing.'",
+              "New phase introduced: 'Now we shift. The $2,000/month that was going to the card → now goes to your emergency fund.'"
+            ]
+          },
+          {
+            "session_num": 9,
+            "days_elapsed": 240,
+            "user_input": "I've been saving $2,000/month for a month. How much do I need for emergency fund?",
+            "expected_outputs": [
+              "Calculation: 3-6 months of $2,200 = $6,600 to $13,200",
+              "Current savings: $500 + $2,000 = $2,500",
+              "Timeline: 'At $2,000/month, you're 2-5 months from a full emergency fund'",
+              "Behavioral profile: 8/8 commitments (100% follow-through), highly_engaged tag"
+            ]
+          },
+          {
+            "session_num": 10,
+            "days_elapsed": 270,
+            "snapshot_data": {
+              "total_savings": 6500
+            },
+            "user_input": "What's the plan from here?",
+            "expected_outputs": [
+              "Milestone 50% emergency fund detected",
+              "Atlas: 'You've built $6,000 in savings in 2 months. You're halfway to a full emergency fund.'",
+              "Next phase: 'In about 2 more months, you'll have 3 months covered. Then we can talk about investing.'",
+              "Learned insight: 'You've completed one full goal and you're halfway through the next. That's the pattern of someone who follows through.'"
+            ]
+          }
+        ],
+        "pass_criteria": {
+          "session_2_accountability": "First response addresses commitment",
+          "session_5_milestone": "Milestone acknowledged before new topic",
+          "session_8_phase_transition": "Phase transition celebrated and new phase introduced",
+          "session_10_continuity": "Atlas references full history and shows progression"
+        }
+      }
+    ]
+  }
+}
