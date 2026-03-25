@@ -1,11 +1,9 @@
-import { loadUserContext, UserContext } from '@/lib/db/userContext';
-import {
-  persistFinancialData,
-  createSessionSnapshot,
-  endConversationSession,
-  buildAccountabilityBlock,
-  buildBehavioralAdaptationBlock,
-  initializeConversationSession,
+import { loadUserContext } from '@/lib/db/userContext';
+import { 
+  persistFinancialData, 
+  createSessionSnapshot, 
+  endConversationSession, 
+  initializeConversationSession 
 } from '@/lib/db/supabaseIntegration';
 import { extractActionFromResponse, detectCommitmentFromMessage } from '@/lib/ai/actionExtractor';
 import { buildAccountabilityBlock as buildAccountabilityBlockEngine } from '@/lib/ai/accountabilityEngine';
@@ -15,7 +13,7 @@ import { evaluateEscalation, buildEscalationBlock } from '@/lib/ai/escalationEng
 import { buildMemorySummary, extractKeyDecisions, determineFollowUpNeeded, generateFollowUpNotes } from '@/lib/ai/memoryActivation';
 import { coordinateGoals, buildMultiGoalBlock } from '@/lib/ai/multiGoalCoordinator';
 import { calculateMetricChange, calculateNetWorthTrend } from '@/lib/calculations/progressCalculations';
-import { createAction, updateActionStatus, createSnapshot, getFinancialProfile, upsertFinancialProfile } from '@/lib/db/supabaseRepository';
+import { createAction, updateActionStatus } from '@/lib/db/supabaseRepository';
 
 /**
  * Build complete companion context for system prompt

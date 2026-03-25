@@ -3,11 +3,16 @@ import { createClient } from '@supabase/supabase-js';
 const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
 const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
-if (!supabaseUrl || !supabaseKey) {
-  throw new Error('Missing Supabase environment variables');
-}
+// Initialize Supabase client only if environment variables are available
+// This allows the module to be imported at build time without errors
+let supabase: any = null;
 
-const supabase = createClient(supabaseUrl, supabaseKey);
+if (supabaseUrl && supabaseKey) {
+  supabase = createClient(supabaseUrl, supabaseKey);
+} else if (typeof window === 'undefined' && process.env.NODE_ENV === 'production') {
+  // Only throw in production server-side if Supabase is actually needed
+  console.warn('Supabase environment variables not configured. Companion features will be disabled.');
+}
 
 // ============================================================================
 // FINANCIAL PROFILE OPERATIONS

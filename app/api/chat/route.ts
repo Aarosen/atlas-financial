@@ -28,6 +28,14 @@ import { runCalculations, formatCalculationBlock } from '@/lib/calculations/spri
 import { cleanAtlasResponse } from '@/lib/ai/responsePostprocessor';
 import { classifyUserIntent } from '@/lib/ai/intentClassifier';
 import { buildSystemPrompt } from '@/lib/ai/systemPromptBuilder';
+import { 
+  buildCompanionSystemPromptContext, 
+  processUserMessageForCompanion, 
+  processAtlasResponseForCompanion, 
+  endCompanionSession, 
+  initializeCompanionSession 
+} from '@/lib/ai/companionIntegration';
+import { loadUserContext } from '@/lib/db/userContext';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -257,7 +265,7 @@ export async function POST(req: Request) {
     return jsonError(400, 'Invalid JSON body');
   }
 
-  const { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion, answered } = body as {
+  const { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion, answered, userId, sessionId } = body as {
     type?: string;
     messages?: any[];
     missing?: string[];
@@ -269,6 +277,8 @@ export async function POST(req: Request) {
     sessionState?: Record<string, any>;
     lastQuestion?: string;
     answered?: Record<string, boolean>;
+    userId?: string;
+    sessionId?: string;
   };
 
   if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'answer_explain', 'answer_explain_stream'].includes(type)) {
@@ -640,6 +650,17 @@ Return ONLY the rewritten text.`;
         updatedAnswered.totalSavings = true;
       }
 
+      // COMPANION INTEGRATION: Process user message for commitments
+      // This detects if user is committing to or completing actions
+      if (userId) {
+        try {
+          await processUserMessageForCompanion(userId, lastUserMsg, apiKey);
+        } catch (error) {
+          console.error('Error processing user message for companion:', error);
+          // Continue without companion processing if it fails
+        }
+      }
+
       // Step 1: Crisis check first (safety gate)
       const crisisSignal = detectCrisisSignals(lastUserMsg, conversationHistory, financialProfile as any);
       if (crisisSignal) {
@@ -664,6 +685,18 @@ Return ONLY the rewritten text.`;
         previousState: sessionState as any,
         answered: updatedAnswered,
       });
+
+      // COMPANION INTEGRATION: Build companion system prompt context
+      // Injects accountability, progress, roadmap, behavioral, escalation, and multi-goal blocks
+      let companionContext = '';
+      if (userId) {
+        try {
+          companionContext = await buildCompanionSystemPromptContext(userId, lastUserMsg, extractedFields || {});
+        } catch (error) {
+          console.error('Error building companion context:', error);
+          // Continue without companion context if it fails
+        }
+      }
 
       // Step 3: Build enriched system prompt with session state block FIRST
       // The session state block is injected first so it's never trimmed away
@@ -696,6 +729,7 @@ Return ONLY the rewritten text.`;
       const promptSections: string[] = [
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
         sessionStateBlock,           // ← Always included, never trimmed (position 1)
+        ...(companionContext ? [companionContext] : []), // ← COMPANION CONTEXT = injected after session state
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← SECOND = always preserved before other sections get trimmed
         memoryContext,
         emotionContext,
@@ -823,6 +857,18 @@ Return ONLY the rewritten text.`;
 
             // Apply postprocessing to clean formatting
             const cleanedResponse = cleanAtlasResponse(fullResponse);
+            
+            // COMPANION INTEGRATION: Process Atlas response for actions
+            // This extracts actions from Claude response and tracks them
+            if (userId && sessionId) {
+              try {
+                await processAtlasResponseForCompanion(userId, sessionId, cleanedResponse, apiKey);
+              } catch (error) {
+                console.error('Error processing Atlas response for companion:', error);
+                // Continue without companion processing if it fails
+              }
+            }
+            
             // Send cleaned response as a replacement event for the frontend to use
             controller.enqueue(
               enc.encode(
