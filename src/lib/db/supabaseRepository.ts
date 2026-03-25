@@ -317,6 +317,7 @@ export interface UserBehaviorProfile {
   last_active_at: string | null;
   behavioral_tags: string[];
   preferred_check_in_frequency: 'weekly' | 'biweekly' | 'monthly' | null;
+  behavior_profile_active: boolean;
   updated_at: string;
 }
 
