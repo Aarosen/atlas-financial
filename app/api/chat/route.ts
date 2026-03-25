@@ -665,20 +665,36 @@ Return ONLY the rewritten text.`;
         updatedAnswered.totalSavings = true;
       }
 
-      // COMPANION INTEGRATION: Process user message for commitments
+      // COMPANION INTEGRATION: Process user message for commitments (with timeout)
       // This detects if user is committing to or completing actions
+      // Wrapped in Promise.race with timeout to prevent blocking response
       if (userId && sessionId) {
-        try {
-          const { commitment } = await processUserMessageForCompanion(userId, lastUserMsg, apiKey);
-          // Handle the commitment (update action status if detected)
-          if (commitment.commitment_detected) {
-            const { handleUserCommitment } = await import('@/lib/ai/companionIntegration');
-            await handleUserCommitment(userId, sessionId, commitment, apiKey);
+        const commitmentTimeout = new Promise((resolve) => {
+          setTimeout(() => {
+            console.warn('[companion] Commitment detection timeout - skipping');
+            resolve(null);
+          }, 3000); // 3 second timeout for commitment detection
+        });
+
+        const commitmentPromise = (async () => {
+          try {
+            const { commitment } = await processUserMessageForCompanion(userId, lastUserMsg, apiKey);
+            // Handle the commitment (update action status if detected)
+            if (commitment.commitment_detected) {
+              const { handleUserCommitment } = await import('@/lib/ai/companionIntegration');
+              await handleUserCommitment(userId, sessionId, commitment, apiKey);
+            }
+            return commitment;
+          } catch (error) {
+            console.error('Error processing user message for companion:', error);
+            return null;
           }
-        } catch (error) {
-          console.error('Error processing user message for companion:', error);
-          // Continue without companion processing if it fails
-        }
+        })();
+
+        // Race: whichever completes first (commitment or timeout)
+        Promise.race([commitmentPromise, commitmentTimeout]).catch(() => {
+          // Silently ignore timeout
+        });
       }
 
       // Step 1: Crisis check first (safety gate)
@@ -706,17 +722,30 @@ Return ONLY the rewritten text.`;
         answered: updatedAnswered,
       });
 
-      // COMPANION INTEGRATION: Build companion system prompt context
+      // COMPANION INTEGRATION: Build companion system prompt context (with timeout)
       // Injects accountability, progress, roadmap, behavioral, escalation, and multi-goal blocks
+      // Wrapped in Promise.race with timeout to prevent blocking response
       let companionContext = '';
       if (userId) {
-        try {
-          const isFirstMessage = messages.length <= 1;
-          companionContext = await buildCompanionSystemPromptContext(userId, lastUserMsg, extractedFields || {}, isFirstMessage);
-        } catch (error) {
-          console.error('Error building companion context:', error);
-          // Continue without companion context if it fails
-        }
+        const contextTimeout = new Promise<string>((resolve) => {
+          setTimeout(() => {
+            console.warn('[companion] Context building timeout - using empty context');
+            resolve('');
+          }, 5000); // 5 second timeout for companion context building
+        });
+
+        const contextPromise = (async () => {
+          try {
+            const isFirstMessage = messages.length <= 1;
+            return await buildCompanionSystemPromptContext(userId, lastUserMsg, extractedFields || {}, isFirstMessage);
+          } catch (error) {
+            console.error('Error building companion context:', error);
+            return '';
+          }
+        })();
+
+        // Race: whichever completes first (context or timeout)
+        companionContext = await Promise.race([contextPromise, contextTimeout]);
       }
 
       // Step 3: Build enriched system prompt with session state block FIRST
@@ -879,15 +908,29 @@ Return ONLY the rewritten text.`;
             // Apply postprocessing to clean formatting
             const cleanedResponse = cleanAtlasResponse(fullResponse);
             
-            // COMPANION INTEGRATION: Process Atlas response for actions
+            // COMPANION INTEGRATION: Process Atlas response for actions (with timeout)
             // This extracts actions from Claude response and tracks them
+            // Wrapped in Promise.race with timeout to prevent blocking response
             if (userId && sessionId) {
-              try {
-                await processAtlasResponseForCompanion(userId, sessionId, cleanedResponse, apiKey);
-              } catch (error) {
-                console.error('Error processing Atlas response for companion:', error);
-                // Continue without companion processing if it fails
-              }
+              const actionTimeout = new Promise<void>((resolve) => {
+                setTimeout(() => {
+                  console.warn('[companion] Action extraction timeout - skipping');
+                  resolve();
+                }, 3000); // 3 second timeout for action extraction
+              });
+
+              const actionPromise = (async () => {
+                try {
+                  await processAtlasResponseForCompanion(userId, sessionId, cleanedResponse, apiKey);
+                } catch (error) {
+                  console.error('Error processing Atlas response for companion:', error);
+                }
+              })();
+
+              // Race: whichever completes first (action extraction or timeout)
+              Promise.race([actionPromise, actionTimeout]).catch(() => {
+                // Silently ignore timeout
+              });
             }
             
             // Send cleaned response as a replacement event for the frontend to use
