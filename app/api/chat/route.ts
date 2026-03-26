@@ -34,6 +34,7 @@ import {
   processAtlasResponseForCompanion, 
   endCompanionSession 
 } from '@/lib/ai/companionIntegration';
+import { injectNudgeIfAppropriate } from '@/lib/notifications/nudgeInjection';
 import { loadUserContext } from '@/lib/db/userContext';
 import { initializeConversationSession } from '@/lib/db/supabaseIntegration';
 
@@ -920,7 +921,7 @@ Return ONLY the rewritten text.`;
             }
 
             // Apply postprocessing to clean formatting
-            const cleanedResponse = cleanAtlasResponse(fullResponse);
+            let cleanedResponse = cleanAtlasResponse(fullResponse);
             
             // COMPANION INTEGRATION: Process Atlas response for actions (with timeout)
             // This extracts actions from Claude response and tracks them
@@ -945,6 +946,43 @@ Return ONLY the rewritten text.`;
               Promise.race([actionPromise, actionTimeout]).catch(() => {
                 // Silently ignore timeout
               });
+            }
+
+            // NUDGE INJECTION: Inject proactive nudges if appropriate
+            // This adds contextual nudges to the response based on user progress
+            // Wrapped in Promise.race with timeout to prevent blocking response
+            if (userId && sessionId) {
+              const nudgeTimeout = new Promise<string>((resolve) => {
+                setTimeout(() => {
+                  console.warn('[companion] Nudge injection timeout - skipping');
+                  resolve(cleanedResponse);
+                }, 2000); // 2 second timeout for nudge injection
+              });
+
+              const nudgePromise = (async () => {
+                try {
+                  // Nudge injection with basic context
+                  const result = injectNudgeIfAppropriate(
+                    cleanedResponse,
+                    {
+                      userId,
+                      goals: [],
+                    },
+                    messages.length
+                  );
+                  return result.response;
+                } catch (error) {
+                  console.error('Error injecting nudge:', error);
+                  return cleanedResponse;
+                }
+              })();
+
+              // Race: whichever completes first (nudge injection or timeout)
+              try {
+                cleanedResponse = await Promise.race([nudgePromise, nudgeTimeout]);
+              } catch {
+                // Silently ignore timeout, use original response
+              }
             }
             
             // Send cleaned response as a replacement event for the frontend to use

@@ -2,7 +2,7 @@ import { useCallback, useEffect } from 'react';
 
 /**
  * Hook to handle session finalization when user closes conversation
- * Calls /api/chat/finalize endpoint to persist session data to Supabase
+ * Uses navigator.sendBeacon for reliable data delivery on page unload
  */
 export function useSessionFinalization() {
   const finalizeSession = useCallback(
@@ -12,15 +12,29 @@ export function useSessionFinalization() {
       }
 
       try {
+        const payload = JSON.stringify({
+          userId,
+          sessionId,
+          conversationText,
+          financialData,
+        });
+
+        // Try sendBeacon first (reliable on unload), fall back to fetch for normal flow
+        if (navigator.sendBeacon) {
+          const sent = navigator.sendBeacon('/api/chat/finalize', payload);
+          if (sent) {
+            console.log('[companion] Session finalized via sendBeacon');
+            return;
+          }
+        }
+
+        // Fallback to fetch for normal navigation
         const response = await fetch('/api/chat/finalize', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({
-            userId,
-            sessionId,
-            conversationText,
-            financialData,
-          }),
+          body: payload,
+          // Use keepalive to ensure request completes even if page unloads
+          keepalive: true,
         });
 
         if (!response.ok) {
@@ -40,8 +54,7 @@ export function useSessionFinalization() {
   // Set up beforeunload handler to finalize session when user leaves
   useEffect(() => {
     const handleBeforeUnload = () => {
-      // Note: We can't make async calls in beforeunload, so we rely on the frontend
-      // to call finalizeSession explicitly before navigation
+      // beforeunload handler is called from AtlasApp to ensure we have latest state
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
