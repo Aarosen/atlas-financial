@@ -452,6 +452,40 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     void fetchProgress();
   }, [authLoading, userId, st.scr, st.msgs.length, sessionId]);
 
+  // ACTION COMPLETION: Fetch pending action check-in for returning authenticated users on session start
+  useEffect(() => {
+    if (authLoading) return;
+    if (userId === 'guest') return; // Only for authenticated users
+    if (st.scr !== 'conversation') return;
+    if (st.msgs.length > 0) return; // Only on session start (no messages yet)
+
+    // Fetch pending action from backend
+    const fetchPendingAction = async () => {
+      try {
+        const response = await fetch('/api/actions/pending', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, sessionId }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.action) {
+            setPendingActionCompletion({
+              id: data.action.id,
+              text: data.action.text,
+              dueDate: data.action.dueDate,
+            });
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching pending action:', error);
+      }
+    };
+
+    void fetchPendingAction();
+  }, [authLoading, userId, st.scr, st.msgs.length, sessionId]);
+
   useEffect(() => {
     if (authLoading) return;
     db.get<{ metrics?: UserOutcomeMetrics; lastState?: { debtBalance: number; savings: number } }>('outcomes', 'metrics')
