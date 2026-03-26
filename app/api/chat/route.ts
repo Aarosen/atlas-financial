@@ -957,7 +957,8 @@ Return ONLY the rewritten text.`;
               })();
 
               // Race: whichever completes first (action extraction or timeout)
-              Promise.race([actionPromise, actionTimeout]).catch(() => {
+              // Await this to ensure it completes before closing stream
+              await Promise.race([actionPromise, actionTimeout]).catch(() => {
                 // Silently ignore timeout
               });
             }
@@ -992,6 +993,7 @@ Return ONLY the rewritten text.`;
               })();
 
               // Race: whichever completes first (nudge injection or timeout)
+              // Await this to ensure it completes before closing stream
               try {
                 cleanedResponse = await Promise.race([nudgePromise, nudgeTimeout]);
               } catch {
