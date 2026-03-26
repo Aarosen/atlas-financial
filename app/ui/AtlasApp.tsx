@@ -35,6 +35,7 @@ import { useSessionId } from '@/lib/session/useSessionId';
 import { useSessionFinalization } from '@/lib/session/useSessionFinalization';
 import { useMultiGoals } from '@/lib/goals/useMultiGoals';
 import { AuthPromptCard } from '@/components/AuthPromptCard';
+import { ActionCompletionCard } from '@/components/ActionCompletionCard';
 import { processResponseForGoals } from '@/lib/ai/conversationGoalWiring';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
@@ -78,6 +79,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [responsePref, setResponsePref] = useState<'short' | 'explain' | null>(null);
   const [literacyLevel, setLiteracyLevel] = useState<'novice' | 'intermediate' | 'advanced' | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
+  const [pendingActionCompletion, setPendingActionCompletion] = useState<{ id: string; text: string; dueDate?: string } | null>(null);
   const voice = useMemo(
     () =>
       createVoice({
@@ -1116,10 +1118,52 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     }
   }, [send, updateInput]);
 
+  const handleActionCompletion = useCallback(async (actionId: string, completed: boolean) => {
+    try {
+      // Send action completion to backend
+      const response = await fetch('/api/actions/complete', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({
+          userId,
+          sessionId,
+          actionId,
+          completed,
+        }),
+        keepalive: true,
+      });
+
+      if (response.ok) {
+        const data = await response.json();
+        console.log('[companion] Action completion recorded:', data);
+        
+        // Show acknowledgment message
+        const acknowledgment = completed
+          ? `That's fantastic! You followed through on your commitment. That consistency is what builds real financial progress.`
+          : `No worries — life happens. Let's figure out what got in the way and adjust the plan.`;
+        
+        dispatch({ type: 'SEND_ASKED', text: acknowledgment });
+      }
+    } catch (error) {
+      console.error('Error recording action completion:', error);
+    } finally {
+      setPendingActionCompletion(null);
+    }
+  }, [userId, sessionId]);
+
   const renderTalkStack = (scr: Screen) => (
     <>
       <div style={{ display: scr === 'conversation' ? 'block' : 'none' }}>
         {showAuthPrompt && <AuthPromptCard onDismiss={() => setShowAuthPrompt(false)} />}
+        {pendingActionCompletion && (
+          <ActionCompletionCard
+            actionId={pendingActionCompletion.id}
+            actionText={pendingActionCompletion.text}
+            dueDate={pendingActionCompletion.dueDate}
+            onConfirm={handleActionCompletion}
+            onDismiss={() => setPendingActionCompletion(null)}
+          />
+        )}
         <ConversationScreen
           inputEnabled={mounted}
           theme={theme}
