@@ -18,6 +18,23 @@ export type FinancialState = {
   timeHorizonYears: number;
 };
 
+// Multi-goal support
+export type FinancialGoal = {
+  id: string;
+  type: 'debt_payoff' | 'emergency_fund' | 'savings' | 'investment' | 'retirement' | 'other';
+  title: string;
+  description?: string;
+  targetAmount?: number;
+  currentAmount?: number;
+  deadline?: string;
+  priority: 'critical' | 'high' | 'medium' | 'low';
+  status: 'active' | 'paused' | 'completed' | 'abandoned';
+  monthlyContribution?: number;
+  createdAt: string;
+  updatedAt: string;
+  metadata?: Record<string, any>;
+};
+
 export type Tier = 'Foundation' | 'Stabilizing' | 'Strategic' | 'GrowthReady';
 
 export type Lever =
