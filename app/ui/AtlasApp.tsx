@@ -36,6 +36,7 @@ import { useSessionFinalization } from '@/lib/session/useSessionFinalization';
 import { useMultiGoals } from '@/lib/goals/useMultiGoals';
 import { AuthPromptCard } from '@/components/AuthPromptCard';
 import { ActionCompletionCard } from '@/components/ActionCompletionCard';
+import { ProgressDisplay } from '@/components/ProgressDisplay';
 import { processResponseForGoals } from '@/lib/ai/conversationGoalWiring';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
@@ -80,6 +81,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [literacyLevel, setLiteracyLevel] = useState<'novice' | 'intermediate' | 'advanced' | null>(null);
   const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const [pendingActionCompletion, setPendingActionCompletion] = useState<{ id: string; text: string; dueDate?: string } | null>(null);
+  const [progressSnapshots, setProgressSnapshots] = useState<Array<{ metric: string; previousValue: number; currentValue: number; unit: string; isPositive: boolean }>>([]);
+  const [daysSinceLast, setDaysSinceLast] = useState(0);
+  const [showProgress, setShowProgress] = useState(false);
   const voice = useMemo(
     () =>
       createVoice({
@@ -415,6 +419,38 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     };
     void db.set('conv', { k: 'snapshot', userId, state: snapshot, ts: Date.now() });
   }, [authLoading, db, restored, st, userId]);
+
+  // PROGRESS DISPLAY: Fetch progress data for returning authenticated users on session start
+  useEffect(() => {
+    if (authLoading) return;
+    if (userId === 'guest') return; // Only for authenticated users
+    if (st.scr !== 'conversation') return;
+    if (st.msgs.length > 0) return; // Only on session start (no messages yet)
+
+    // Fetch progress data from backend
+    const fetchProgress = async () => {
+      try {
+        const response = await fetch('/api/progress/summary', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ userId, sessionId }),
+        });
+
+        if (response.ok) {
+          const data = await response.json();
+          if (data.snapshots && data.snapshots.length > 0) {
+            setProgressSnapshots(data.snapshots);
+            setDaysSinceLast(data.daysSinceLast || 0);
+            setShowProgress(true);
+          }
+        }
+      } catch (error) {
+        console.error('Error fetching progress data:', error);
+      }
+    };
+
+    void fetchProgress();
+  }, [authLoading, userId, st.scr, st.msgs.length, sessionId]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -1154,6 +1190,13 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const renderTalkStack = (scr: Screen) => (
     <>
       <div style={{ display: scr === 'conversation' ? 'block' : 'none' }}>
+        {showProgress && (
+          <ProgressDisplay
+            snapshots={progressSnapshots}
+            daysSinceLast={daysSinceLast}
+            onDismiss={() => setShowProgress(false)}
+          />
+        )}
         {showAuthPrompt && <AuthPromptCard onDismiss={() => setShowAuthPrompt(false)} />}
         {pendingActionCompletion && (
           <ActionCompletionCard
