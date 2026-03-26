@@ -1,5 +1,6 @@
 import { useCallback, useEffect } from 'react';
 import { persistFinancialProfile } from '@/lib/ai/conversationGoalWiring';
+import { createSessionSnapshot } from '@/lib/db/supabaseIntegration';
 
 /**
  * Hook to handle session finalization when user closes conversation
@@ -25,8 +26,10 @@ export function useSessionFinalization() {
           const sent = navigator.sendBeacon('/api/chat/finalize', payload);
           if (sent) {
             console.log('[companion] Session finalized via sendBeacon');
-            // PROFILE PERSISTENCE: Also persist financial profile at session end
+            // PROFILE PERSISTENCE: Persist financial profile at session end
             await persistFinancialProfile(userId, sessionId, financialData, conversationText);
+            // SNAPSHOT CREATION: Create financial snapshot for progress tracking
+            await createSessionSnapshot(userId, sessionId, financialData);
             return;
           }
         }
@@ -48,8 +51,10 @@ export function useSessionFinalization() {
         const data = await response.json();
         console.log('[companion] Session finalized:', data);
         
-        // PROFILE PERSISTENCE: Also persist financial profile at session end
+        // PROFILE PERSISTENCE: Persist financial profile at session end
         await persistFinancialProfile(userId, sessionId, financialData, conversationText);
+        // SNAPSHOT CREATION: Create financial snapshot for progress tracking
+        await createSessionSnapshot(userId, sessionId, financialData);
       } catch (error) {
         console.error('Error finalizing session:', error);
       }
