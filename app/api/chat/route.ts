@@ -853,7 +853,8 @@ Return ONLY the rewritten text.`;
       const enrichedSystemPrompt = trimPromptSections(promptSections, Math.max(8000, coreBlocksLength + 4000));
 
       // Step 4: Call Claude with enriched context
-      const trimmedMessages = messages.slice(-10);
+      // NOTE: trimmedMessages already computed at line 495 from compressConversationHistory
+      // This preserves full conversation history (not just last 10 messages) via compressed memory injection
       
       // If calculation block exists, use prefill pattern: inject it as assistant message
       // This forces Claude to continue from the calculation output instead of generating its own numbers
