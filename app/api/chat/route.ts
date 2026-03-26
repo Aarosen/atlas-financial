@@ -726,6 +726,7 @@ Return ONLY the rewritten text.`;
       // Injects accountability, progress, roadmap, behavioral, escalation, and multi-goal blocks
       // Wrapped in Promise.race with timeout to prevent blocking response
       let companionContext = '';
+      let multiGoalContext = '';
       if (userId) {
         const contextTimeout = new Promise<string>((resolve) => {
           setTimeout(() => {
@@ -746,6 +747,18 @@ Return ONLY the rewritten text.`;
 
         // Race: whichever completes first (context or timeout)
         companionContext = await Promise.race([contextPromise, contextTimeout]);
+      }
+
+      // MULTI-GOAL INTEGRATION: Build multi-goal context if goals are present
+      // This injects all active goals and current phase into the system prompt
+      if (sessionState && sessionState.goals && Array.isArray(sessionState.goals) && sessionState.goals.length > 0) {
+        try {
+          const { buildMultiGoalContextBlock } = await import('@/lib/ai/multiGoalPrompt');
+          multiGoalContext = buildMultiGoalContextBlock(sessionState.goals);
+        } catch (error) {
+          console.error('Error building multi-goal context:', error);
+          // Continue without multi-goal context if it fails
+        }
       }
 
       // Step 3: Build enriched system prompt with session state block FIRST
@@ -780,6 +793,7 @@ Return ONLY the rewritten text.`;
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
         sessionStateBlock,           // ← Always included, never trimmed (position 1)
         ...(companionContext ? [companionContext] : []), // ← COMPANION CONTEXT = injected after session state
+        ...(multiGoalContext ? [multiGoalContext] : []), // ← MULTI-GOAL CONTEXT = injected after companion context
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← SECOND = always preserved before other sections get trimmed
         memoryContext,
         emotionContext,
