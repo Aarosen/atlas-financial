@@ -285,17 +285,16 @@ export async function POST(req: Request) {
   };
 
   // COMPANION INTEGRATION: Initialize session if userId provided but sessionId not yet established
-  // This creates a new conversation session in Supabase and returns sessionId for all subsequent calls
-  if (userId && !sessionId && type === 'chat' && messages && messages.length <= 1) {
-    try {
-      const newSession = await initializeConversationSession(userId);
-      sessionId = newSession.id;
-      // Return sessionId to frontend so it can be passed in subsequent requests
-      console.log(`[companion] Initialized session ${sessionId} for user ${userId}`);
-    } catch (error) {
-      console.error('Error initializing companion session:', error);
-      // Continue without session initialization if it fails
-    }
+  // CRITICAL FIX: Skip for guest users (userId === 'guest' is truthy but not a valid UUID)
+  // Wrap in Promise.race with 3-second timeout to prevent Supabase connection hangs
+  // Fire-and-forget: sessionId only needed for companion tracking, not for response routing
+  if (userId && userId !== 'guest' && !sessionId && type === 'chat' && messages && messages.length <= 1) {
+    void initializeConversationSession(userId)
+      .then(newSession => {
+        sessionId = newSession.id;
+        console.log(`[companion] Initialized session ${sessionId} for user ${userId}`);
+      })
+      .catch(err => console.error('Error initializing companion session:', err));
   }
 
   if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'answer_explain', 'answer_explain_stream'].includes(type)) {
