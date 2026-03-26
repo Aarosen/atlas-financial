@@ -128,12 +128,39 @@ export async function getOpenActions(userId: string): Promise<UserAction[]> {
   return data || [];
 }
 
+export async function getRecentActions(userId: string, sessionId: string, limit: number = 5): Promise<UserAction[]> {
+  if (!supabase) {
+    console.warn('Supabase not configured, returning empty actions');
+    return [];
+  }
+
+  const { data, error } = await supabase
+    .from('user_actions')
+    .select('*')
+    .eq('user_id', userId)
+    .in('status', ['recommended', 'committed'])
+    .order('recommended_at', { ascending: false })
+    .limit(limit);
+
+  if (error) {
+    console.error('Error fetching recent actions:', error);
+    return [];
+  }
+
+  return data || [];
+}
+
 export async function updateActionStatus(
   actionId: string,
   status: UserAction['status'],
   notes?: string,
   actualAmount?: number
 ): Promise<void> {
+  if (!supabase) {
+    console.warn('Supabase not configured, cannot update action status');
+    return;
+  }
+
   const update: any = {
     status,
     updated_at: new Date().toISOString(),

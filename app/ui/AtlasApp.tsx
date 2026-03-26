@@ -32,6 +32,8 @@ import { trackOutcomeProgress, type UserOutcomeMetrics } from '@/lib/ai/phase4-i
 import { useUser } from '@/lib/auth/userContext';
 import { useAuth } from '@/lib/auth/useAuth';
 import { useSessionId } from '@/lib/session/useSessionId';
+import { useSessionFinalization } from '@/lib/session/useSessionFinalization';
+import { useMultiGoals } from '@/lib/goals/useMultiGoals';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -63,6 +65,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const { user, isLoading: authLoading } = useUser();
   const { session: authSession } = useAuth();
   const { sessionId, updateSessionId } = useSessionId();
+  const { finalizeSession } = useSessionFinalization();
+  const { state: multiGoalState, addNewGoal, updateGoal, getCurrentGoals, getContext: getMultiGoalContext } = useMultiGoals();
   const userId = authSession?.userId || user?.id || 'guest';
   const [mounted, setMounted] = useState(false);
   const [apiStatus, setApiStatus] = useState(claude.status);
@@ -146,6 +150,19 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   useEffect(() => {
     claude.setUserContext(userId !== 'guest' ? userId : null, sessionId);
   }, [claude, userId, sessionId]);
+
+  // Finalize session when leaving conversation
+  useEffect(() => {
+    const handleBeforeUnload = () => {
+      if (userId !== 'guest' && sessionId && st.msgs.length > 0) {
+        const conversationText = st.msgs.map((m) => `${m.r === 'u' ? 'User' : 'Atlas'}: ${m.t}`).join('\n');
+        finalizeSession(userId, sessionId, conversationText, st.fin);
+      }
+    };
+
+    window.addEventListener('beforeunload', handleBeforeUnload);
+    return () => window.removeEventListener('beforeunload', handleBeforeUnload);
+  }, [userId, sessionId, st.msgs, st.fin, finalizeSession]);
 
   const updateInput = useCallback(
     (text: string) => {

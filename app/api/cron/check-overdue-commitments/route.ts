@@ -48,10 +48,10 @@ async function getOverdueCommitments(): Promise<OverdueCommitment[]> {
   try {
     const supabase = getSupabaseClient();
     
-    // Query actions table for overdue commitments
+    // Query user_actions table for overdue commitments
     // Status = 'committed' or 'recommended' and due_date < today
     const { data, error } = await supabase
-      .from('actions')
+      .from('user_actions')
       .select(`
         id,
         user_id,
