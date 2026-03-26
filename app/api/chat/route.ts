@@ -975,12 +975,12 @@ Return ONLY the rewritten text.`;
 
               const nudgePromise = (async () => {
                 try {
-                  // Nudge injection with basic context
+                  // Nudge injection with real goals from sessionState
                   const result = injectNudgeIfAppropriate(
                     cleanedResponse,
                     {
                       userId,
-                      goals: [],
+                      goals: sessionState?.goals || [],
                     },
                     messages.length
                   );

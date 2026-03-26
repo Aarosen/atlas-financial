@@ -35,6 +35,7 @@ import { useSessionId } from '@/lib/session/useSessionId';
 import { useSessionFinalization } from '@/lib/session/useSessionFinalization';
 import { useMultiGoals } from '@/lib/goals/useMultiGoals';
 import { AuthPromptCard } from '@/components/AuthPromptCard';
+import { processResponseForGoals } from '@/lib/ai/conversationGoalWiring';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -982,6 +983,14 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
         dispatch({ type: 'STREAM_DONE' });
         
+        // AUTHPROMPTCARD: Show auth prompt to guest users after 3 messages
+        if (userId === 'guest' && st.msgs.length >= 3 && !showAuthPrompt) {
+          setShowAuthPrompt(true);
+        }
+
+        // GOAL DETECTION: Process response for goals and trigger addNewGoal if detected
+        await processResponseForGoals(adaptiveAsk || action.text, addNewGoal);
+        
         // Only dispatch SEND_ASKED if streaming produced nothing
         // The streamed content is already in the UI via STREAM_DELTA
         if (!adaptiveAsk.trim()) {
@@ -1110,6 +1119,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const renderTalkStack = (scr: Screen) => (
     <>
       <div style={{ display: scr === 'conversation' ? 'block' : 'none' }}>
+        {showAuthPrompt && <AuthPromptCard onDismiss={() => setShowAuthPrompt(false)} />}
         <ConversationScreen
           inputEnabled={mounted}
           theme={theme}
