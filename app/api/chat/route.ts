@@ -590,31 +590,39 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
       });
     }
 
-    let response = await callAnthropic({ apiKey, model: usedModel, maxTokens, system: sys, messages: msgPayload });
+    // CRITICAL FIX: For non-chat types (extract, answer), use non-streaming call
+    // For chat type, skip this pre-call and go directly to streaming at line 843
+    // The pre-call was causing 8+ second latency before streaming started
+    let response: Response | null = null;
+    let text = '';
 
-    if (!response.ok) {
-      let bodyText = await readUpstreamErrorBody(response);
+    if (type !== 'chat') {
+      response = await callAnthropic({ apiKey, model: usedModel, maxTokens, system: sys, messages: msgPayload });
 
-      if (response.status === 404 && bodyText.includes('not_found_error') && bodyText.includes('model')) {
-        for (const m of modelCandidates.slice(1)) {
-          usedModel = m;
-          response = await callAnthropic({ apiKey, model: usedModel, maxTokens, system: systemPrompt, messages: trimmedMessages });
-          if (response.ok) break;
-          bodyText = await readUpstreamErrorBody(response);
-          if (!(response.status === 404 && bodyText.includes('not_found_error') && bodyText.includes('model'))) break;
+      if (!response.ok) {
+        let bodyText = await readUpstreamErrorBody(response);
+
+        if (response.status === 404 && bodyText.includes('not_found_error') && bodyText.includes('model')) {
+          for (const m of modelCandidates.slice(1)) {
+            usedModel = m;
+            response = await callAnthropic({ apiKey, model: usedModel, maxTokens, system: systemPrompt, messages: trimmedMessages });
+            if (response.ok) break;
+            bodyText = await readUpstreamErrorBody(response);
+            if (!(response.status === 404 && bodyText.includes('not_found_error') && bodyText.includes('model'))) break;
+          }
+        }
+
+        if (!response.ok) {
+          if (response.status === 401) return jsonError(401, 'Anthropic auth failed (check ANTHROPIC_API_KEY).');
+          if (response.status === 429) return jsonError(429, 'Anthropic rate limit reached. Please try again.');
+          if (response.status === 400) return jsonError(400, `Anthropic request rejected. ${bodyText ? `Details: ${bodyText}` : ''}`.trim());
+          return jsonError(502, `Upstream API error (${response.status}). ${bodyText ? `Details: ${bodyText}` : ''}`.trim());
         }
       }
 
-      if (!response.ok) {
-        if (response.status === 401) return jsonError(401, 'Anthropic auth failed (check ANTHROPIC_API_KEY).');
-        if (response.status === 429) return jsonError(429, 'Anthropic rate limit reached. Please try again.');
-        if (response.status === 400) return jsonError(400, `Anthropic request rejected. ${bodyText ? `Details: ${bodyText}` : ''}`.trim());
-        return jsonError(502, `Upstream API error (${response.status}). ${bodyText ? `Details: ${bodyText}` : ''}`.trim());
-      }
+      const data: any = await response.json();
+      text = data.content?.[0]?.text || '';
     }
-
-    const data: any = await response.json();
-    const text = data.content?.[0]?.text || '';
 
     if (type === 'extract') {
       try {
@@ -652,7 +660,7 @@ Return ONLY the rewritten text.`;
 
     // For chat responses, use orchestrator to inject session state
     // This makes Claude aware of conversation goal, phase, missing fields, and urgency
-    if (type === 'chat' && text) {
+    if (type === 'chat') {
       const lastUserMsg = String((messages || []).slice(-1)[0]?.content || '').trim();
       const conversationHistory = messages || [];
       const financialProfile = { ...(fin || {}), ...(extractedFields || {}) };
@@ -725,22 +733,43 @@ Return ONLY the rewritten text.`;
         });
       }
 
-      // Step 2: Run the orchestrator
+      // Step 2: Run the orchestrator with timeout protection
       // This analyzes conversation state and builds a session context block
       // Now uses semantic intent classifier on first message for superior accuracy
-      const { sessionStateBlock, missingFields: orchestratorMissingFields, state, objectionBlock, calculationBlock } = await orchestrate({
+      // CRITICAL FIX: Wrap in Promise.race with 5-second timeout to prevent hanging
+      const orchestrateTimeout = new Promise<any>((resolve) => {
+        setTimeout(() => {
+          console.warn('[atlas] Orchestrator timeout - using minimal session state');
+          resolve({
+            sessionStateBlock: '',
+            missingFields: [],
+            state: {},
+            objectionBlock: '',
+            calculationBlock: '',
+          });
+        }, 5000); // 5 second timeout for orchestrator
+      });
+
+      const orchestratePromise = orchestrate({
         messages: conversationHistory,
         financialProfile,
         previousState: sessionState as any,
         answered: updatedAnswered,
       });
 
+      const { sessionStateBlock, missingFields: orchestratorMissingFields, state, objectionBlock, calculationBlock } = await Promise.race([
+        orchestratePromise,
+        orchestrateTimeout,
+      ]);
+
       // COMPANION INTEGRATION: Build companion system prompt context (with timeout)
       // Injects accountability, progress, roadmap, behavioral, escalation, and multi-goal blocks
       // Wrapped in Promise.race with timeout to prevent blocking response
+      // CRITICAL FIX: Only build companion context for authenticated users (not guests)
+      // Guest users should not hit Supabase, which causes 5-second timeout
       let companionContext = '';
       let multiGoalContext = '';
-      if (userId) {
+      if (userId && userId !== 'guest') {
         const contextTimeout = new Promise<string>((resolve) => {
           setTimeout(() => {
             console.warn('[companion] Context building timeout - using empty context');
