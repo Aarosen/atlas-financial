@@ -30,6 +30,8 @@ import { BarChart3, LayoutList, MessageSquare, Settings } from 'lucide-react';
 import type { SupportedLanguage } from '@/lib/ai/slangMapper';
 import { trackOutcomeProgress, type UserOutcomeMetrics } from '@/lib/ai/phase4-integration';
 import { useUser } from '@/lib/auth/userContext';
+import { useAuth } from '@/lib/auth/useAuth';
+import { useSessionId } from '@/lib/session/useSessionId';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -49,7 +51,7 @@ const tc = (t: Strategy['tier']) =>
     {
       Foundation: { name: 'Foundation', desc: 'We steady the ground first.' },
       Stabilizing: { name: 'Stabilizing', desc: 'We reduce pressure and build buffer.' },
-      Strategic: { name: 'Strategic', desc: 'We’re building momentum with intent.' },
+      Strategic: { name: 'Strategic', desc: 'We are building momentum with intent.' },
       GrowthReady: { name: 'Growth Ready', desc: 'We can lean into growth.' },
     } as const
   )[t];
@@ -59,7 +61,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const claude = useMemo(() => new ClaudeClient(), []);
   const engine = useMemo(() => new StrategyEngine(), []);
   const { user, isLoading: authLoading } = useUser();
-  const userId = user?.id || 'guest';
+  const { session: authSession } = useAuth();
+  const { sessionId, updateSessionId } = useSessionId();
+  const userId = authSession?.userId || user?.id || 'guest';
   const [mounted, setMounted] = useState(false);
   const [apiStatus, setApiStatus] = useState(claude.status);
   const [voiceListening, setVoiceListening] = useState(false);
@@ -137,6 +141,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     latestStateRef.current = st;
     finRef.current = st.fin;
   }, [st]);
+
+  // Set user context on Claude client for companion features
+  useEffect(() => {
+    claude.setUserContext(userId !== 'guest' ? userId : null, sessionId);
+  }, [claude, userId, sessionId]);
 
   const updateInput = useCallback(
     (text: string) => {

@@ -8,6 +8,14 @@ export class ClaudeClient {
   private _apiStatus: ClaudeApiStatus = 'unknown';
   private _hadSuccess = false;
   private _lastErrorStatus: number | null = null;
+  private _userId: string | null = null;
+  private _sessionId: string | null = null;
+
+  // Set userId and sessionId for companion features
+  setUserContext(userId: string | null, sessionId: string | null) {
+    this._userId = userId;
+    this._sessionId = sessionId;
+  }
 
   async statusCheck(): Promise<{ configured: boolean } | null> {
     try {
@@ -42,7 +50,14 @@ export class ClaudeClient {
       const r = await fetch(this.ep, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'extract', messages: [{ role: 'user', content: msg }], language: opts?.language, lastQuestion: opts?.lastQuestion }),
+        body: JSON.stringify({ 
+          type: 'extract', 
+          messages: [{ role: 'user', content: msg }], 
+          language: opts?.language, 
+          lastQuestion: opts?.lastQuestion,
+          userId: this._userId,
+          sessionId: this._sessionId,
+        }),
       });
       if (!r.ok) {
         this._lastErrorStatus = r.status;
@@ -80,7 +95,7 @@ export class ClaudeClient {
     memorySummary?: string | null;
     fin?: Partial<FinancialState> | null;
     language?: SupportedLanguage;
-  }): Promise<{ ok: boolean; canceled: boolean }> {
+  }): Promise<{ ok: boolean; canceled: boolean; sessionId?: string }> {
     const { question, onDelta, signal, mode, memorySummary, fin } = args;
     const slow = String(question || '').toLowerCase().includes('slowstream');
     const type = mode === 'explain' ? 'answer_explain_stream' : 'answer_stream';
@@ -88,7 +103,16 @@ export class ClaudeClient {
       const r = await fetch(this.ep, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type, messages: args.msgs, question, memorySummary, fin: fin ?? null, language: args.language }),
+        body: JSON.stringify({ 
+          type, 
+          messages: args.msgs, 
+          question, 
+          memorySummary, 
+          fin: fin ?? null, 
+          language: args.language,
+          userId: this._userId,
+          sessionId: this._sessionId,
+        }),
         signal,
       });
 
@@ -132,12 +156,16 @@ export class ClaudeClient {
                 this._hadSuccess = true;
                 this._apiStatus = 'online';
                 this._lastErrorStatus = null;
+                // Capture sessionId from response if present
+                if (j?.sessionId && !this._sessionId) {
+                  this._sessionId = j.sessionId;
+                }
                 try {
                   reader.releaseLock();
                 } catch {
                   // ignore
                 }
-                return { ok: true, canceled: false };
+                return { ok: true, canceled: false, sessionId: j?.sessionId };
               }
             } catch (frameErr: any) {
               if (frameErr?.name === 'AbortError') throw frameErr;
@@ -174,7 +202,7 @@ export class ClaudeClient {
     sessionState?: Record<string, any>;
     answered?: Record<string, boolean>;
     language?: SupportedLanguage;
-  }): Promise<{ ok: boolean; canceled: boolean }> {
+  }): Promise<{ ok: boolean; canceled: boolean; sessionId?: string }> {
     const { msgs, missing, onDelta, onSessionState, signal, memorySummary, fin, extractedFields, sessionState, answered, language } = args;
     try {
       const r = await fetch(this.ep, {
@@ -190,6 +218,8 @@ export class ClaudeClient {
           sessionState: sessionState ?? {},
           answered: answered ?? {},
           language,
+          userId: this._userId,
+          sessionId: this._sessionId,
         }),
         signal,
       });
@@ -237,12 +267,16 @@ export class ClaudeClient {
                 this._hadSuccess = true;
                 this._apiStatus = 'online';
                 this._lastErrorStatus = null;
+                // Capture sessionId from response if present
+                if (j?.sessionId && !this._sessionId) {
+                  this._sessionId = j.sessionId;
+                }
                 try {
                   reader.releaseLock();
                 } catch {
                   // ignore
                 }
-                return { ok: true, canceled: false };
+                return { ok: true, canceled: false, sessionId: j?.sessionId };
               }
             } catch (frameErr: any) {
               if (frameErr?.name === 'AbortError') throw frameErr;
