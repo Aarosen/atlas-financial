@@ -26,6 +26,8 @@ import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
 import { extractFinancialSnapshot } from '@/lib/ai/financialExtractor';
 import { runCalculations, formatCalculationBlock } from '@/lib/calculations/sprint1';
 import { cleanAtlasResponse } from '@/lib/ai/responsePostprocessor';
+import { validateFinancialSnapshot, buildValidationPrompt } from '@/lib/ai/financialValidation';
+import { compressConversationHistory, formatCompressedMemory } from '@/lib/ai/contextWindowExtension';
 import { classifyUserIntent } from '@/lib/ai/intentClassifier';
 import { buildSystemPrompt } from '@/lib/ai/systemPromptBuilder';
 import { 
@@ -489,7 +491,9 @@ Structure (use headings or short labels when helpful):
 Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if needed.`;
 
   try {
-    const trimmedMessages = messages.slice(-10);
+    // CONTEXT WINDOW EXTENSION: Compress conversation history beyond 10 messages
+    const { recentMessages, compressedMemory } = compressConversationHistory(messages, 10);
+    const trimmedMessages = recentMessages;
     let usedModel = modelCandidates[0] || DEFAULT_MODEL;
     const sys = type === 'answer' ? answerPrompt : type === 'answer_explain' ? explainerPrompt : systemPrompt;
     const msgPayload =
@@ -666,6 +670,14 @@ Return ONLY the rewritten text.`;
         updatedAnswered.totalSavings = true;
       }
 
+      // FINANCIAL VALIDATION: Validate extracted financial snapshot for implausible values
+      // This catches typos and suspicious data before analysis runs
+      const validation = validateFinancialSnapshot(extractedFields as any);
+      let validationContext = '';
+      if (!validation.isValid) {
+        validationContext = `\n\n${buildValidationPrompt(validation)}`;
+      }
+
       // COMPANION INTEGRATION: Process user message for commitments (with timeout)
       // This detects if user is committing to or completing actions
       // Wrapped in Promise.race with timeout to prevent blocking response
@@ -796,6 +808,8 @@ Return ONLY the rewritten text.`;
         ...(companionContext ? [companionContext] : []), // ← COMPANION CONTEXT = injected after session state
         ...(multiGoalContext ? [multiGoalContext] : []), // ← MULTI-GOAL CONTEXT = injected after companion context
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← SECOND = always preserved before other sections get trimmed
+        ...(compressedMemory ? [formatCompressedMemory(compressedMemory)] : []), // ← COMPRESSED MEMORY = preserve context beyond 10 messages
+        ...(validationContext ? [validationContext] : []), // ← VALIDATION CONTEXT = flag implausible values
         memoryContext,
         emotionContext,
         disclaimerContext,

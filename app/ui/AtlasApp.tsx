@@ -34,6 +34,7 @@ import { useAuth } from '@/lib/auth/useAuth';
 import { useSessionId } from '@/lib/session/useSessionId';
 import { useSessionFinalization } from '@/lib/session/useSessionFinalization';
 import { useMultiGoals } from '@/lib/goals/useMultiGoals';
+import { AuthPromptCard } from '@/components/AuthPromptCard';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -75,6 +76,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [replayEnabled, setReplayEnabled] = useState(true);
   const [responsePref, setResponsePref] = useState<'short' | 'explain' | null>(null);
   const [literacyLevel, setLiteracyLevel] = useState<'novice' | 'intermediate' | 'advanced' | null>(null);
+  const [showAuthPrompt, setShowAuthPrompt] = useState(false);
   const voice = useMemo(
     () =>
       createVoice({
