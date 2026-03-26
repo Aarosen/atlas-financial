@@ -1,5 +1,13 @@
 import { NextRequest, NextResponse } from 'next/server';
 
+interface ProgressSnapshot {
+  metric: string;
+  previousValue: number;
+  currentValue: number;
+  unit: string;
+  isPositive: boolean;
+}
+
 /**
  * API endpoint for fetching user progress summary
  * Called on session start to show returning users their progress
@@ -23,23 +31,7 @@ export async function POST(request: NextRequest) {
     // 4. Return formatted progress data
 
     // For now, return empty snapshots (will be populated when Supabase is configured)
-    const snapshots = [
-      // Example structure:
-      // {
-      //   metric: 'High-interest debt',
-      //   previousValue: 12000,
-      //   currentValue: 9500,
-      //   unit: 'USD',
-      //   isPositive: true, // true means improvement is when value goes down
-      // },
-      // {
-      //   metric: 'Emergency fund',
-      //   previousValue: 3000,
-      //   currentValue: 4500,
-      //   unit: 'USD',
-      //   isPositive: false, // false means improvement is when value goes up
-      // },
-    ];
+    const snapshots: ProgressSnapshot[] = [];
 
     const daysSinceLast = 0; // Will be calculated from last session timestamp
 
