@@ -84,6 +84,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [progressSnapshots, setProgressSnapshots] = useState<Array<{ metric: string; previousValue: number; currentValue: number; unit: string; isPositive: boolean }>>([]);
   const [daysSinceLast, setDaysSinceLast] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
+  const [currentMission, setCurrentMission] = useState<{ text: string; daysUntilCheckIn: number } | null>(null);
   const voice = useMemo(
     () =>
       createVoice({
@@ -471,11 +472,21 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         if (response.ok) {
           const data = await response.json();
           if (data.action) {
-            setPendingActionCompletion({
-              id: data.action.id,
-              text: data.action.text,
-              dueDate: data.action.dueDate,
-            });
+            const dueDate = new Date(data.action.dueDate);
+            const now = new Date();
+            const daysUntil = Math.max(0, Math.floor((dueDate.getTime() - now.getTime()) / (1000 * 60 * 60 * 24)));
+            
+            // Only show "current mission" if NOT yet due (ActionCompletionCard handles the due case)
+            if (daysUntil > 0) {
+              setCurrentMission({ text: data.action.text, daysUntilCheckIn: daysUntil });
+            } else {
+              // If due, show ActionCompletionCard instead
+              setPendingActionCompletion({
+                id: data.action.id,
+                text: data.action.text,
+                dueDate: data.action.dueDate,
+              });
+            }
           }
         }
       } catch (error) {
@@ -1235,6 +1246,28 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const renderTalkStack = (scr: Screen) => (
     <>
       <div style={{ display: scr === 'conversation' ? 'block' : 'none' }}>
+        {currentMission && !pendingActionCompletion && (
+          <div className="w-full max-w-2xl mx-auto mb-4 p-4 bg-gradient-to-r from-slate-50 to-blue-50 border border-slate-200 rounded-lg">
+            <p className="text-xs font-medium text-slate-500 uppercase tracking-wide mb-1">Your current mission</p>
+            <p className="text-sm text-slate-800 mb-3">{currentMission.text}</p>
+            <div className="flex items-center justify-between">
+              <span className="text-xs text-slate-500">
+                {currentMission.daysUntilCheckIn === 1
+                  ? 'Check-in tomorrow'
+                  : `${currentMission.daysUntilCheckIn} days until check-in`}
+              </span>
+              <button
+                onClick={() => {
+                  setCurrentMission(null);
+                  void send(`I'm checking in on my commitment: "${currentMission.text}"`);
+                }}
+                className="text-xs text-blue-600 hover:text-blue-700 font-medium"
+              >
+                Check in with Atlas →
+              </button>
+            </div>
+          </div>
+        )}
         {showProgress && (
           <ProgressDisplay
             snapshots={progressSnapshots}
