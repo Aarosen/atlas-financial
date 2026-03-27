@@ -14,6 +14,7 @@ import { buildMemorySummary, extractKeyDecisions, determineFollowUpNeeded, gener
 import { coordinateGoals, buildMultiGoalBlock } from '@/lib/ai/multiGoalCoordinator';
 import { calculateMetricChange, calculateNetWorthTrend } from '@/lib/calculations/progressCalculations';
 import { createAction, updateActionStatus } from '@/lib/db/supabaseRepository';
+import { generateDebtPayoffPipeline, generateEmergencyFundPipeline } from '@/lib/ai/actionPipeline';
 
 /**
  * Build complete companion context for system prompt
@@ -149,7 +150,8 @@ export async function processAtlasResponseForCompanion(
   userId: string,
   sessionId: string,
   atlasResponse: string,
-  apiKey: string
+  apiKey: string,
+  financialProfile?: Record<string, any>
 ): Promise<void> {
   try {
     // Extract action from response
@@ -176,6 +178,52 @@ export async function processAtlasResponseForCompanion(
         actual_amount: null,
         impact_per_month: null,
       });
+
+      // Generate full action pipeline for goal-oriented actions if financial profile available
+      if (financialProfile && extractedAction.action_category === 'debt_payoff' && 
+          financialProfile.highInterestDebt && financialProfile.monthlyIncome && financialProfile.essentialExpenses) {
+        try {
+          const steps = generateDebtPayoffPipeline(
+            financialProfile.highInterestDebt,
+            financialProfile.monthlyIncome,
+            financialProfile.essentialExpenses
+          );
+          
+          // Create all pipeline steps (skip first since we already created it)
+          for (let i = 1; i < steps.length; i++) {
+            const step = steps[i];
+            // Map ActionStep category to action category for Supabase
+            const categoryMap: Record<string, 'savings' | 'income' | 'other' | 'debt_payoff' | 'invest' | 'budget_cut'> = {
+              'debt': 'debt_payoff',
+              'savings': 'savings',
+              'income': 'income',
+              'expenses': 'budget_cut',
+              'investment': 'invest',
+              'other': 'other'
+            };
+            
+            await createAction({
+              user_id: userId,
+              session_id: sessionId,
+              goal_id: null,
+              action_text: step.specificAction,
+              action_category: categoryMap[step.category] || 'other',
+              target_amount: null,
+              target_frequency: 'monthly',
+              check_in_due_at: step.dueDate || new Date(Date.now() + 30 * 24 * 60 * 60 * 1000).toISOString(),
+              status: 'recommended', // All steps start as recommended
+              committed_at: null,
+              completion_verified_at: null,
+              user_reported_outcome: null,
+              actual_amount: null,
+              impact_per_month: null,
+            });
+          }
+        } catch (pipelineError) {
+          console.warn('Failed to create action pipeline:', pipelineError);
+          // Non-fatal: pipeline creation failure doesn't block action creation
+        }
+      }
     }
   } catch (error) {
     console.error('Error processing Atlas response:', error);
