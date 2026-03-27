@@ -1,5 +1,7 @@
 export function cleanAtlasResponse(raw: string): string {
   return raw
+    // Remove any leading control tags like [EMPATHY], [CALCULATION_RESULTS], etc.
+    .replace(/^\[[A-Z_]+\]\n?/g, '')
     // Remove profile block delimiters (all variations)
     .replace(/\[ATLAS_USER_PROFILE\][\s\S]*?\[END_PROFILE\]/g, '')
     .replace(/\[ATLAS_USER_PROFILE\]/g, '')

@@ -1045,7 +1045,7 @@ Return ONLY the rewritten text.`;
 
               const actionPromise = (async () => {
                 try {
-                  await processAtlasResponseForCompanion(userId, sessionId, cleanedResponse, apiKey);
+                  await processAtlasResponseForCompanion(userId, sessionId, cleanedResponse, apiKey, financialProfile);
                 } catch (error) {
                   console.error('Error processing Atlas response for companion:', error);
                 }

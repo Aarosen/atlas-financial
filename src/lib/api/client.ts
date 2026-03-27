@@ -207,6 +207,7 @@ export class ClaudeClient {
     missing: string[];
     onDelta: (t: string) => void;
     onSessionState?: (state: any) => void;
+    onReplace?: (text: string) => void;
     signal?: AbortSignal;
     memorySummary?: string | null;
     fin?: Partial<FinancialState> | null;
@@ -215,7 +216,7 @@ export class ClaudeClient {
     answered?: Record<string, boolean>;
     language?: SupportedLanguage;
   }): Promise<{ ok: boolean; canceled: boolean; sessionId?: string }> {
-    const { msgs, missing, onDelta, onSessionState, signal, memorySummary, fin, extractedFields, sessionState, answered, language } = args;
+    const { msgs, missing, onDelta, onSessionState, onReplace, signal, memorySummary, fin, extractedFields, sessionState, answered, language } = args;
     try {
       const r = await fetch(this.ep, {
         method: 'POST',
@@ -270,6 +271,10 @@ export class ClaudeClient {
               // Handle session state events
               if (j?.type === 'session_state' && onSessionState) {
                 onSessionState(j.state);
+              }
+              // Handle replace event (final cleaned response from server)
+              if (j?.type === 'replace' && typeof j?.text === 'string') {
+                onReplace?.(j.text);
               }
               // Handle text deltas
               if (typeof j?.delta === 'string' && j.delta) {

@@ -30,7 +30,7 @@ export async function GET(request: NextRequest) {
     const { error } = await supabase
       .from('users')
       .update({ email_notifications: false })
-      .eq('user_id', userId);
+      .eq('id', userId);
 
     if (error) {
       console.error('Error updating user notification preference:', error);

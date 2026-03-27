@@ -29,7 +29,14 @@ export function detectComplianceRisk(input: string): ComplianceRisk | null {
   if (!t) return null;
 
   if (/\b(tax\s+evasion|evade\s+tax(?:es)?|hide\s+income|money\s+launder|launder)\b/i.test(t)) return 'illegal';
-  if (/\b(buy|sell|short|long|invest\s+in|should\s+i\s+buy)\b.*\b(stock|crypto|coin|option|etf|fund)\b/i.test(t)) return 'investment_advice';
+  
+  // Investment advice detection: catch specific ticker advice and general buy/sell directives
+  if (/\b(buy|sell|short|long|invest\s+in|should\s+i\s+buy|should\s+i\s+sell|hold)\b.*\b(stock|crypto|coin|option|etf|fund)\b/i.test(t)) return 'investment_advice';
+  // Catch ticker-specific advice: "sell AAPL", "buy TSLA", "should I buy MSFT", etc.
+  if (/\b(buy|sell|hold|should\s+i\s+(?:buy|sell|hold))\s+[A-Z]{1,5}\b/i.test(t)) return 'investment_advice';
+  // Catch "should I (buy/sell/hold)" patterns even without ticker
+  if (/should\s+i\s+(buy|sell|hold|invest|allocate)/i.test(t)) return 'investment_advice';
+  
   if (/\b(tax\s+return|audit|deduction|write[-\s]?off|legal\s+advice|lawsuit)\b/i.test(t)) return 'tax_legal';
   return null;
 }

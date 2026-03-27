@@ -49,21 +49,21 @@ async function getOverdueCommitments(): Promise<OverdueCommitment[]> {
     const supabase = getSupabaseClient();
     
     // Query user_actions table for overdue commitments
-    // Status = 'committed' or 'recommended' and due_date < today
+    // Status = 'committed' or 'recommended' and check_in_due_at < today
     const { data, error } = await supabase
       .from('user_actions')
       .select(`
         id,
         user_id,
-        title,
-        due_date,
+        action_text,
+        check_in_due_at,
         status,
-        description,
         users(email)
       `)
+      .eq('email_notifications', true)
       .in('status', ['committed', 'recommended'])
-      .lt('due_date', new Date().toISOString().split('T')[0])
-      .order('due_date', { ascending: true });
+      .lt('check_in_due_at', new Date().toISOString().split('T')[0])
+      .order('check_in_due_at', { ascending: true });
 
     if (error) {
       console.error('Error querying overdue commitments:', error);
@@ -78,7 +78,7 @@ async function getOverdueCommitments(): Promise<OverdueCommitment[]> {
     const overdue: OverdueCommitment[] = data
       .filter((action: any) => action.users?.email)
       .map((action: any) => {
-        const dueDate = new Date(action.due_date);
+        const dueDate = new Date(action.check_in_due_at);
         const today = new Date();
         const daysOverdue = Math.floor((today.getTime() - dueDate.getTime()) / (1000 * 60 * 60 * 24));
 
@@ -86,10 +86,10 @@ async function getOverdueCommitments(): Promise<OverdueCommitment[]> {
           id: action.id,
           userId: action.user_id,
           userEmail: action.users.email,
-          commitmentTitle: action.title,
-          dueDate: action.due_date,
+          commitmentTitle: action.action_text,
+          dueDate: action.check_in_due_at,
           daysOverdue,
-          commitmentDetails: action.description || '',
+          commitmentDetails: '',
         };
       });
 

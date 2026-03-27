@@ -305,6 +305,43 @@ export function detectCrisisSignals(
     };
   }
 
+  // CRITICAL: Hopelessness and suicidal ideation (indirect phrasing)
+  if (/no point|what's the point|doesn't matter|can't go on|don't see a way out|no way out|hopeless|there's no hope|might as well|no reason to|not worth|give up|end it|don't want to be here|wish i wasn't|better off dead|better off without me/i.test(messageLower)) {
+    return {
+      level: 'critical',
+      type: 'suicidal_ideation',
+      description: 'User expressing hopelessness or suicidal ideation',
+      immediateActions: [
+        'Call 988 Suicide & Crisis Lifeline immediately',
+        'If in immediate danger, call 911 or go to nearest emergency room',
+        'Tell someone you trust how you\'re feeling right now',
+        'Remove access to means of self-harm if possible',
+      ],
+      resources: [
+        {
+          name: '988 Suicide & Crisis Lifeline',
+          description: 'Free, confidential mental health support - call or text',
+          phone: '988',
+          availability: '24/7',
+        },
+        {
+          name: 'Crisis Text Line',
+          description: 'Text HOME to 741741 for immediate support',
+          url: 'https://www.crisistextline.org',
+          availability: '24/7',
+        },
+        {
+          name: 'International Association for Suicide Prevention',
+          description: 'Global crisis resources and hotlines',
+          url: 'https://www.iasp.info/resources/Crisis_Centres/',
+          availability: '24/7',
+        },
+      ],
+      escalateToHuman: true,
+      toneShift: 'crisis',
+    };
+  }
+
   // URGENT: Escalation detection
   const previousMessages = conversationHistory.map(m => m.content).join(' ').toLowerCase();
   const stressIndicators = (previousMessages.match(/stress|worried|anxious|scared|desperate/gi) || []).length;
