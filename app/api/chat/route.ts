@@ -45,8 +45,9 @@ const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
 const FALLBACK_MODELS = ['claude-3-haiku-20240307', 'claude-3-opus-20240229'] as const;
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
-const RATE_LIMIT = 20;
-const RATE_WINDOW = 60_000;
+const RATE_LIMIT_GUEST = 20; // 20 requests per minute for guests
+const RATE_LIMIT_AUTHENTICATED = 100; // 100 requests per minute for authenticated users
+const RATE_WINDOW = 60_000; // 1 minute
 
 type EmotionTag = 'anxious' | 'ashamed' | 'analytical' | 'motivated' | 'uncertain' | 'neutral';
 
@@ -56,16 +57,18 @@ function isSupportedLanguage(value: unknown): value is SupportedLanguage {
   return SUPPORTED_LANGUAGES.includes(value as SupportedLanguage);
 }
 
-function checkRateLimit(ip: string) {
+function checkRateLimit(identifier: string, isAuthenticated: boolean = false) {
   const now = Date.now();
-  const entry = rateLimitMap.get(ip) || { count: 0, resetAt: now + RATE_WINDOW };
+  const limit = isAuthenticated ? RATE_LIMIT_AUTHENTICATED : RATE_LIMIT_GUEST;
+  const entry = rateLimitMap.get(identifier) || { count: 0, resetAt: now + RATE_WINDOW };
+  
   if (now > entry.resetAt) {
     entry.count = 0;
     entry.resetAt = now + RATE_WINDOW;
   }
   entry.count++;
-  rateLimitMap.set(ip, entry);
-  return entry.count <= RATE_LIMIT;
+  rateLimitMap.set(identifier, entry);
+  return entry.count <= limit;
 }
 
 function streamStaticResponse(text: string, meta: { model: string; tier: string; guardrail?: string }) {
@@ -250,10 +253,7 @@ export async function OPTIONS() {
 
 export async function POST(req: Request) {
   const ip = req.headers.get('x-forwarded-for') || 'unknown';
-  if (!checkRateLimit(ip)) {
-    return jsonError(429, 'Too many requests. Please wait a moment.');
-  }
-
+  
   const apiKey = process.env.ANTHROPIC_API_KEY;
   const notConfigured = () =>
     jsonError(
@@ -283,6 +283,14 @@ export async function POST(req: Request) {
     userId?: string;
     sessionId?: string;
   };
+
+  // RATE LIMITING: Per-user limits (higher for authenticated users)
+  // Use userId if available, otherwise use IP address
+  const isAuthenticated = !!(userId && userId !== 'guest');
+  const rateLimitIdentifier = isAuthenticated ? (userId as string) : ip;
+  if (!checkRateLimit(rateLimitIdentifier, isAuthenticated)) {
+    return jsonError(429, 'Too many requests. Please wait a moment.');
+  }
 
   // COMPANION INTEGRATION: Initialize session for authenticated users only
   // CRITICAL: Must check userId !== 'guest' — guests are not in auth.users, Supabase call hangs
