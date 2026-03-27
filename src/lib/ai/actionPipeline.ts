@@ -113,7 +113,7 @@ export function generateDebtPayoffPipeline(
       stepNumber: 7,
       title: 'Start investing for the future',
       description: 'Begin building wealth through investments',
-      specificAction: `Invest $${Math.round(monthlySurplus * 0.15)} per month in a low-cost index fund (e.g., VTSAX).`,
+      specificAction: `Invest $${Math.round(monthlySurplus * 0.15)} per month in a low-cost total market index fund — a standard brokerage or your employer's 401k are both fine places to start.`,
       blockedBy: [6],
       priority: 'medium',
       category: 'investment',
