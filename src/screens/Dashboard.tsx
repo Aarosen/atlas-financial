@@ -2,9 +2,10 @@ import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
 import type { FinancialState, Strategy } from '@/lib/state/types';
 import { Card } from '@/components/Card';
-import { GhostBtn, PrimaryBtn } from '@/components/Buttons';
+import { Button, PrimaryBtn, GhostBtn } from '@/components/Buttons';
 import { TopBar, ScreenWrap } from '@/components/TopBar';
 import { PageContainer, Stack } from '@/components/Layout';
+import { ProgressBar } from '@/components/ProgressBar';
 import { conceptsForLever } from '@/lib/ai/conceptMap';
 import { simulateSavingsGrowth } from '@/lib/ai/scenarioSimulator';
 import { buildSparkline } from '@/lib/ai/visualExplainer';
@@ -167,8 +168,11 @@ export function DashboardScreen({
       <PageContainer maxWidth={980} style={{ paddingTop: 'var(--padY)', paddingBottom: 'var(--padY)' }}>
         <Stack gap={14}>
           <Card>
-            <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }} title="Based on how much we’ve learned so far.">PROFILE CLARITY</div>
-            <div style={{ marginTop: 8, fontWeight: 950, fontSize: 20 }}>{completenessScore}%</div>
+            <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }} title="Based on how much we've learned so far.">PROFILE CLARITY</div>
+            <div style={{ marginTop: 12 }}>
+              <ProgressBar value={completenessScore} max={100} label="Profile completeness" showLabel={true} />
+            </div>
+            <div style={{ marginTop: 10, fontWeight: 950, fontSize: 20 }}>{completenessScore}%</div>
             <div style={{ marginTop: 6, color: 'var(--ink2)', lineHeight: 1.7 }}>As we keep talking, this picture gets sharper.</div>
             {completenessScore < 70 && (
               <div style={{ marginTop: 8, color: 'var(--ink3)', fontSize: 12 }}>Tell me more so I can refine this.</div>
