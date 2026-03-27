@@ -942,12 +942,18 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             streamAbortRef.current = followupCtrl;
             
             let followupText = '';
+            // MULTI-GOAL SERIALIZATION: Merge multiGoalState.goals into sessionState for backend
+            const followupSessionState = {
+              ...sessionStateRef.current,
+              ...(multiGoalState?.goals && { goals: multiGoalState.goals }),
+            };
+            
             const followupRes = await claude.chatStream({
               msgs: followupMsgs,
               missing: missBefore as string[],
               memorySummary: st.memorySummary,
               fin: finRef.current,
-              sessionState: sessionStateRef.current,
+              sessionState: followupSessionState,
               answered: st.answered,
               onDelta: (t) => { followupText += t; },
               onSessionState: handleSessionState,
@@ -1089,6 +1095,12 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         dispatch({ type: 'STREAM_START' });
 
         let adaptiveAsk = '';
+        // MULTI-GOAL SERIALIZATION: Merge multiGoalState.goals into sessionState for backend
+        const sessionStateWithGoals = {
+          ...sessionStateRef.current,
+          ...(multiGoalState?.goals && { goals: multiGoalState.goals }),
+        };
+        
         const res = await claude.chatStream({
           msgs: chatMsgs,
           missing: miss as string[],
@@ -1103,7 +1115,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           memorySummary: st.memorySummary,
           fin: finRef.current,
           extractedFields: ex.fields as any,
-          sessionState: sessionStateRef.current,
+          sessionState: sessionStateWithGoals,
           answered: st.answered,
         });
 
