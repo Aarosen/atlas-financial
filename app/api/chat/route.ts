@@ -284,17 +284,28 @@ export async function POST(req: Request) {
     sessionId?: string;
   };
 
-  // COMPANION INTEGRATION: Initialize session if userId provided but sessionId not yet established
-  // CRITICAL FIX: Skip for guest users (userId === 'guest' is truthy but not a valid UUID)
-  // Wrap in Promise.race with 3-second timeout to prevent Supabase connection hangs
-  // Fire-and-forget: sessionId only needed for companion tracking, not for response routing
+  // COMPANION INTEGRATION: Initialize session for authenticated users only
+  // CRITICAL: Must check userId !== 'guest' — guests are not in auth.users, Supabase call hangs
+  // CRITICAL: Must use Promise.race with timeout — bare await hangs entire Edge Function if Supabase is slow
   if (userId && userId !== 'guest' && !sessionId && type === 'chat' && messages && messages.length <= 1) {
-    void initializeConversationSession(userId)
-      .then(newSession => {
+    const sessionInitTimeout = new Promise<void>((resolve) => {
+      setTimeout(() => {
+        console.warn('[companion] Session init timeout - continuing without sessionId');
+        resolve();
+      }, 3000);
+    });
+
+    const sessionInitPromise = (async () => {
+      try {
+        const newSession = await initializeConversationSession(userId);
         sessionId = newSession.id;
         console.log(`[companion] Initialized session ${sessionId} for user ${userId}`);
-      })
-      .catch(err => console.error('Error initializing companion session:', err));
+      } catch (error) {
+        console.error('Error initializing companion session:', error);
+      }
+    })();
+
+    await Promise.race([sessionInitPromise, sessionInitTimeout]);
   }
 
   if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'answer_explain', 'answer_explain_stream'].includes(type)) {
