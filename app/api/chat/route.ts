@@ -743,6 +743,53 @@ Return ONLY the rewritten text.`;
         });
       }
 
+      // Step 1.5: AI-powered compliance screening for investment/tax/legal advice
+      // Runs in parallel with other processing — only blocks if risk is detected
+      // Uses Haiku (fastest, cheapest model) with a strict 2-second timeout
+      const complianceCheck = detectComplianceRisk(lastUserMsg);
+      if (!complianceCheck) {
+        // For messages that pass keyword check, do a fast AI semantic check on first 3 turns
+        // After turn 3, topic is established and keyword check is sufficient
+        if (messages.length <= 3) {
+          const complianceTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
+          const aiCompliancePromise = (async () => {
+            try {
+              const checkResp = await fetch(ANTHROPIC_API, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  'x-api-key': apiKey,
+                  'anthropic-version': '2023-06-01',
+                },
+                body: JSON.stringify({
+                  model: 'claude-3-haiku-20240307',
+                  max_tokens: 10,
+                  system: 'You are a financial compliance classifier. Answer only: YES or NO. Is this message requesting specific investment advice (which securities to buy/sell), specific tax filing guidance, or specific legal advice?',
+                  messages: [{ role: 'user', content: lastUserMsg }],
+                }),
+              });
+              if (!checkResp.ok) return null;
+              const checkData: any = await checkResp.json();
+              const answer = checkData.content?.[0]?.text?.trim().toUpperCase();
+              return answer === 'YES' ? 'investment_advice' : null;
+            } catch {
+              return null;
+            }
+          })();
+
+          const aiRisk = await Promise.race([aiCompliancePromise, complianceTimeout]);
+          if (aiRisk) {
+            const safe = complianceResponse(lastUserMsg, aiRisk as any);
+            return jsonOk({
+              text: safe,
+              source: 'compliance_guardrail',
+              model: 'policy',
+              tier,
+            });
+          }
+        }
+      }
+
       // Step 2: Run the orchestrator with timeout protection
       // This analyzes conversation state and builds a session context block
       // Now uses semantic intent classifier on first message for superior accuracy
