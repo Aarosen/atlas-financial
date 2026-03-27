@@ -1,0 +1,164 @@
+/* PHASE 5: Mobile optimization and responsive design */
+
+/* Mobile-first responsive design */
+@media (max-width: 640px) {
+  :root {
+    --padX: 12px;
+    --padY: 16px;
+    --fsHero: clamp(28px, 5vw, 40px);
+    --fsTitle: clamp(18px, 2.5vw, 22px);
+  }
+
+  /* Touch targets - minimum 44x44px */
+  button, a, input, select, textarea {
+    min-height: 44px;
+    min-width: 44px;
+  }
+
+  /* Improve tap targets for mobile */
+  .btn {
+    padding: 12px 16px;
+    font-size: 14px;
+  }
+
+  /* Stack layouts vertically on mobile */
+  .stack-mobile {
+    display: flex;
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  /* Full width inputs on mobile */
+  input, textarea, select {
+    width: 100%;
+  }
+
+  /* Reduce spacing on mobile */
+  .gap-mobile-sm {
+    gap: 8px !important;
+  }
+
+  /* Hide desktop-only elements */
+  .hide-mobile {
+    display: none !important;
+  }
+
+  /* Optimize card spacing */
+  .card {
+    padding: 12px;
+  }
+
+  /* Optimize font sizes */
+  body {
+    font-size: 15px;
+  }
+
+  h1 {
+    font-size: var(--fsHero);
+  }
+
+  h2 {
+    font-size: var(--fsTitle);
+  }
+
+  /* Viewport height optimization */
+  .viewport-full {
+    height: 100dvh;
+  }
+
+  /* Optimize navigation */
+  nav {
+    flex-wrap: wrap;
+    gap: 8px;
+  }
+
+  /* Optimize modals for mobile */
+  .modal {
+    width: 90vw;
+    max-width: 100%;
+    max-height: 90dvh;
+  }
+
+  /* Optimize scrollable areas */
+  .scroll-area {
+    -webkit-overflow-scrolling: touch;
+  }
+}
+
+/* Tablet optimization */
+@media (min-width: 641px) and (max-width: 1024px) {
+  :root {
+    --padX: 14px;
+    --padY: 18px;
+  }
+
+  .hide-tablet {
+    display: none !important;
+  }
+}
+
+/* Desktop optimization */
+@media (min-width: 1025px) {
+  .hide-desktop {
+    display: none !important;
+  }
+
+  /* Optimize spacing on desktop */
+  .gap-desktop {
+    gap: 20px;
+  }
+}
+
+/* Landscape orientation */
+@media (orientation: landscape) and (max-height: 500px) {
+  :root {
+    --padY: 8px;
+  }
+
+  .hide-landscape {
+    display: none !important;
+  }
+}
+
+/* High DPI screens */
+@media (-webkit-min-device-pixel-ratio: 2), (min-resolution: 192dpi) {
+  /* Optimize for retina displays */
+  body {
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+  }
+}
+
+/* Touch device optimization */
+@media (hover: none) and (pointer: coarse) {
+  /* Increase touch targets */
+  button, a {
+    padding: 14px 16px;
+  }
+
+  /* Remove hover effects on touch devices */
+  button:hover {
+    background-color: inherit;
+  }
+
+  /* Optimize for touch */
+  input, textarea {
+    font-size: 16px; /* Prevents zoom on iOS */
+  }
+}
+
+/* Safe area support for notched devices */
+@supports (padding: max(0px)) {
+  body {
+    padding-left: max(var(--padX), env(safe-area-inset-left));
+    padding-right: max(var(--padX), env(safe-area-inset-right));
+  }
+
+  .safe-area-top {
+    padding-top: max(0px, env(safe-area-inset-top));
+  }
+
+  .safe-area-bottom {
+    padding-bottom: max(0px, env(safe-area-inset-bottom));
+  }
+}
