@@ -26,7 +26,6 @@ export default function Footer() {
       items: [
         { label: 'About Us', href: '/about' },
         { label: 'Contact', href: '/contact' },
-        { label: 'Blog', href: '#' },
       ],
     },
     {
@@ -40,9 +39,7 @@ export default function Footer() {
     {
       title: 'SUPPORT',
       items: [
-        { label: 'FAQ', href: '#' },
         { label: 'Get Support', href: '/contact' },
-        { label: 'Documentation', href: '#' },
       ],
     },
   ];

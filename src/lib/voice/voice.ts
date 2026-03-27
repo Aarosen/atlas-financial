@@ -4,10 +4,13 @@ export type VoiceListeningHandler = (listening: boolean) => void;
 
 export type VoiceSpeakingHandler = (speaking: boolean) => void;
 
+export type SupportedLanguage = 'en' | 'es' | 'fr' | 'zh';
+
 export type VoiceOptions = {
   onTranscript?: VoiceTranscriptHandler;
   onListeningChange?: VoiceListeningHandler;
   onSpeakingChange?: VoiceSpeakingHandler;
+  language?: SupportedLanguage;
 };
 
 export type Voice = {
@@ -18,6 +21,15 @@ export type Voice = {
   speak: (text: string) => void;
   stopSpeak: () => void;
   setOnTranscript: (h?: VoiceTranscriptHandler) => void;
+  setLanguage: (lang: SupportedLanguage) => void;
+};
+
+// Map Atlas language codes to BCP 47 language tags
+const languageMap: Record<SupportedLanguage, string> = {
+  en: 'en-US',
+  es: 'es-ES',
+  fr: 'fr-FR',
+  zh: 'zh-CN',
 };
 
 export function createVoice(opts: VoiceOptions = {}): Voice {
@@ -29,13 +41,14 @@ export function createVoice(opts: VoiceOptions = {}): Voice {
   let onTranscript: VoiceTranscriptHandler | undefined = opts.onTranscript;
   let onListeningChange: VoiceListeningHandler | undefined = opts.onListeningChange;
   let onSpeakingChange: VoiceSpeakingHandler | undefined = opts.onSpeakingChange;
+  let currentLanguage: SupportedLanguage = opts.language || 'en';
   let rec: any | null = null;
 
   if (sttSupported) {
     rec = new SpeechRecognition();
     rec.continuous = false;
     rec.interimResults = false;
-    rec.lang = 'en-US';
+    rec.lang = languageMap[currentLanguage];
 
     rec.onstart = () => onListeningChange?.(true);
     rec.onend = () => onListeningChange?.(false);
@@ -94,6 +107,13 @@ export function createVoice(opts: VoiceOptions = {}): Voice {
     onTranscript = h;
   };
 
+  const setLanguage = (lang: SupportedLanguage) => {
+    currentLanguage = lang;
+    if (rec) {
+      rec.lang = languageMap[lang];
+    }
+  };
+
   return {
     sttSupported,
     ttsSupported,
@@ -102,5 +122,6 @@ export function createVoice(opts: VoiceOptions = {}): Voice {
     speak,
     stopSpeak,
     setOnTranscript,
+    setLanguage,
   };
 }
