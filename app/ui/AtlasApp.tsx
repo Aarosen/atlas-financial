@@ -1248,7 +1248,15 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             actionId={pendingActionCompletion.id}
             actionText={pendingActionCompletion.text}
             dueDate={pendingActionCompletion.dueDate}
-            onConfirm={handleActionCompletion}
+            onConfirm={async (actionId, completed) => {
+              await handleActionCompletion(actionId, completed);
+              setPendingActionCompletion(null);
+              // Automatically continue the conversation based on outcome
+              const followupText = completed
+                ? `I completed the action: "${pendingActionCompletion.text}"` 
+                : `I didn't get to it yet: "${pendingActionCompletion.text}"`;
+              void send(followupText);
+            }}
             onDismiss={() => setPendingActionCompletion(null)}
           />
         )}
