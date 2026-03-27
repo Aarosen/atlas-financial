@@ -1,4 +1,5 @@
 import type { ReactNode } from 'react';
+import { useEffect, useState } from 'react';
 import type { ClaudeApiStatus } from '@/lib/api/client';
 import type { SupportedLanguage } from '@/lib/ai/slangMapper';
 import { Moon, Sun, Monitor } from 'lucide-react';
@@ -105,7 +106,18 @@ export function TopBar({
   const showStatusBadge = apiStatus === 'offline' || apiStatus === 'degraded' || apiErr;
   
   // TASK 1.4 PART C: Determine theme toggle icon based on three states
-  const themeMode = typeof window !== 'undefined' ? localStorage.getItem('atlas_theme') : null;
+  // Move localStorage access to useEffect to avoid hydration mismatch
+  const [themeMode, setThemeMode] = useState<string | null>(null);
+  
+  useEffect(() => {
+    try {
+      const stored = localStorage.getItem('atlas_theme');
+      setThemeMode(stored);
+    } catch (error) {
+      console.error('Error reading theme preference:', error);
+    }
+  }, []);
+  
   const getThemeIcon = () => {
     if (!themeMode) {
       // System preference (no override)

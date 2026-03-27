@@ -217,6 +217,16 @@ export class ClaudeClient {
     language?: SupportedLanguage;
   }): Promise<{ ok: boolean; canceled: boolean; sessionId?: string }> {
     const { msgs, missing, onDelta, onSessionState, onReplace, signal, memorySummary, fin, extractedFields, sessionState, answered, language } = args;
+    
+    // Create a timeout abort controller (30 second timeout for chat streaming)
+    const TIMEOUT_MS = 30_000;
+    const timeoutCtrl = new AbortController();
+    const timeoutId = setTimeout(() => timeoutCtrl.abort(), TIMEOUT_MS);
+    
+    // Combine caller's signal (if present) and timeout signal
+    const signals = [signal, timeoutCtrl.signal].filter(Boolean) as AbortSignal[];
+    const combinedSignal = signals.length > 1 ? AbortSignal.any(signals) : signals[0];
+    
     try {
       const r = await fetch(this.ep, {
         method: 'POST',
@@ -234,7 +244,7 @@ export class ClaudeClient {
           userId: this._userId,
           sessionId: this._sessionId,
         }),
-        signal,
+        signal: combinedSignal,
       });
 
       if (!r.ok) {
@@ -306,8 +316,10 @@ export class ClaudeClient {
       this._hadSuccess = true;
       this._apiStatus = 'online';
       this._lastErrorStatus = null;
+      clearTimeout(timeoutId);
       return { ok: true, canceled: false };
     } catch (e: any) {
+      clearTimeout(timeoutId);
       const canceled = String(e?.name || '').toLowerCase() === 'aborterror';
       if (!this._hadSuccess) {
         this._apiStatus = 'unknown';
