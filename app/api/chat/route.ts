@@ -1,4 +1,5 @@
 export const runtime = 'edge';
+export const maxDuration = 60;
 
 import { inferModelTier } from '@/lib/ai/modelRouting';
 import { routeAgentForText } from '@/lib/ai/agentRouter';

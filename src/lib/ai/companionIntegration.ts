@@ -284,13 +284,33 @@ export async function handleUserCommitment(
  */
 async function getRecentActions(userId: string, sessionId: string): Promise<any[]> {
   try {
-    // This would query Supabase for recent actions
-    // For now, return empty array if Supabase is not configured
-    if (!process.env.NEXT_PUBLIC_SUPABASE_URL) {
+    // Import Supabase client dynamically to avoid build-time errors
+    const { createClient } = await import('@supabase/supabase-js');
+    
+    if (!process.env.NEXT_PUBLIC_SUPABASE_URL || !process.env.SUPABASE_SERVICE_ROLE_KEY) {
+      console.warn('Supabase not configured, returning empty actions');
       return [];
     }
-    // Query would be implemented here
-    return [];
+
+    const supabase = createClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL,
+      process.env.SUPABASE_SERVICE_ROLE_KEY
+    );
+
+    const { data, error } = await supabase
+      .from('user_actions')
+      .select('*')
+      .eq('user_id', userId)
+      .in('status', ['recommended', 'committed'])
+      .order('recommended_at', { ascending: false })
+      .limit(5);
+
+    if (error) {
+      console.error('Error fetching recent actions:', error);
+      return [];
+    }
+
+    return data || [];
   } catch (error) {
     console.error('Error getting recent actions:', error);
     return [];
