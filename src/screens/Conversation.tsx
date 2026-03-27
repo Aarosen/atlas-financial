@@ -231,11 +231,12 @@ export function ConversationScreen({
     }
   }, []);
 
+  // TASK 2.4: Auto-expanding textarea
   useEffect(() => {
     const ta = taRef.current;
     if (!ta) return;
-    ta.style.height = '0px';
-    ta.style.height = `${Math.min(ta.scrollHeight, 140)}px`;
+    ta.style.height = 'auto';
+    ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
   }, [inp]);
 
   useEffect(() => {
@@ -315,7 +316,8 @@ export function ConversationScreen({
       />
 
       {/* Main scrollable conversation area - optimized for single-screen view */}
-      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '2px', paddingBottom: '2px', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+      {/* TASK 2.3: Anchor messages to bottom using flex-end on outer container */}
+      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '2px', paddingBottom: '2px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: 0 }}>
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', width: '100%', maxWidth: '720px', margin: '0 auto', paddingLeft: 'var(--padX)', paddingRight: 'var(--padX)' }}>
           <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Conversation</h1>
           {showJump && (
