@@ -463,6 +463,53 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     // Fetch pending action from backend
     const fetchPendingAction = async () => {
       try {
+        // Check for deep link from email check-in
+        const urlParams = typeof window !== 'undefined' ? new URLSearchParams(window.location.search) : null;
+        const checkinActionId = urlParams?.get('checkin');
+        const checkinResult = urlParams?.get('result'); // 'yes' or 'no'
+
+        if (checkinActionId) {
+          // Clear the URL param without page reload
+          if (typeof window !== 'undefined') {
+            window.history.replaceState({}, '', window.location.pathname);
+          }
+
+          // If result is already provided via URL (user clicked yes/no in email)
+          if (checkinResult === 'yes' || checkinResult === 'no') {
+            const completed = checkinResult === 'yes';
+            await handleActionCompletion(checkinActionId, completed);
+            // Send message to start the conversation
+            const message = completed
+              ? `I completed my commitment: checking in from your email.` 
+              : `I haven't completed my commitment yet — checking in from your email.`;
+            void send(message);
+            return;
+          }
+
+          // If just the checkin param (show the card)
+          try {
+            const response = await fetch('/api/actions/pending', {
+              method: 'POST',
+              headers: { 'Content-Type': 'application/json' },
+              body: JSON.stringify({ userId, sessionId, actionId: checkinActionId }),
+            });
+            if (response.ok) {
+              const data = await response.json();
+              if (data.action) {
+                setPendingActionCompletion({
+                  id: data.action.id,
+                  text: data.action.text,
+                  dueDate: data.action.dueDate,
+                });
+              }
+            }
+          } catch (error) {
+            console.error('Error fetching check-in action:', error);
+          }
+          return;
+        }
+
+        // Normal flow: fetch most recent pending action
         const response = await fetch('/api/actions/pending', {
           method: 'POST',
           headers: { 'Content-Type': 'application/json' },
