@@ -884,7 +884,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             streamAbortRef.current = followupCtrl;
             
             let followupText = '';
-            await claude.chatStream({
+            const followupRes = await claude.chatStream({
               msgs: followupMsgs,
               missing: missBefore as string[],
               memorySummary: st.memorySummary,
@@ -896,6 +896,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               signal: followupCtrl.signal,
             });
             streamAbortRef.current = null;
+
+            // COMPANION: Capture sessionId from followup response if not yet set
+            if (followupRes.sessionId && !sessionId) {
+              updateSessionId(followupRes.sessionId);
+            }
             
             const fallbackText = resumeQ?.text || 'What would help you most right now?';
             const askText = followupText.trim() || fallbackText;
@@ -1054,6 +1059,12 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         }
 
         dispatch({ type: 'STREAM_DONE' });
+
+        // COMPANION: Capture sessionId returned from first response, persist to sessionStorage
+        // This ensures finalization, action tracking, and progress display work on subsequent requests
+        if (res.sessionId && !sessionId) {
+          updateSessionId(res.sessionId);
+        }
         
         // AUTHPROMPTCARD: Show auth prompt to guest users after 3 messages
         if (userId === 'guest' && st.msgs.length >= 3 && !showAuthPrompt) {
