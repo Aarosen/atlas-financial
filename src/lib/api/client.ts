@@ -47,34 +47,46 @@ export class ClaudeClient {
 
   async extract(msg: string, _ctx: Partial<FinancialState> = {}, opts?: { language?: SupportedLanguage; lastQuestion?: string }) {
     try {
-      const r = await fetch(this.ep, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ 
-          type: 'extract', 
-          messages: [{ role: 'user', content: msg }], 
-          language: opts?.language, 
-          lastQuestion: opts?.lastQuestion,
-          userId: this._userId,
-          sessionId: this._sessionId,
-        }),
-      });
-      if (!r.ok) {
-        this._lastErrorStatus = r.status;
-        this._setStatusFromHttpError(r.status);
-        const t = await r.text().catch(() => '');
-        throw new Error(t || `proxy_error_${r.status}`);
-      }
-      const d = await r.json();
-      if (d.error) {
+      // TASK 1.1: Add 15-second timeout to prevent indefinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      try {
+        const r = await fetch(this.ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ 
+            type: 'extract', 
+            messages: [{ role: 'user', content: msg }], 
+            language: opts?.language, 
+            lastQuestion: opts?.lastQuestion,
+            userId: this._userId,
+            sessionId: this._sessionId,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!r.ok) {
+          this._lastErrorStatus = r.status;
+          this._setStatusFromHttpError(r.status);
+          const t = await r.text().catch(() => '');
+          throw new Error(t || `proxy_error_${r.status}`);
+        }
+        const d = await r.json();
+        if (d.error) {
+          this._lastErrorStatus = null;
+          if (this._hadSuccess) this._apiStatus = 'degraded';
+          throw new Error(d.error);
+        }
+        this._hadSuccess = true;
+        this._apiStatus = 'online';
         this._lastErrorStatus = null;
-        if (this._hadSuccess) this._apiStatus = 'degraded';
-        throw new Error(d.error);
+        return { fields: (d.fields || {}) as Record<string, unknown>, src: 'claude', apiOk: true as const };
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        throw fetchErr;
       }
-      this._hadSuccess = true;
-      this._apiStatus = 'online';
-      this._lastErrorStatus = null;
-      return { fields: (d.fields || {}) as Record<string, unknown>, src: 'claude', apiOk: true as const };
     } catch (e: any) {
       if (!this._hadSuccess) {
         this._apiStatus = 'unknown';
@@ -307,30 +319,42 @@ export class ClaudeClient {
     args?: { memorySummary?: string | null; fin?: Partial<FinancialState> | null; language?: SupportedLanguage }
   ) {
     try {
-      const r = await fetch(this.ep, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({
-          type: 'chat',
-          messages: msgs,
-          missing,
-          memorySummary: args?.memorySummary ?? null,
-          fin: args?.fin ?? null,
-          language: args?.language,
-        }),
-      });
-      if (!r.ok) {
-        const t = await r.text().catch(() => '');
-        this._lastErrorStatus = r.status;
-        this._setStatusFromHttpError(r.status);
-        throw new Error(t || `proxy_error_${r.status}`);
+      // TASK 1.1: Add 15-second timeout to prevent indefinite loading
+      const controller = new AbortController();
+      const timeoutId = setTimeout(() => controller.abort(), 15000);
+
+      try {
+        const r = await fetch(this.ep, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({
+            type: 'chat',
+            messages: msgs,
+            missing,
+            memorySummary: args?.memorySummary ?? null,
+            fin: args?.fin ?? null,
+            language: args?.language,
+          }),
+          signal: controller.signal,
+        });
+        clearTimeout(timeoutId);
+
+        if (!r.ok) {
+          const t = await r.text().catch(() => '');
+          this._lastErrorStatus = r.status;
+          this._setStatusFromHttpError(r.status);
+          throw new Error(t || `proxy_error_${r.status}`);
+        }
+        const d = await r.json();
+        if (d.error) throw new Error(d.error);
+        this._hadSuccess = true;
+        this._apiStatus = 'online';
+        this._lastErrorStatus = null;
+        return (d.text as string) || this._fallbackQuestion(missing[0]);
+      } catch (fetchErr: any) {
+        clearTimeout(timeoutId);
+        throw fetchErr;
       }
-      const d = await r.json();
-      if (d.error) throw new Error(d.error);
-      this._hadSuccess = true;
-      this._apiStatus = 'online';
-      this._lastErrorStatus = null;
-      return (d.text as string) || this._fallbackQuestion(missing[0]);
     } catch {
       if (!this._hadSuccess) {
         this._apiStatus = 'unknown';
