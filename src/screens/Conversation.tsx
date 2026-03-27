@@ -139,6 +139,7 @@ export function ConversationScreen({
   const scRef = useRef<HTMLDivElement | null>(null);
   const taRef = useRef<HTMLTextAreaElement | null>(null);
   const [isNearBottom, setIsNearBottom] = useState(true);
+  const isNearBottomRef = useRef(true);
   const [inpFocused, setInpFocused] = useState(false);
   const [isDesktop, setIsDesktop] = useState(false);
   const [editAffForMsgIdx, setEditAffForMsgIdx] = useState<number | null>(null);
@@ -198,7 +199,10 @@ export function ConversationScreen({
 
   const scrollToBottom = () => {
     try {
-      botRef.current?.scrollIntoView({ behavior: 'smooth' });
+      const el = scRef.current;
+      if (el) {
+        el.scrollTop = el.scrollHeight;
+      }
     } catch {
       // ignore
     }
@@ -209,7 +213,7 @@ export function ConversationScreen({
     if (!el) return;
     const onScroll = () => {
       const dist = el.scrollHeight - el.scrollTop - el.clientHeight;
-      setIsNearBottom(dist < 120);
+      setIsNearBottom(dist < 60);
     };
     onScroll();
     el.addEventListener('scroll', onScroll, { passive: true });
@@ -239,9 +243,17 @@ export function ConversationScreen({
     ta.style.height = `${Math.min(ta.scrollHeight, 160)}px`;
   }, [inp]);
 
+  // Keep isNearBottomRef in sync
   useEffect(() => {
-    if (isNearBottom) scrollToBottom();
-  }, [isNearBottom, msgs.length, busy]);
+    isNearBottomRef.current = isNearBottom;
+  }, [isNearBottom]);
+
+  // Auto-scroll when new messages arrive, only if user was near bottom
+  useEffect(() => {
+    if (isNearBottomRef.current) {
+      scrollToBottom();
+    }
+  }, [msgs.length]);
 
   const showJump = useMemo(() => !isNearBottom && msgs.length > 3, [isNearBottom, msgs.length]);
   const lastMsgRole = msgs.length ? msgs[msgs.length - 1]?.r : undefined;
@@ -303,7 +315,7 @@ export function ConversationScreen({
   };
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', position: 'relative' }}>
       {/* Single unified header - no duplicate navbar */}
       <TopBar
         title="Conversation"
@@ -315,24 +327,34 @@ export function ConversationScreen({
         onLanguageChange={onLanguageChange}
       />
 
+      {showJump && (
+        <div style={{
+          position: 'absolute',
+          top: 60,
+          left: 0,
+          right: 0,
+          display: 'flex',
+          justifyContent: 'center',
+          zIndex: 10,
+        }}>
+          <Button
+            onClick={scrollToBottom}
+            variant="secondary"
+            size="sm"
+            data-testid="jumpToLatest"
+            style={{ borderRadius: 999, fontWeight: 900, fontSize: 12, boxShadow: 'var(--sh1)' }}
+          >
+            {jumpLabel}
+          </Button>
+        </div>
+      )}
+
       {/* Main scrollable conversation area - optimized for single-screen view */}
-      {/* TASK 2.3: Anchor messages to bottom using flex-end on outer container */}
-      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', paddingTop: '2px', paddingBottom: '2px', display: 'flex', flexDirection: 'column', justifyContent: 'flex-end', minHeight: 0 }}>
-        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', width: '100%', maxWidth: '720px', margin: '0 auto', paddingLeft: 'var(--padX)', paddingRight: 'var(--padX)' }}>
+      {/* TASK 2.3: Anchor messages to bottom using spacer element instead of justify-content: flex-end */}
+      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, overflowAnchor: 'none' as any }}>
+        <div style={{ flex: 1, minHeight: 0 }} aria-hidden />
+        <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', width: '100%', maxWidth: '720px', margin: '0 auto', paddingLeft: 'var(--padX)', paddingRight: 'var(--padX)', paddingTop: '2px', paddingBottom: '2px' }}>
           <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Conversation</h1>
-          {showJump && (
-            <div style={{ position: 'sticky', top: 10, zIndex: 5, display: 'flex', justifyContent: 'center', marginBottom: 10 }}>
-              <Button
-                onClick={scrollToBottom}
-                variant="secondary"
-                size="sm"
-                data-testid="jumpToLatest"
-                style={{ borderRadius: 999, fontWeight: 900, fontSize: 12, boxShadow: 'var(--sh1)' }}
-              >
-                {jumpLabel}
-              </Button>
-            </div>
-          )}
           {msgs.map((m, i) => {
             const isAssistant = m.r === 'a';
             const parsed = isAssistant ? extractMetricCardFromResponse(m.t) : { text: m.t, card: null };

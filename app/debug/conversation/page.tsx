@@ -16,16 +16,18 @@ export default function DebugConversationPage() {
     return 'light';
   });
   const [inp, setInp] = useState('');
-  const [msgs, setMsgs] = useState<ChatMessage[]>([
+  const defaultMsgs: ChatMessage[] = [
     { r: 'u', t: 'My income is $4000/month.' },
     { r: 'a', t: 'Got it. What are your essential monthly expenses?' },
     { r: 'u', t: 'About $2500.' },
     { r: 'a', t: 'And how much do you have in savings?' },
     { r: 'u', t: '$5000.' },
     { r: 'a', t: 'Great! That gives me a good picture of your financial situation.' },
-  ]);
+  ];
+  const [msgs, setMsgs] = useState<ChatMessage[]>(defaultMsgs);
   const botRef = useRef<HTMLDivElement>(null);
-  const caseParam = typeof window !== 'undefined' ? new URLSearchParams(window.location.search).get('case') : null;
+  const [caseParam, setCaseParam] = useState<string | null>(null);
+  const [state, setState] = useState<any>({ msgs: defaultMsgs });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
@@ -36,31 +38,40 @@ export default function DebugConversationPage() {
     }
   }, [theme]);
 
-  // Generate different conversation states based on case parameter
-  const getConversationState = () => {
+  useEffect(() => {
+    setCaseParam(new URLSearchParams(window.location.search).get('case'));
+  }, []);
+
+  useEffect(() => {
+    // Update state whenever caseParam changes
     switch (caseParam) {
       case 'scroll':
-        // Long conversation for scroll testing
-        return {
-          msgs: Array.from({ length: 20 }, (_, i) => ({
+        // Long conversation for scroll testing — needs enough content to overflow all viewport sizes
+        setState({
+          msgs: Array.from({ length: 50 }, (_, i) => ({
             r: i % 2 === 0 ? ('u' as const) : ('a' as const),
-            t: i % 2 === 0 ? `Message ${i + 1}` : `Response to message ${i}. This is a longer response to test scrolling behavior.`,
+            t: i % 2 === 0
+              ? `User message ${i + 1}: I have a question about managing my monthly budget and long-term savings strategy.`
+              : `Response ${i}: Based on what you have shared, I recommend focusing on building an emergency fund first, then addressing high-interest debt, and finally increasing your monthly savings rate by at least 10% over the next six months.`,
           })),
-        };
+        });
+        break;
       case 'idle':
-        return { msgs, busy: false };
+        setState({ msgs, busy: false });
+        break;
       case 'typing':
-        return { msgs, busy: true };
+        setState({ msgs, busy: true });
+        break;
       case 'error':
-        return { msgs, apiErr: 'Connection issue — retry when you\'re ready.' };
+        setState({ msgs, apiErr: 'Connection issue — retry when you\'re ready.' });
+        break;
       case 'streaming':
-        return { msgs, streaming: true };
+        setState({ msgs, streaming: true });
+        break;
       default:
-        return { msgs };
+        setState({ msgs });
     }
-  };
-
-  const state = getConversationState();
+  }, [caseParam, msgs]);
 
   return (
     <ConversationScreen

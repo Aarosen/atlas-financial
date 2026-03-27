@@ -6,11 +6,25 @@ test('R4: scroll away shows Jump to latest, clicking returns to bottom', async (
   const sc = page.getByTestId('conversationScroll');
   await expect(sc).toBeVisible();
 
-  // Scroll away from bottom.
+  // Wait until the scroll container actually has overflow content (50 messages loaded client-side)
+  await page.waitForFunction(() => {
+    const el = document.querySelector('[data-testid="conversationScroll"]');
+    if (!el) return false;
+    return (el as HTMLElement).scrollHeight > (el as HTMLElement).clientHeight + 200;
+  }, { timeout: 10000 });
+
+  // Ensure we start at the bottom (defensive — flex-end or auto-scroll should already do this)
   await sc.evaluate((el) => {
-    el.scrollTop = 0;
+    el.scrollTop = el.scrollHeight;
   });
 
+  // Scroll away from bottom and explicitly dispatch scroll event so React listener fires
+  await sc.evaluate((el) => {
+    el.scrollTop = 0;
+    el.dispatchEvent(new Event('scroll'));
+  });
+
+  // Wait for React to re-render and button to appear (expect has 10s timeout from config)
   const jump = page.getByTestId('jumpToLatest');
   await expect(jump).toBeVisible();
 
