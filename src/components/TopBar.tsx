@@ -100,18 +100,21 @@ export function TopBar({
   language?: SupportedLanguage;
   onLanguageChange?: (lang: SupportedLanguage) => void;
 }) {
+  // TASK 2.5: Clean conversation header - only show logo on left, controls on right
+  // Remove redundant title label and simplify status display
+  const showStatusBadge = apiStatus === 'offline' || apiStatus === 'degraded' || apiErr;
+  
   return (
     <div className="atlasHeader">
       <div className="atlasHeaderInner">
       <div style={{ display: 'flex', alignItems: 'center', gap: 14 }}>
         <Logo />
-        <div style={{ color: 'var(--ink2)', fontWeight: 800, fontSize: 12 }}>{title}</div>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap', justifyContent: 'flex-end' }}>
         {language && onLanguageChange && (
           <LanguageSelector currentLanguage={language} onLanguageChange={onLanguageChange} />
         )}
-        <StatusPill apiErr={apiErr} status={apiStatus} />
+        {showStatusBadge && <StatusPill apiErr={apiErr} status={apiStatus} />}
         <IconButton onClick={onToggleTheme} aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} title="Theme">
           {theme === 'dark' ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
         </IconButton>
