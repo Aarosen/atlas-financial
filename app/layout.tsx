@@ -21,6 +21,24 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: ReactNode }) {
   return (
     <html lang="en" data-scroll-behavior="smooth">
+      <head>
+        {/* TASK 1.4 PART A: Inline blocking script for theme persistence - eliminates FOUC */}
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `
+              (function() {
+                // 1. Check localStorage for an explicit user choice
+                var saved = localStorage.getItem('atlas_theme');
+                // 2. If no user choice, check system preference
+                var prefersDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+                // 3. Apply immediately — before React mounts
+                var theme = saved ? saved : (prefersDark ? 'dark' : 'light');
+                document.documentElement.setAttribute('data-theme', theme);
+              })();
+            `,
+          }}
+        />
+      </head>
       <body className={`${inter.variable} ${sora.variable}`}>
         <UserProvider>
           <header role="banner" style={{ display: 'contents' }}>

@@ -109,7 +109,39 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     return parts.join(' ');
   }, [literacyLevel, responsePref]);
 
-  const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  // TASK 1.4 PART B: Initialize theme from localStorage with system preference fallback
+  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
+    if (typeof window === 'undefined') return 'light';
+    const saved = localStorage.getItem('atlas_theme');
+    if (saved === 'light' || saved === 'dark') return saved;
+    // Check system preference if no saved choice
+    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+  });
+
+  // TASK 1.4 PART C: Three-state theme toggle (light → dark → system)
+  const toggleTheme = () => {
+    const saved = localStorage.getItem('atlas_theme');
+    const systemDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+
+    let next: 'light' | 'dark';
+    if (!saved) {
+      // Currently: system (no override). Cycle to: force light
+      next = 'light';
+      localStorage.setItem('atlas_theme', next);
+    } else if (saved === 'light') {
+      // Currently: force light. Cycle to: force dark
+      next = 'dark';
+      localStorage.setItem('atlas_theme', next);
+    } else {
+      // Currently: force dark. Cycle to: system (remove override)
+      localStorage.removeItem('atlas_theme');
+      next = systemDark ? 'dark' : 'light';
+    }
+
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
+  };
+
   const [isMobile, setIsMobile] = useState(false);
   const [activeTab, setActiveTab] = useState<'talk' | 'plan' | 'dashboard' | 'settings'>('talk');
   const tabStacksRef = useRef({
@@ -598,23 +630,35 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     });
   }, [db, st.scr]);
 
+  // TASK 1.4 PART B: System preference listener - updates theme if user hasn't explicitly chosen
+  useEffect(() => {
+    const mq = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)');
+    if (!mq) return;
+    
+    const handler = (e: MediaQueryListEvent) => {
+      // Only follow system if user hasn't explicitly chosen
+      if (!localStorage.getItem('atlas_theme')) {
+        const systemTheme = e.matches ? 'dark' : 'light';
+        setTheme(systemTheme);
+        document.documentElement.setAttribute('data-theme', systemTheme);
+      }
+    };
+    
+    mq.addEventListener('change', handler);
+    return () => mq.removeEventListener('change', handler);
+  }, []);
+
+  // TASK 1.4 PART B: Update theme in DOM and localStorage
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     db.set('prefs', { k: 'theme', v: theme }).catch(() => {});
     try {
-      window.localStorage.setItem('atlas:theme', theme);
+      // Use 'atlas_theme' for localStorage (synchronous, used in blocking script)
+      localStorage.setItem('atlas_theme', theme);
     } catch {
       // ignore
     }
   }, [theme, db]);
-
-  useEffect(() => {
-    db.get<{ v: 'light' | 'dark' }>('prefs', 'theme')
-      .then((p: { v: 'light' | 'dark' } | undefined) => {
-        if (p?.v) setTheme(p.v);
-      })
-      .catch(() => {});
-  }, [db]);
 
   useEffect(() => {
     if (st.scr !== 'conversation') return;
@@ -1355,7 +1399,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         <ConversationScreen
           inputEnabled={mounted}
           theme={theme}
-          onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+          onToggleTheme={toggleTheme}
           apiErr={st.apiErr}
           apiStatus={apiStatus}
           msgs={st.msgs}
@@ -1431,7 +1475,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         <div style={{ display: scr === 'summary' ? 'block' : 'none' }}>
           <SummaryScreen
             theme={theme}
-            onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            onToggleTheme={toggleTheme}
             apiErr={st.apiErr}
             apiStatus={claude.status}
             fin={st.fin}
@@ -1447,7 +1491,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         <div style={{ display: scr === 'tier' ? 'block' : 'none' }}>
           <TierRevealScreen
             theme={theme}
-            onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+            onToggleTheme={toggleTheme}
             apiErr={st.apiErr}
             apiStatus={claude.status}
             baseline={st.baseline}
@@ -1486,7 +1530,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     ) : (
       <DashboardScreen
         theme={theme}
-        onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        onToggleTheme={toggleTheme}
         apiErr={st.apiErr}
         apiStatus={apiStatus}
         fin={st.fin}
@@ -1524,7 +1568,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       return (
         <StrategyScreen
           theme={theme}
-          onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+          onToggleTheme={toggleTheme}
           apiErr={st.apiErr}
           apiStatus={claude.status}
           baseline={st.baseline}
@@ -1537,7 +1581,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     return (
       <PlanScreen
         theme={theme}
-        onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+        onToggleTheme={toggleTheme}
         apiErr={st.apiErr}
         apiStatus={claude.status}
         baseline={st.baseline}
@@ -1549,7 +1593,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const renderSettings = () => (
     <SettingsScreen
       theme={theme}
-      onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))}
+      onToggleTheme={toggleTheme}
       apiErr={st.apiErr}
       apiStatus={claude.status}
       onThemeLight={() => setTheme('light')}
@@ -1608,7 +1652,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       data-mounted={mounted ? 'true' : 'false'}
       style={{ minHeight: '100vh', background: 'var(--bg)' }}
     >
-      {st.scr === 'landing' && <LandingScreen theme={theme} onToggleTheme={() => setTheme((t) => (t === 'dark' ? 'light' : 'dark'))} onStart={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} />}
+      {st.scr === 'landing' && <LandingScreen theme={theme} onToggleTheme={toggleTheme} onStart={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} />}
 
       <div style={{ display: talkVisible ? 'block' : 'none' }}>{renderTalkStack(talkScr)}</div>
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from 'react';
 import type { ClaudeApiStatus } from '@/lib/api/client';
 import type { SupportedLanguage } from '@/lib/ai/slangMapper';
-import { Moon, Sun } from 'lucide-react';
+import { Moon, Sun, Monitor } from 'lucide-react';
 import { IconButton } from '@/components/IconButton';
 import { LanguageSelector } from '@/components/LanguageSelector';
 
@@ -104,6 +104,31 @@ export function TopBar({
   // Remove redundant title label and simplify status display
   const showStatusBadge = apiStatus === 'offline' || apiStatus === 'degraded' || apiErr;
   
+  // TASK 1.4 PART C: Determine theme toggle icon based on three states
+  const themeMode = typeof window !== 'undefined' ? localStorage.getItem('atlas_theme') : null;
+  const getThemeIcon = () => {
+    if (!themeMode) {
+      // System preference (no override)
+      return <Monitor size={18} aria-hidden />;
+    } else if (themeMode === 'light') {
+      // Force light
+      return <Sun size={18} aria-hidden />;
+    } else {
+      // Force dark
+      return <Moon size={18} aria-hidden />;
+    }
+  };
+
+  const getThemeLabel = () => {
+    if (!themeMode) {
+      return 'Using system theme preference';
+    } else if (themeMode === 'light') {
+      return 'Switch to dark theme or system default';
+    } else {
+      return 'Switch to system default or light theme';
+    }
+  };
+  
   return (
     <div className="atlasHeader">
       <div className="atlasHeaderInner">
@@ -115,8 +140,8 @@ export function TopBar({
           <LanguageSelector currentLanguage={language} onLanguageChange={onLanguageChange} />
         )}
         {showStatusBadge && <StatusPill apiErr={apiErr} status={apiStatus} />}
-        <IconButton onClick={onToggleTheme} aria-label={theme === 'dark' ? 'Switch to light theme' : 'Switch to dark theme'} title="Theme">
-          {theme === 'dark' ? <Sun size={18} aria-hidden /> : <Moon size={18} aria-hidden />}
+        <IconButton onClick={onToggleTheme} aria-label={getThemeLabel()} title={getThemeLabel()}>
+          {getThemeIcon()}
         </IconButton>
       </div>
       </div>
