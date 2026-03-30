@@ -154,7 +154,9 @@ Atlas
         Authorization: `Bearer ${resendApiKey}`,
       },
       body: JSON.stringify({
-        from: 'Atlas <notifications@atlas.financial>',
+        // Use onboarding@resend.dev as fallback if atlas.financial domain not verified in Resend
+        // To use notifications@atlas.financial, verify atlas.financial domain in Resend dashboard
+        from: 'Atlas <onboarding@resend.dev>',
         to: email,
         subject: `You have ${commitments.length} overdue financial commitment${commitments.length > 1 ? 's' : ''}`,
         html: `
