@@ -22,9 +22,11 @@ test('R4: mobile tab bar preserves talk draft and exposes tab roles', async ({ p
   const input = page.locator('textarea');
   await input.fill('Keep this draft.');
 
+  await settingsTab.scrollIntoViewIfNeeded();
   await settingsTab.click();
   await expect(settingsTab).toHaveAttribute('aria-selected', 'true');
 
+  await talkTab.scrollIntoViewIfNeeded();
   await talkTab.click();
   await expect(talkTab).toHaveAttribute('aria-selected', 'true');
   await expect(input).toHaveValue('Keep this draft.');

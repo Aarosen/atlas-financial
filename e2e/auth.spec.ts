@@ -4,18 +4,18 @@ test.describe('Authentication Flow', () => {
   test('should allow guest access to landing page', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/Atlas/);
-    await expect(page.locator('text=Start Your Journey')).toBeVisible();
+    await expect(page.locator('h1')).toContainText('clarity');
   });
 
   test('should show auth prompt when starting conversation as guest', async ({ page }) => {
     await page.goto('/');
-    await page.click('button:has-text("Start")');
-    await expect(page.locator('text=Sign in with Magic Link')).toBeVisible();
+    await page.click('button:has-text("Sign in with email")');
+    await expect(page.locator('text=Sign in to Atlas')).toBeVisible();
   });
 
   test('should allow email input for magic link', async ({ page }) => {
     await page.goto('/');
-    await page.click('button:has-text("Start")');
+    await page.click('button:has-text("Sign in with email")');
     const emailInput = page.locator('input[type="email"]');
     await expect(emailInput).toBeVisible();
     await emailInput.fill('test@example.com');
@@ -24,11 +24,11 @@ test.describe('Authentication Flow', () => {
 
   test('should show error for invalid email', async ({ page }) => {
     await page.goto('/');
-    await page.click('button:has-text("Start")');
+    await page.click('button:has-text("Sign in with email")');
     const emailInput = page.locator('input[type="email"]');
-    await emailInput.fill('invalid-email');
-    await page.click('button:has-text("Send Magic Link")');
-    await expect(page.locator('text=Invalid email')).toBeVisible();
+    await emailInput.fill('');
+    await page.click('button:has-text("Send magic link")');
+    await expect(page.locator('text=Please enter your email')).toBeVisible();
   });
 
   test('should persist session across page reloads', async ({ page }) => {

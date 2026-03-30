@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
+import { waitForAppReady } from './helpers';
 
 async function installApiMocks(page: Page, withGoal = true) {
   await page.route('**/api/chat', async (route: Route) => {
@@ -39,6 +40,7 @@ async function installApiMocks(page: Page, withGoal = true) {
 
 async function completeBaseline(page: Page) {
   await page.goto('/conversation');
+  await waitForAppReady(page);
   const input = page.locator('textarea');
   await input.fill('Income $8000/month. Essentials $3000/month. Savings $24000. No debt.');
   await input.press('Enter');
@@ -49,6 +51,7 @@ async function completeBaseline(page: Page) {
 
 async function completeBaselineWithGoal(page: Page) {
   await page.goto('/conversation');
+  await waitForAppReady(page);
   const input = page.locator('textarea');
   await input.fill('Income $8000/month. Essentials $3000/month. Savings $24000.');
   await input.press('Enter');

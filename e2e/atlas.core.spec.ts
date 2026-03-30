@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
+import { waitForAppReady } from './helpers';
 
 function mockExtractForUserText(userText: string) {
   const t = userText.toLowerCase();
@@ -116,6 +117,7 @@ test('1) happy path onboarding → tier reveal', async ({ page }, testInfo) => {
   test.skip(testInfo.project.name === 'mobile', 'desktop-only');
   await installApiMocks(page);
   await page.goto('/conversation');
+  await waitForAppReady(page);
 
   const input = page.locator('textarea');
 
@@ -163,6 +165,7 @@ test('2) interruption → resume', async ({ page }, testInfo) => {
 test('6) retry recovers from temporary API error', async ({ page }: { page: Page }) => {
   await installApiMocks(page);
   await page.goto('/conversation');
+  await waitForAppReady(page);
 
   const input = page.locator('textarea');
 

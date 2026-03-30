@@ -1,5 +1,6 @@
 import { expect, test } from '@playwright/test';
 import type { Page, Route } from '@playwright/test';
+import { waitForAppReady } from './helpers';
 
 async function installApiMocks(page: Page) {
   await page.route('**/api/chat', async (route: Route) => {
@@ -60,6 +61,7 @@ async function installApiMocks(page: Page) {
 test('R4: Cancel stops streaming and returns to idle', async ({ page }) => {
   await installApiMocks(page);
   await page.goto('/conversation');
+  await waitForAppReady(page);
 
   const input = page.locator('textarea');
 

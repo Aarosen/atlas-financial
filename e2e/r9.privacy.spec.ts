@@ -13,6 +13,7 @@ async function createBaseline(page: any) {
   });
 
   await page.goto('/conversation');
+  await page.waitForSelector('[data-atlas-ready="true"]', { timeout: 8000 });
   await page.locator('textarea').fill('Income 4000, essentials 2500, savings 1000, debt 500.');
   await page.keyboard.press('Enter');
   await page.getByRole('button', { name: 'Yes, looks right' }).click();
