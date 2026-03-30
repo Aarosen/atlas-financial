@@ -24,6 +24,13 @@ export async function POST(request: NextRequest) {
       goal.target_amount = 0;
     }
 
+    // Fix 8: Sanitize goal description - remove HTML and limit length
+    if (goal.description) {
+      goal.description = goal.description
+        .replace(/<[^>]*>/g, '') // Remove HTML tags
+        .substring(0, 500); // Limit to 500 characters
+    }
+
     // Verify Bearer token for authenticated users
     const authHeader = request.headers.get('Authorization');
     if (userId && userId !== 'guest') {

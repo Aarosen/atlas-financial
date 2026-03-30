@@ -172,6 +172,36 @@ export function CompanionDashboard({
     }
   };
 
+  const handleGoalDelete = async (goalId: string) => {
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/goals/delete', {
+        method: 'DELETE',
+        headers,
+        body: JSON.stringify({
+          goalId,
+          userId,
+        }),
+      });
+
+      if (response.ok) {
+        // Reload dashboard data to reflect deleted goal
+        await loadDashboardData();
+      } else {
+        console.error('Error deleting goal:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error deleting goal:', error);
+    }
+  };
+
   if (isLoading || dashboardLoading) {
     return (
       <div className="space-y-4 p-4">
@@ -218,17 +248,17 @@ export function CompanionDashboard({
 
       {/* Goal Tracking */}
       {goals.length > 0 && (
-        <GoalTrackingCard goals={goals} onGoalUpdate={handleGoalUpdate} />
+        <GoalTrackingCard goals={goals} onGoalUpdate={handleGoalUpdate} onGoalDelete={handleGoalDelete} />
       )}
 
-      {/* Empty State */}
+      {/* Fix 6: Empty State */}
       {actions.length === 0 && !snapshot && goals.length === 0 && (
-        <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-8 text-center">
-          <p className="text-slate-600 dark:text-slate-400 mb-4">
-            No companion data yet
+        <div className="rounded-lg border border-slate-200 dark:border-slate-700 p-8 text-center bg-slate-50 dark:bg-slate-800/50">
+          <p className="text-slate-700 dark:text-slate-300 mb-2 font-medium">
+            Your companion dashboard will fill up as you have conversations with Atlas.
           </p>
-          <p className="text-sm text-slate-500 dark:text-slate-500">
-            Start a conversation to begin tracking your financial goals
+          <p className="text-sm text-slate-600 dark:text-slate-400">
+            Start a conversation to get your first goal and action plan.
           </p>
         </div>
       )}

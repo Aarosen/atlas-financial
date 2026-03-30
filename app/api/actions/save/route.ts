@@ -51,6 +51,25 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Fix 1: Ensure conversation session exists before inserting action (FK constraint)
+    // Actions can be detected in messages 1-4, but sessions are only created at message 5
+    if (sessionId) {
+      const { data: existingSession } = await supabase
+        .from('conversation_sessions')
+        .select('id')
+        .eq('id', sessionId)
+        .maybeSingle();
+
+      if (!existingSession) {
+        // Auto-create session if it doesn't exist yet
+        await supabase.from('conversation_sessions').insert({
+          id: sessionId,
+          user_id: userId,
+          created_at: new Date().toISOString(),
+        });
+      }
+    }
+
     // Insert action into user_actions table
     const { data, error } = await supabase
       .from('user_actions')

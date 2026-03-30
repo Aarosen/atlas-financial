@@ -72,7 +72,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const claude = useMemo(() => new ClaudeClient(), []);
   const engine = useMemo(() => new StrategyEngine(), []);
   const { user, isLoading: authLoading } = useUser();
-  const { session: authSession } = useAuth();
+  const { session: authSession, error: authError } = useAuth();
   const { sessionId, updateSessionId } = useSessionId();
   const { finalizeSession } = useSessionFinalization();
   const { state: multiGoalState, addNewGoal, updateGoal, getCurrentGoals, getContext: getMultiGoalContext } = useMultiGoals();
@@ -1763,6 +1763,13 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       data-mounted={mounted ? 'true' : 'false'}
       style={{ minHeight: '100vh', background: 'var(--bg)' }}
     >
+      {/* Fix 5b: Display auth error message when session expires */}
+      {authError && (
+        <div className="fixed top-4 left-1/2 -translate-x-1/2 bg-red-500 text-white px-6 py-3 rounded-xl shadow-lg z-50 max-w-md text-center">
+          {authError}
+        </div>
+      )}
+
       {showOnboarding && (
         <OnboardingModal
           onComplete={() => {

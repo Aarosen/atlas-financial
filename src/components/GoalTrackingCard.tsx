@@ -17,14 +17,17 @@ interface GoalTrackingCardProps {
   goals: Goal[];
   isLoading?: boolean;
   onGoalUpdate?: (goalId: string, status: string) => Promise<void>;
+  onGoalDelete?: (goalId: string) => Promise<void>;
 }
 
 export function GoalTrackingCard({
   goals,
   isLoading = false,
   onGoalUpdate,
+  onGoalDelete,
 }: GoalTrackingCardProps) {
   const [updatingGoalId, setUpdatingGoalId] = useState<string | null>(null);
+  const [deletingGoalId, setDeletingGoalId] = useState<string | null>(null);
   if (isLoading) {
     return (
       <div className="bg-white dark:bg-slate-800 rounded-lg p-4 border border-slate-200 dark:border-slate-700 mb-4">
@@ -146,7 +149,7 @@ export function GoalTrackingCard({
                         setUpdatingGoalId(null);
                       }
                     }}
-                    disabled={updatingGoalId === goal.id}
+                    disabled={updatingGoalId === goal.id || deletingGoalId === goal.id}
                     className="flex-1 text-xs px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 disabled:opacity-50 font-medium transition-colors"
                   >
                     {updatingGoalId === goal.id ? 'Marking...' : '✓ Mark Complete'}
@@ -161,10 +164,26 @@ export function GoalTrackingCard({
                         setUpdatingGoalId(null);
                       }
                     }}
-                    disabled={updatingGoalId === goal.id}
+                    disabled={updatingGoalId === goal.id || deletingGoalId === goal.id}
                     className="flex-1 text-xs px-2 py-1 bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 font-medium transition-colors"
                   >
                     {updatingGoalId === goal.id ? 'Pausing...' : 'Pause'}
+                  </button>
+                  {/* Fix 7c: Delete button */}
+                  <button
+                    onClick={async () => {
+                      if (!onGoalDelete) return;
+                      setDeletingGoalId(goal.id);
+                      try {
+                        await onGoalDelete(goal.id);
+                      } finally {
+                        setDeletingGoalId(null);
+                      }
+                    }}
+                    disabled={updatingGoalId === goal.id || deletingGoalId === goal.id}
+                    className="text-xs px-2 py-1 bg-red-100 text-red-700 dark:bg-red-900 dark:text-red-200 rounded hover:bg-red-200 dark:hover:bg-red-800 disabled:opacity-50 font-medium transition-colors"
+                  >
+                    {deletingGoalId === goal.id ? 'Deleting...' : '✕'}
                   </button>
                 </div>
               )}
