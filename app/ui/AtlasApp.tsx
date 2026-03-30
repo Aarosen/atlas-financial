@@ -142,14 +142,26 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     }
   }, []);
 
-  // FIX 7: Listen for milestone celebration events
+  // FIX 7: Listen for milestone celebration events with persistence
   useEffect(() => {
-    const handleMilestones = (event: Event) => {
+    const handleMilestones = async (event: Event) => {
       const customEvent = event as CustomEvent;
       if (customEvent.detail && Array.isArray(customEvent.detail)) {
-        setMilestonesToCelebrate(customEvent.detail);
-        // Auto-clear milestones after 5 seconds
-        setTimeout(() => setMilestonesToCelebrate([]), 5000);
+        // Fix 5: Import persistence system and mark milestones as seen
+        const { markMilestoneAsSeen, getUnseenMilestones } = await import('@/lib/celebrations/milestonePersistence');
+        
+        // Filter to only unseen milestones
+        const unseenMilestones = getUnseenMilestones(customEvent.detail);
+        
+        if (unseenMilestones.length > 0) {
+          setMilestonesToCelebrate(unseenMilestones);
+          
+          // Mark all milestones as seen
+          unseenMilestones.forEach(m => markMilestoneAsSeen(m.id));
+          
+          // Auto-clear milestones after 5 seconds
+          setTimeout(() => setMilestonesToCelebrate([]), 5000);
+        }
       }
     };
 
