@@ -18,10 +18,12 @@ interface ConversationMemory {
 export function useConversationMemory(userId: string, sessionId: string) {
   const [memory, setMemory] = useState<ConversationMemory | null>(null);
   const [isLoading, setIsLoading] = useState(false);
+  const [isLoaded, setIsLoaded] = useState(false);
 
   // Load conversation memory from Supabase
   const loadMemory = useCallback(async () => {
     if (!userId || !sessionId || userId === 'guest') {
+      setIsLoaded(true);
       return;
     }
 
@@ -43,6 +45,7 @@ export function useConversationMemory(userId: string, sessionId: string) {
       console.error('Error loading conversation memory:', error);
     } finally {
       setIsLoading(false);
+      setIsLoaded(true);
     }
   }, [userId, sessionId]);
 
@@ -97,6 +100,7 @@ export function useConversationMemory(userId: string, sessionId: string) {
   return {
     memory,
     isLoading,
+    isLoaded,
     loadMemory,
     saveMemory,
     clearMemory,

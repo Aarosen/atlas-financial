@@ -107,7 +107,7 @@ export class ClaudeClient {
     memorySummary?: string | null;
     fin?: Partial<FinancialState> | null;
     language?: SupportedLanguage;
-  }): Promise<{ ok: boolean; canceled: boolean; sessionId?: string }> {
+  }): Promise<{ ok: boolean; canceled: boolean; sessionId?: string; rateLimitRemaining?: number }> {
     const { question, onDelta, signal, mode, memorySummary, fin } = args;
     const slow = String(question || '').toLowerCase().includes('slowstream');
     const type = mode === 'explain' ? 'answer_explain_stream' : 'answer_stream';
@@ -142,6 +142,9 @@ export class ClaudeClient {
       }
 
       if (!r.body) throw new Error('stream_missing_body');
+
+      const _rl = parseInt(r.headers.get('X-RateLimit-Remaining') ?? '', 10);
+      const rlRemaining: number | undefined = Number.isFinite(_rl) ? _rl : undefined;
 
       const dec = new TextDecoder();
       const reader = r.body.getReader();
@@ -184,7 +187,7 @@ export class ClaudeClient {
                   // ignore
                 }
                 clearTimeout(timeoutId);
-                return { ok: true, canceled: false, sessionId: j?.sessionId };
+                return { ok: true, canceled: false, sessionId: j?.sessionId, rateLimitRemaining: rlRemaining };
               }
             } catch (frameErr: any) {
               if (frameErr?.name === 'AbortError') throw frameErr;
@@ -198,7 +201,7 @@ export class ClaudeClient {
       this._apiStatus = 'online';
       this._lastErrorStatus = null;
       clearTimeout(timeoutId);
-      return { ok: true, canceled: false };
+      return { ok: true, canceled: false, rateLimitRemaining: rlRemaining };
     } catch (e: any) {
       clearTimeout(timeoutId);
       const canceled = String(e?.name || '').toLowerCase() === 'aborterror';
@@ -224,7 +227,7 @@ export class ClaudeClient {
     sessionState?: Record<string, any>;
     answered?: Record<string, boolean>;
     language?: SupportedLanguage;
-  }): Promise<{ ok: boolean; canceled: boolean; sessionId?: string }> {
+  }): Promise<{ ok: boolean; canceled: boolean; sessionId?: string; rateLimitRemaining?: number }> {
     const { msgs, missing, onDelta, onSessionState, onReplace, signal, memorySummary, fin, extractedFields, sessionState, answered, language } = args;
     
     // Create a timeout abort controller (30 second timeout for chat streaming)
@@ -264,6 +267,9 @@ export class ClaudeClient {
       }
 
       if (!r.body) throw new Error('stream_missing_body');
+
+      const _rl = parseInt(r.headers.get('X-RateLimit-Remaining') ?? '', 10);
+      const rlRemaining: number | undefined = Number.isFinite(_rl) ? _rl : undefined;
 
       const dec = new TextDecoder();
       const reader = r.body.getReader();
@@ -313,7 +319,7 @@ export class ClaudeClient {
                   // ignore
                 }
                 clearTimeout(timeoutId);
-                return { ok: true, canceled: false, sessionId: j?.sessionId };
+                return { ok: true, canceled: false, sessionId: j?.sessionId, rateLimitRemaining: rlRemaining };
               }
             } catch (frameErr: any) {
               if (frameErr?.name === 'AbortError') throw frameErr;
@@ -327,7 +333,7 @@ export class ClaudeClient {
       this._apiStatus = 'online';
       this._lastErrorStatus = null;
       clearTimeout(timeoutId);
-      return { ok: true, canceled: false };
+      return { ok: true, canceled: false, rateLimitRemaining: rlRemaining };
     } catch (e: any) {
       clearTimeout(timeoutId);
       const canceled = String(e?.name || '').toLowerCase() === 'aborterror';

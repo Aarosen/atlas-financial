@@ -97,7 +97,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [showSidebar, setShowSidebar] = useState(true);
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number | undefined>(undefined);
   const token = authSession?.accessToken || '';
-  const { memory, loadMemory, saveMemory } = useConversationMemory(userId || 'guest', sessionId || '');
+  const { memory, loadMemory, saveMemory, isLoaded } = useConversationMemory(userId || 'guest', sessionId || '');
   const voice = useMemo(
     () =>
       createVoice({
@@ -277,7 +277,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   // First-session onboarding: inject opening message if conversation is empty
   useEffect(() => {
-    if (st.msgs.length === 0 && mounted && st.scr === 'conversation') {
+    if (st.msgs.length === 0 && mounted && st.scr === 'conversation' && isLoaded) {
       // Check if user has prior conversations (returning user)
       const isReturningUser = memory && Object.keys(memory).length > 0;
       
@@ -293,7 +293,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       
       dispatch({ type: 'SEND_ASKED', text: openingMessage });
     }
-  }, [st.msgs.length, mounted, st.scr, memory, st.fin?.primaryGoal]);
+  }, [st.msgs.length, mounted, st.scr, memory, st.fin?.primaryGoal, isLoaded]);
 
   // Auto-save conversation messages every 5 messages
   useEffect(() => {
@@ -1082,6 +1082,12 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           } else {
             dispatch({ type: 'STREAM_DONE' });
           }
+
+          // Extract rate limit remaining from response
+          if (res.rateLimitRemaining !== undefined) {
+            setRateLimitRemaining(res.rateLimitRemaining);
+          }
+
           if (res.ok) {
             logReplay(
               createReplayEntry({
@@ -1129,6 +1135,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               signal: followupCtrl.signal,
             });
             streamAbortRef.current = null;
+
+            // Extract rate limit remaining from followup response
+            if (followupRes.rateLimitRemaining !== undefined) {
+              setRateLimitRemaining(followupRes.rateLimitRemaining);
+            }
 
             // COMPANION: Capture sessionId from followup response if not yet set
             if (followupRes.sessionId && !sessionId) {
@@ -1301,6 +1312,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           dispatch({ type: 'SEND_ASKED', text: "I'm having trouble connecting right now. Please try again in a moment." });
         } else {
           dispatch({ type: 'STREAM_DONE' });
+        }
+
+        // Extract rate limit remaining from response
+        if (res.rateLimitRemaining !== undefined) {
+          setRateLimitRemaining(res.rateLimitRemaining);
         }
 
         // COMPANION: Capture sessionId returned from first response, persist to sessionStorage
@@ -1617,6 +1633,29 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             dispatch({ type: 'STREAM_CANCELED' });
           }}
         />
+        {rateLimitRemaining !== undefined && rateLimitRemaining <= 15 && (
+          <div
+            style={{
+              position: 'fixed',
+              bottom: 80,
+              left: '50%',
+              transform: 'translateX(-50%)',
+              background: rateLimitRemaining <= 5 ? '#ef4444' : 'rgba(0,0,0,0.65)',
+              color: '#fff',
+              fontSize: 11,
+              fontWeight: 700,
+              padding: '3px 10px',
+              borderRadius: 999,
+              zIndex: 20,
+              pointerEvents: 'none',
+              whiteSpace: 'nowrap',
+              letterSpacing: '0.01em',
+              boxShadow: '0 1px 4px rgba(0,0,0,0.2)',
+            }}
+          >
+            {rateLimitRemaining} message{rateLimitRemaining !== 1 ? 's' : ''} remaining today
+          </div>
+        )}
       </div>
       {st.baseline && (
         <div style={{ display: scr === 'summary' ? 'block' : 'none' }}>

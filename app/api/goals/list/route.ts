@@ -30,6 +30,13 @@ export async function GET(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // Verify JWT token matches requested userId
+    const token = authHeader.slice(7);
+    const { data: { user }, error: authCheckError } = await supabase.auth.getUser(token);
+    if (authCheckError || !user || user.id !== userId) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
     // Fetch goals for user
     const { data: goals, error } = await supabase
       .from('user_goals')
