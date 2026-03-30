@@ -42,6 +42,7 @@ import { injectNudgeIfAppropriate } from '@/lib/notifications/nudgeInjection';
 import { loadUserContext } from '@/lib/db/userContext';
 import { initializeConversationSession } from '@/lib/db/supabaseIntegration';
 import { applyRateLimit } from './rateLimitMiddleware';
+import { checkRateLimitKv } from '@/lib/api/rateLimitKv';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -315,10 +316,14 @@ export async function POST(req: Request) {
   
   // Check distributed KV rate limit first (persists across cold starts)
   const kvRateLimitResult = await applyRateLimit(req, rateLimitIdentifier);
+  let rateLimitRemaining = 30; // default
   if (!kvRateLimitResult.allowed && kvRateLimitResult.response) {
     captureMessage('Rate limit exceeded (KV)', 'warning', { userId, ip });
     return kvRateLimitResult.response;
   }
+  // Extract remaining count from rate limit check
+  const kvCheckResult = await checkRateLimitKv(rateLimitIdentifier, 'chat');
+  rateLimitRemaining = kvCheckResult.remaining;
   
   // Fall back to in-memory check as fast pre-check
   if (!checkRateLimit(rateLimitIdentifier, isAuthenticated)) {
@@ -1240,6 +1245,7 @@ Return ONLY the rewritten text.`;
           'Cache-Control': 'no-cache, no-transform',
           Connection: 'keep-alive',
           'Access-Control-Allow-Origin': '*',
+          'X-RateLimit-Remaining': Math.max(0, rateLimitRemaining).toString(),
         },
       });
     }
