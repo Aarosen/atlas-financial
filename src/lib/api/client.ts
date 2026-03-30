@@ -111,6 +111,12 @@ export class ClaudeClient {
     const { question, onDelta, signal, mode, memorySummary, fin } = args;
     const slow = String(question || '').toLowerCase().includes('slowstream');
     const type = mode === 'explain' ? 'answer_explain_stream' : 'answer_stream';
+    
+    // Create AbortController with 30s timeout, combined with caller's signal
+    const timeoutCtrl = new AbortController();
+    const timeoutId = setTimeout(() => timeoutCtrl.abort(), 30_000);
+    const combinedSignal = AbortSignal.any([timeoutCtrl.signal, signal || new AbortController().signal]);
+    
     try {
       const r = await fetch(this.ep, {
         method: 'POST',
@@ -125,7 +131,7 @@ export class ClaudeClient {
           userId: this._userId,
           sessionId: this._sessionId,
         }),
-        signal,
+        signal: combinedSignal,
       });
 
       if (!r.ok) {
@@ -177,6 +183,7 @@ export class ClaudeClient {
                 } catch {
                   // ignore
                 }
+                clearTimeout(timeoutId);
                 return { ok: true, canceled: false, sessionId: j?.sessionId };
               }
             } catch (frameErr: any) {
@@ -190,8 +197,10 @@ export class ClaudeClient {
       this._hadSuccess = true;
       this._apiStatus = 'online';
       this._lastErrorStatus = null;
+      clearTimeout(timeoutId);
       return { ok: true, canceled: false };
     } catch (e: any) {
+      clearTimeout(timeoutId);
       const canceled = String(e?.name || '').toLowerCase() === 'aborterror';
       if (!this._hadSuccess) {
         this._apiStatus = 'unknown';
@@ -303,6 +312,7 @@ export class ClaudeClient {
                 } catch {
                   // ignore
                 }
+                clearTimeout(timeoutId);
                 return { ok: true, canceled: false, sessionId: j?.sessionId };
               }
             } catch (frameErr: any) {
