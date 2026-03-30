@@ -67,9 +67,9 @@ export function useSessionFinalization() {
           const { checkMilestones } = await import('@/lib/celebrations/milestoneCelebrations');
           const milestones = checkMilestones(financialData);
           if (milestones && milestones.length > 0) {
-            // Surface milestones to frontend via API response
+            // Dispatch browser event to notify frontend of milestone celebrations
+            window.dispatchEvent(new CustomEvent('atlas:milestones', { detail: milestones }));
             console.log('[companion] New milestones detected:', milestones);
-            // Milestones will be included in response data for frontend to display
           }
         } catch (error) {
           console.error('Error detecting milestones:', error);

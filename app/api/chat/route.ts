@@ -1114,9 +1114,15 @@ Return ONLY the rewritten text.`;
                       const checkInDate = new Date();
                       checkInDate.setDate(checkInDate.getDate() + (extractedAction.check_in_days || 30));
                       
+                      // Extract incoming auth header to forward to /api/actions/save
+                      const incomingAuth = req.headers.get('Authorization');
+                      
                       await fetch('/api/actions/save', {
                         method: 'POST',
-                        headers: { 'Content-Type': 'application/json' },
+                        headers: {
+                          'Content-Type': 'application/json',
+                          ...(incomingAuth ? { 'Authorization': incomingAuth } : {}),
+                        },
                         body: JSON.stringify({
                           userId,
                           sessionId,

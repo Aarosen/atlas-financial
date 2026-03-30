@@ -92,6 +92,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [currentMission, setCurrentMission] = useState<{ text: string; daysUntilCheckIn: number } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
   const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const [milestonesToCelebrate, setMilestonesToCelebrate] = useState<any[]>([]);
   const token = authSession?.accessToken || '';
   const { memory, loadMemory, saveMemory } = useConversationMemory(userId || 'guest', sessionId || '');
   const voice = useMemo(
@@ -138,6 +139,21 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     if (!hasCompletedOnboarding()) {
       setShowOnboarding(true);
     }
+  }, []);
+
+  // FIX 7: Listen for milestone celebration events
+  useEffect(() => {
+    const handleMilestones = (event: Event) => {
+      const customEvent = event as CustomEvent;
+      if (customEvent.detail && Array.isArray(customEvent.detail)) {
+        setMilestonesToCelebrate(customEvent.detail);
+        // Auto-clear milestones after 5 seconds
+        setTimeout(() => setMilestonesToCelebrate([]), 5000);
+      }
+    };
+
+    window.addEventListener('atlas:milestones', handleMilestones);
+    return () => window.removeEventListener('atlas:milestones', handleMilestones);
   }, []);
 
   // TASK 1.4 PART C: Three-state theme toggle (light → dark → system)
@@ -1242,7 +1258,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         }
 
         // GOAL DETECTION: Process response for goals and trigger addNewGoal if detected
-        await processResponseForGoals(adaptiveAsk || action.text, addNewGoal);
+        // FIX 4: Pass userId and token for goal persistence
+        const token = authSession?.accessToken || undefined;
+        await processResponseForGoals(adaptiveAsk || action.text, addNewGoal, userId !== 'guest' ? userId : undefined, token);
         
         // Only dispatch SEND_ASKED if streaming produced nothing
         // The streamed content is already in the UI via STREAM_DELTA

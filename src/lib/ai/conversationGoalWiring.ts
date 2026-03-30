@@ -12,7 +12,8 @@ import { detectGoalsFromMessage } from './goalDetection';
 export async function processResponseForGoals(
   response: string,
   addNewGoal: (goal: FinancialGoal) => void,
-  userId?: string
+  userId?: string,
+  token?: string
 ): Promise<void> {
   try {
     const detectedGoals = detectGoalsFromMessage(response);
@@ -24,7 +25,10 @@ export async function processResponseForGoals(
         try {
           await fetch('/api/goals/save', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
+            headers: {
+              'Content-Type': 'application/json',
+              ...(token ? { 'Authorization': `Bearer ${token}` } : {}),
+            },
             body: JSON.stringify({
               userId,
               goal: {
