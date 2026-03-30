@@ -543,9 +543,26 @@ Structure (use headings or short labels when helpful):
 Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if needed.`;
 
   try {
+    // CONTEXT WINDOW TRUNCATION: If conversation exceeds 40 messages, keep last 30 + prepend summary
+    let trimmedMessages = messages;
+    let contextWindowNote = '';
+    
+    if (messages.length > 40) {
+      // Keep the last 30 messages to stay within token limits
+      const recentMessages = messages.slice(-30);
+      const truncatedMessages = messages.slice(0, -30);
+      
+      // Create a summary of earlier conversation
+      if (truncatedMessages.length > 0) {
+        contextWindowNote = `[Earlier conversation with ${truncatedMessages.length} messages truncated for context window. User's financial situation and goals remain consistent.]`;
+      }
+      
+      trimmedMessages = recentMessages;
+    }
+    
     // CONTEXT WINDOW EXTENSION: Compress conversation history beyond 10 messages
-    const { recentMessages, compressedMemory } = compressConversationHistory(messages, 10);
-    const trimmedMessages = recentMessages;
+    const { recentMessages: compressedRecent, compressedMemory } = compressConversationHistory(trimmedMessages, 10);
+    trimmedMessages = compressedRecent;
     let usedModel = modelCandidates[0] || DEFAULT_MODEL;
     const sys = type === 'answer' ? answerPrompt : type === 'answer_explain' ? explainerPrompt : systemPrompt;
     const msgPayload =

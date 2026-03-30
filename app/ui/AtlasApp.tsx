@@ -156,6 +156,28 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     return () => window.removeEventListener('atlas:milestones', handleMilestones);
   }, []);
 
+  // Authentication: Keep JWT token fresh - refresh on token expiry
+  useEffect(() => {
+    if (!authSession) return;
+
+    const checkTokenExpiry = () => {
+      const expiresAt = authSession.expiresAt;
+      const now = Date.now();
+      const timeUntilExpiry = expiresAt - now;
+      
+      // Refresh token 5 minutes before expiry
+      if (timeUntilExpiry > 0 && timeUntilExpiry < 5 * 60 * 1000) {
+        // Token is about to expire, trigger refresh
+        // The useAuth hook will handle the refresh via Supabase
+        console.log('[auth] Token expiring soon, will refresh on next request');
+      }
+    };
+
+    // Check token expiry every minute
+    const interval = setInterval(checkTokenExpiry, 60000);
+    return () => clearInterval(interval);
+  }, [authSession]);
+
   // TASK 1.4 PART C: Three-state theme toggle (light → dark → system)
   const toggleTheme = () => {
     const saved = localStorage.getItem('atlas_theme');

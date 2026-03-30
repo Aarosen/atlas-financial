@@ -4,6 +4,7 @@ import { checkRateLimitKv, getRateLimitHeaders } from '@/lib/api/rateLimitKv';
 /**
  * Rate limit middleware for chat endpoint
  * Uses Vercel KV for distributed rate limiting
+ * Enforces both per-minute and daily limits
  */
 export async function applyRateLimit(
   request: Request,
@@ -14,12 +15,18 @@ export async function applyRateLimit(
 
     if (!result.allowed) {
       const headers = getRateLimitHeaders(result);
+      const retryAfterSeconds = Math.ceil((result.resetAt - Date.now()) / 1000);
+      
+      // User-facing error message for rate limiting
+      const errorMessage = `You're sending messages too quickly. Please wait ${retryAfterSeconds} seconds.`;
+      
       return {
         allowed: false,
         response: NextResponse.json(
           {
-            error: 'Rate limit exceeded',
-            retryAfter: Math.ceil((result.resetAt - Date.now()) / 1000),
+            error: 'rate_limited',
+            message: errorMessage,
+            retryAfter: retryAfterSeconds,
           },
           {
             status: 429,
