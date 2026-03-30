@@ -6,29 +6,38 @@ import type { ConversationSession } from '@/lib/types/financial';
 
 interface ConversationSidebarProps {
   currentSessionId?: string;
-  onSelectSession: (sessionId: string) => void;
+  onSelectSession: (sessionId: string, messages?: any[]) => void;
   onNewConversation: () => void;
+  userId?: string;
+  token?: string;
 }
 
 export function ConversationSidebar({
   currentSessionId,
   onSelectSession,
   onNewConversation,
+  userId,
+  token,
 }: ConversationSidebarProps) {
   const { user } = useUser();
   const [sessions, setSessions] = useState<ConversationSession[]>([]);
   const [isLoading, setIsLoading] = useState(true);
   const [isExpanded, setIsExpanded] = useState(true);
+  const [loadingSessionId, setLoadingSessionId] = useState<string | null>(null);
+
+  const effectiveUserId = userId || user?.id;
+  const authToken = token;
 
   useEffect(() => {
-    if (!user?.id) return;
+    if (!effectiveUserId) return;
 
     const fetchSessions = async () => {
       try {
         setIsLoading(true);
-        const response = await fetch('/api/conversations/list?userId=' + encodeURIComponent(user.id), {
+        const response = await fetch('/api/conversations/list?userId=' + encodeURIComponent(effectiveUserId), {
           headers: {
             'Content-Type': 'application/json',
+            ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
           },
         });
         if (!response.ok) throw new Error('Failed to fetch sessions');
@@ -43,7 +52,42 @@ export function ConversationSidebar({
     };
 
     fetchSessions();
-  }, [user?.id]);
+  }, [effectiveUserId, authToken]);
+
+  const handleSelectSession = async (sessionId: string) => {
+    setLoadingSessionId(sessionId);
+    try {
+      if (!effectiveUserId) {
+        onSelectSession(sessionId);
+        return;
+      }
+
+      // Fetch the conversation messages for this session
+      const response = await fetch(
+        `/api/conversations/get?sessionId=${encodeURIComponent(sessionId)}&userId=${encodeURIComponent(effectiveUserId)}`,
+        {
+          headers: {
+            'Content-Type': 'application/json',
+            ...(authToken && { 'Authorization': `Bearer ${authToken}` }),
+          },
+        }
+      );
+
+      if (!response.ok) {
+        console.error('Failed to fetch conversation messages');
+        onSelectSession(sessionId);
+        return;
+      }
+
+      const data = await response.json();
+      onSelectSession(sessionId, data.messages);
+    } catch (error) {
+      console.error('Error loading conversation:', error);
+      onSelectSession(sessionId);
+    } finally {
+      setLoadingSessionId(null);
+    }
+  };
 
   const formatDate = (date: Date | string): string => {
     const d = typeof date === 'string' ? new Date(date) : date;
@@ -103,8 +147,9 @@ export function ConversationSidebar({
             {sessions.map((session) => (
               <button
                 key={session.id}
-                onClick={() => onSelectSession(session.id)}
-                className={`w-full text-left px-3 py-2 rounded-lg transition-colors ${
+                onClick={() => handleSelectSession(session.id)}
+                disabled={loadingSessionId === session.id}
+                className={`w-full text-left px-3 py-2 rounded-lg transition-colors disabled:opacity-50 ${
                   currentSessionId === session.id
                     ? 'bg-teal-100 dark:bg-teal-900 text-teal-900 dark:text-teal-100'
                     : 'hover:bg-slate-200 dark:hover:bg-slate-800 text-slate-700 dark:text-slate-300'
