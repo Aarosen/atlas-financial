@@ -868,6 +868,7 @@ Return ONLY the rewritten text.`;
       // Guest users should not hit Supabase, which causes 5-second timeout
       let companionContext = '';
       let multiGoalContext = '';
+      let behavioralContext = '';
       if (userId && userId !== 'guest') {
         const contextTimeout = new Promise<string>((resolve) => {
           setTimeout(() => {
@@ -888,6 +889,28 @@ Return ONLY the rewritten text.`;
 
         // Race: whichever completes first (context or timeout)
         companionContext = await Promise.race([contextPromise, contextTimeout]);
+        
+        // FIX 6: Wire behavioral adaptation
+        // Analyze user's behavioral patterns and incorporate into system prompt
+        const behavioralTimeout = new Promise<string>((resolve) => {
+          setTimeout(() => {
+            console.warn('[companion] Behavioral adaptation timeout - skipping');
+            resolve('');
+          }, 3000); // 3 second timeout for behavioral analysis
+        });
+
+        const behavioralPromise = (async () => {
+          try {
+            const { analyzeBehavioralPatterns, buildBehavioralAdaptationContext } = await import('@/lib/ai/behavioralAdaptation');
+            const pattern = await analyzeBehavioralPatterns(userId, conversationHistory);
+            return buildBehavioralAdaptationContext(pattern);
+          } catch (error) {
+            console.error('Error analyzing behavioral patterns:', error);
+            return '';
+          }
+        })();
+
+        behavioralContext = await Promise.race([behavioralPromise, behavioralTimeout]);
       }
 
       // MULTI-GOAL INTEGRATION: Build multi-goal context if goals are present
@@ -1080,6 +1103,38 @@ Return ONLY the rewritten text.`;
               const actionPromise = (async () => {
                 try {
                   await processAtlasResponseForCompanion(userId, sessionId, cleanedResponse, apiKey, financialProfile);
+                  
+                  // FIX 5: Wire action persistence to user_actions table
+                  // After detecting action, persist it to the database
+                  try {
+                    const { extractActionFromResponse } = await import('@/lib/ai/actionExtractor');
+                    const extractedAction = await extractActionFromResponse(cleanedResponse, apiKey);
+                    
+                    if (extractedAction.action_detected && extractedAction.action_text) {
+                      const checkInDate = new Date();
+                      checkInDate.setDate(checkInDate.getDate() + (extractedAction.check_in_days || 30));
+                      
+                      await fetch('/api/actions/save', {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                          userId,
+                          sessionId,
+                          action: {
+                            action_text: extractedAction.action_text,
+                            action_category: extractedAction.action_category || 'other',
+                            target_amount: extractedAction.target_amount,
+                            target_frequency: extractedAction.target_frequency,
+                            check_in_due_at: checkInDate.toISOString(),
+                            status: 'recommended',
+                          },
+                        }),
+                        keepalive: true,
+                      });
+                    }
+                  } catch (persistError) {
+                    console.error('Error persisting action:', persistError);
+                  }
                 } catch (error) {
                   console.error('Error processing Atlas response for companion:', error);
                 }

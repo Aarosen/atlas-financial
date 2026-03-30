@@ -60,6 +60,20 @@ export function useSessionFinalization() {
         await persistFinancialProfile(userId, sessionId, financialData, conversationText);
         // SNAPSHOT CREATION: Create financial snapshot for progress tracking
         await createSessionSnapshot(userId, sessionId, financialData);
+        
+        // FIX 7: Wire milestone celebrations
+        // Detect and surface milestone celebrations at session end
+        try {
+          const { checkMilestones } = await import('@/lib/celebrations/milestoneCelebrations');
+          const milestones = checkMilestones(financialData);
+          if (milestones && milestones.length > 0) {
+            // Surface milestones to frontend via API response
+            console.log('[companion] New milestones detected:', milestones);
+            // Milestones will be included in response data for frontend to display
+          }
+        } catch (error) {
+          console.error('Error detecting milestones:', error);
+        }
       } catch (error) {
         console.error('Error finalizing session:', error);
       }

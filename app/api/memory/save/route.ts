@@ -52,6 +52,28 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
+    // FIX 3: Create conversation session before saving messages
+    // Check if session exists, if not create it first
+    const { data: existingSession } = await supabase
+      .from('conversation_sessions')
+      .select('id')
+      .eq('id', sessionId)
+      .eq('user_id', userId)
+      .single();
+
+    if (!existingSession) {
+      // Create session if it doesn't exist
+      await supabase
+        .from('conversation_sessions')
+        .insert({
+          id: sessionId,
+          user_id: userId,
+          context: context || {},
+          created_at: new Date().toISOString(),
+          updated_at: new Date().toISOString(),
+        });
+    }
+
     // Save each message
     if (messages && Array.isArray(messages)) {
       for (const message of messages) {

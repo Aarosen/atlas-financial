@@ -11,12 +11,36 @@ import { detectGoalsFromMessage } from './goalDetection';
  */
 export async function processResponseForGoals(
   response: string,
-  addNewGoal: (goal: FinancialGoal) => void
+  addNewGoal: (goal: FinancialGoal) => void,
+  userId?: string
 ): Promise<void> {
   try {
     const detectedGoals = detectGoalsFromMessage(response);
     for (const goal of detectedGoals) {
       addNewGoal(goal);
+      
+      // FIX 4: Wire goal persistence to user_goals table
+      if (userId && userId !== 'guest') {
+        try {
+          await fetch('/api/goals/save', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              userId,
+              goal: {
+                goal_type: goal.type,
+                description: goal.description,
+                target_amount: goal.targetAmount,
+                target_date: goal.deadline,
+                status: goal.status || 'active',
+              },
+            }),
+            keepalive: true,
+          });
+        } catch (error) {
+          console.error('Error persisting goal to database:', error);
+        }
+      }
     }
   } catch (error) {
     console.error('Error processing response for goals:', error);
