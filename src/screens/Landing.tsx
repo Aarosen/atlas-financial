@@ -57,7 +57,7 @@ export function LandingScreen({
             </div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <Smartphone size={16} aria-hidden />
-              Stays on your device
+              Works across devices
             </div>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <Target size={16} aria-hidden />
