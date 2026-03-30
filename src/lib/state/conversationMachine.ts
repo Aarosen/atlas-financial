@@ -40,6 +40,7 @@ export type ConversationEvent =
   | { type: 'STREAM_DELTA'; delta: string }
   | { type: 'STREAM_DONE' }
   | { type: 'STREAM_CANCELED' }
+  | { type: 'STREAM_ERROR'; message: string }
   | {
       type: 'SEND_EXTRACTED';
       finNext: FinancialState;
@@ -171,6 +172,22 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
         }
       }
       return { ...state, streaming: false, busy: false, msgs };
+    }
+
+    case 'STREAM_ERROR': {
+      const msgs = [...state.msgs];
+      const last = msgs[msgs.length - 1];
+      if (last && last.r === 'a') {
+        const cur = String(last.t || '');
+        if (cur.trim().length === 0) {
+          msgs[msgs.length - 1] = { ...last, t: ev.message };
+        } else {
+          msgs[msgs.length - 1] = { ...last, t: `${cur.trim()}\n\n${ev.message}` };
+        }
+      } else {
+        msgs.push({ r: 'a', t: ev.message });
+      }
+      return { ...state, streaming: false, busy: false, msgs, apiErr: ev.message };
     }
 
     case 'SEND_EXTRACTED':
