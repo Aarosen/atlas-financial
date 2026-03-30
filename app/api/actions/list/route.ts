@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimit, getRateLimitHeaders } from '@/lib/api/rateLimit';
 
 /**
  * API endpoint for fetching user's action pipeline
@@ -11,6 +12,18 @@ export async function GET(request: NextRequest) {
     const { searchParams } = new URL(request.url);
     const userIdParam = searchParams.get('userId');
     const statusParam = searchParams.get('status'); // 'recommended', 'committed', 'completed', etc.
+
+    // Check rate limit
+    const clientId = request.headers.get('x-forwarded-for') || request.headers.get('x-real-ip') || 'unknown';
+    const isAuthenticated = !!request.headers.get('authorization');
+    const { allowed } = checkRateLimit(clientId, isAuthenticated);
+    
+    if (!allowed) {
+      return new Response('Too many requests', { 
+        status: 429, 
+        headers: getRateLimitHeaders(clientId, isAuthenticated) 
+      });
+    }
 
     // Verify session token
     const authHeader = request.headers.get('authorization');
