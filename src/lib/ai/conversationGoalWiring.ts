@@ -22,8 +22,7 @@ export async function processResponseForGoals(
     // to avoid async complexity in this context
     const detectedGoals = await detectGoalsFromMessage(response, undefined);
     for (const goal of detectedGoals) {
-      addNewGoal(goal);
-      
+      // Point 1: Only add goal to UI after successful save (prevents ghost goals)
       // FIX 4: Wire goal persistence to user_goals table
       if (userId && userId !== 'guest') {
         try {
@@ -52,6 +51,9 @@ export async function processResponseForGoals(
             throw new Error(data.error || `Failed to save goal: ${saveResponse.status}`);
           }
 
+          // Only add goal to UI after successful save
+          addNewGoal(goal);
+
           // Gap 2a: Check for milestones after successful goal creation
           try {
             await checkMilestonesAfterGoalCreation(userId, detectedGoals.length, {});
@@ -62,6 +64,9 @@ export async function processResponseForGoals(
           console.error('Error persisting goal to database:', error);
           throw error;
         }
+      } else {
+        // For guest users, add goal to UI immediately (no persistence)
+        addNewGoal(goal);
       }
     }
   } catch (error) {
