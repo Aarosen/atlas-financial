@@ -97,6 +97,7 @@ export function useAuth() {
     isAuthenticated: !!session,
     userId: session?.userId || null,
     email: session?.email || null,
+    accessToken: session?.accessToken || null,
     signOut,
   };
 }

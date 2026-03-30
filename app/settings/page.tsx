@@ -6,7 +6,7 @@ import { useRouter } from 'next/navigation';
 import Link from 'next/link';
 
 export default function SettingsPage() {
-  const { userId, email, signOut, isAuthenticated } = useAuth();
+  const { userId, email, accessToken, signOut, isAuthenticated } = useAuth();
   const router = useRouter();
   const [isDeleting, setIsDeleting] = useState(false);
   const [deleteConfirm, setDeleteConfirm] = useState('');
@@ -27,7 +27,7 @@ export default function SettingsPage() {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          'Authorization': `Bearer ${userId || ''}`,
+          'Authorization': `Bearer ${accessToken || ''}`,
         },
         body: JSON.stringify({
           userId,

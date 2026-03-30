@@ -19,7 +19,7 @@ export async function POST(request: NextRequest) {
 
     // Get auth header to verify user is authenticated
     const authHeader = request.headers.get('Authorization');
-    if (!authHeader) {
+    if (!authHeader || !authHeader.startsWith('Bearer ')) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
@@ -38,6 +38,17 @@ export async function POST(request: NextRequest) {
     }
 
     const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+    // Verify the token and ensure it belongs to the user requesting deletion
+    const token = authHeader.replace('Bearer ', '');
+    const { data: { user }, error: authCheckError } = await supabase.auth.getUser(token);
+    
+    if (authCheckError || !user || user.id !== userId) {
+      return NextResponse.json(
+        { error: 'Unauthorized' },
+        { status: 401 }
+      );
+    }
 
     // Delete all user data in order (respecting foreign key constraints)
     // 1. Delete conversation messages
