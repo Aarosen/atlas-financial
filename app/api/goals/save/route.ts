@@ -63,8 +63,8 @@ export async function POST(request: NextRequest) {
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      console.warn('[goals-save] Supabase not configured');
-      return NextResponse.json({ ok: true }, { status: 200 });
+      console.error('[goals-save] Supabase not configured');
+      return NextResponse.json({ ok: false, error: 'Database not configured' }, { status: 500 });
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -81,7 +81,7 @@ export async function POST(request: NextRequest) {
 
     if (checkError && checkError.code !== 'PGRST116') {
       console.error('[goals-save] Error checking existing goal:', checkError);
-      return NextResponse.json({ ok: true }, { status: 200 });
+      return NextResponse.json({ ok: false, error: 'Failed to check existing goal' }, { status: 500 });
     }
 
     let data, error;
@@ -125,12 +125,12 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[goals-save] Error saving goal:', error);
-      return NextResponse.json({ ok: true }, { status: 200 });
+      return NextResponse.json({ ok: false, error: 'Failed to save goal' }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, goal: data }, { status: 200 });
   } catch (error) {
     console.error('[goals-save] Error:', error);
-    return NextResponse.json({ ok: true }, { status: 200 });
+    return NextResponse.json({ ok: false, error: 'Internal server error' }, { status: 500 });
   }
 }

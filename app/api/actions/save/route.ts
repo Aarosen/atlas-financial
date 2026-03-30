@@ -25,8 +25,8 @@ export async function POST(request: NextRequest) {
       const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
       if (!supabaseUrl || !supabaseAnonKey) {
-        console.warn('[actions-save] Supabase not configured');
-        return NextResponse.json({ ok: true }, { status: 200 });
+        console.error('[actions-save] Supabase not configured');
+        return NextResponse.json({ ok: false, error: 'Database not configured' }, { status: 500 });
       }
 
       const supabase = createClient(supabaseUrl, supabaseAnonKey);
@@ -45,8 +45,8 @@ export async function POST(request: NextRequest) {
     const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
 
     if (!supabaseUrl || !supabaseKey) {
-      console.warn('[actions-save] Supabase not configured');
-      return NextResponse.json({ ok: true }, { status: 200 });
+      console.error('[actions-save] Supabase not configured');
+      return NextResponse.json({ ok: false, error: 'Database not configured' }, { status: 500 });
     }
 
     const supabase = createClient(supabaseUrl, supabaseKey);
@@ -88,12 +88,12 @@ export async function POST(request: NextRequest) {
 
     if (error) {
       console.error('[actions-save] Error saving action:', error);
-      return NextResponse.json({ ok: true }, { status: 200 });
+      return NextResponse.json({ ok: false, error: 'Failed to save action' }, { status: 500 });
     }
 
     return NextResponse.json({ ok: true, action: data }, { status: 200 });
   } catch (error) {
     console.error('[actions-save] Error:', error);
-    return NextResponse.json({ ok: true }, { status: 200 });
+    return NextResponse.json({ ok: false, error: 'Internal server error' }, { status: 500 });
   }
 }
