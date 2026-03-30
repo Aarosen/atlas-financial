@@ -15,15 +15,36 @@ export interface Milestone {
 }
 
 const milestones: Milestone[] = [
+  // Early-trigger milestones for new users (fire quickly to build momentum)
+  {
+    id: 'first_goal_set',
+    type: 'goal_completion',
+    title: 'First Goal Set',
+    description: 'Set your first financial goal',
+    celebrationMessage: 'You just set your first financial goal! That clarity is the foundation of progress. You\'re on your way! 🎯',
+    icon: '🎯',
+    reward: 'Unlocked: Goal Tracking',
+    unlockCondition: (data) => data.goalsSet >= 1,
+  },
   {
     id: 'first_action',
     type: 'first_action',
-    title: 'First Step',
+    title: 'First Action',
     description: 'Completed your first financial action',
-    celebrationMessage: 'You took your first step toward financial freedom! This is huge. Every journey starts with a single step, and you just took yours. 🎉',
+    celebrationMessage: 'You took your first action! This is the moment momentum begins. Every big change starts with one small step. 🚀',
     icon: '🚀',
     reward: 'Unlocked: Action Tracking',
-    unlockCondition: (data) => data.actionsCompleted === 1,
+    unlockCondition: (data) => data.actionsCompleted >= 1,
+  },
+  {
+    id: 'first_week_connected',
+    type: 'streak',
+    title: 'Week One',
+    description: 'Connected with Atlas for 7 days',
+    celebrationMessage: 'You\'ve been with Atlas for a week! Consistency is the secret to financial success. Keep going! 📅',
+    icon: '📅',
+    reward: 'Unlocked: Weekly Progress Reports',
+    unlockCondition: (data) => data.daysSinceFirstMessage >= 7,
   },
   {
     id: 'debt_payoff_25',
