@@ -13,10 +13,13 @@ export async function processResponseForGoals(
   response: string,
   addNewGoal: (goal: FinancialGoal) => void,
   userId?: string,
-  token?: string
+  token?: string,
+  apiKey?: string
 ): Promise<void> {
   try {
-    const detectedGoals = detectGoalsFromMessage(response);
+    // Use regex-based detection (fast fallback) instead of AI extraction
+    // to avoid async complexity in this context
+    const detectedGoals = await detectGoalsFromMessage(response, undefined);
     for (const goal of detectedGoals) {
       addNewGoal(goal);
       
