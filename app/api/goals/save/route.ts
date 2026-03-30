@@ -13,6 +13,12 @@ export async function POST(request: NextRequest) {
       return NextResponse.json({ ok: true }, { status: 200 });
     }
 
+    // Validate goal_type against schema CHECK constraint
+    const validGoalTypes = ['emergency_fund', 'debt_payoff', 'savings_target', 'invest_start', 'other'];
+    if (!validGoalTypes.includes(goal.goal_type)) {
+      goal.goal_type = 'other';
+    }
+
     // Verify Bearer token for authenticated users
     const authHeader = request.headers.get('Authorization');
     if (userId && userId !== 'guest') {
@@ -51,11 +57,42 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Upsert goal into user_goals table
-    const { data, error } = await supabase
+    // Check if goal of this type already exists for this user
+    const { data: existing, error: checkError } = await supabase
       .from('user_goals')
-      .upsert(
-        {
+      .select('id')
+      .eq('user_id', userId)
+      .eq('goal_type', goal.goal_type)
+      .maybeSingle();
+
+    if (checkError && checkError.code !== 'PGRST116') {
+      console.error('[goals-save] Error checking existing goal:', checkError);
+      return NextResponse.json({ ok: true }, { status: 200 });
+    }
+
+    let data, error;
+
+    if (existing) {
+      // Update existing goal
+      const { data: updated, error: updateError } = await supabase
+        .from('user_goals')
+        .update({
+          goal_label: goal.goal_label || goal.title,
+          description: goal.description,
+          target_amount: goal.target_amount,
+          target_date: goal.target_date,
+          status: goal.status || 'active',
+        })
+        .eq('id', existing.id)
+        .select();
+
+      data = updated;
+      error = updateError;
+    } else {
+      // Insert new goal
+      const { data: inserted, error: insertError } = await supabase
+        .from('user_goals')
+        .insert({
           user_id: userId,
           goal_type: goal.goal_type,
           goal_label: goal.goal_label || goal.title,
@@ -65,9 +102,12 @@ export async function POST(request: NextRequest) {
           target_date: goal.target_date,
           status: goal.status || 'active',
           created_at: new Date().toISOString(),
-        },
-        { onConflict: 'user_id,goal_type,description' }
-      );
+        })
+        .select();
+
+      data = inserted;
+      error = insertError;
+    }
 
     if (error) {
       console.error('[goals-save] Error saving goal:', error);

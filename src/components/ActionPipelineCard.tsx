@@ -14,15 +14,18 @@ interface Action {
 interface ActionPipelineCardProps {
   actions: Action[];
   onCompleteAction: (actionId: string, completed: boolean) => Promise<void>;
+  onUpdateAction?: (actionId: string, status: string) => Promise<void>;
   isLoading?: boolean;
 }
 
 export function ActionPipelineCard({
   actions,
   onCompleteAction,
+  onUpdateAction,
   isLoading = false,
 }: ActionPipelineCardProps) {
   const [completingId, setCompletingId] = useState<string | null>(null);
+  const [updatingId, setUpdatingId] = useState<string | null>(null);
 
   if (!actions || actions.length === 0) {
     return null;
@@ -80,6 +83,41 @@ export function ActionPipelineCard({
                 <p className="text-xs text-slate-500 dark:text-slate-500 mt-1">
                   Due: {new Date(action.dueDate).toLocaleDateString()}
                 </p>
+              )}
+              {/* Action Status Buttons */}
+              {action.status !== 'completed' && (
+                <div className="flex gap-2 mt-2">
+                  <button
+                    onClick={async () => {
+                      if (!onUpdateAction) return;
+                      setUpdatingId(action.id);
+                      try {
+                        await onUpdateAction(action.id, 'completed');
+                      } finally {
+                        setUpdatingId(null);
+                      }
+                    }}
+                    disabled={updatingId === action.id || isLoading}
+                    className="text-xs px-2 py-1 bg-green-100 text-green-700 dark:bg-green-900 dark:text-green-200 rounded hover:bg-green-200 dark:hover:bg-green-800 disabled:opacity-50 font-medium transition-colors"
+                  >
+                    {updatingId === action.id ? 'Marking...' : '✓ Done'}
+                  </button>
+                  <button
+                    onClick={async () => {
+                      if (!onUpdateAction) return;
+                      setUpdatingId(action.id);
+                      try {
+                        await onUpdateAction(action.id, 'dismissed');
+                      } finally {
+                        setUpdatingId(null);
+                      }
+                    }}
+                    disabled={updatingId === action.id || isLoading}
+                    className="text-xs px-2 py-1 bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 font-medium transition-colors"
+                  >
+                    {updatingId === action.id ? 'Dismissing...' : 'Dismiss'}
+                  </button>
+                </div>
               )}
             </div>
             {action.priority && (

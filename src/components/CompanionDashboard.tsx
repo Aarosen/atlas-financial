@@ -142,6 +142,36 @@ export function CompanionDashboard({
     }
   };
 
+  const handleActionUpdate = async (actionId: string, status: string) => {
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/actions/update', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          actionId,
+          status,
+        }),
+      });
+
+      if (response.ok) {
+        // Reload dashboard data to reflect updated action
+        await loadDashboardData();
+      } else {
+        console.error('Error updating action:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error updating action:', error);
+    }
+  };
+
   if (isLoading || dashboardLoading) {
     return (
       <div className="space-y-4 p-4">
@@ -177,6 +207,7 @@ export function CompanionDashboard({
         <ActionPipelineCard
           actions={actions.slice(0, 3)}
           onCompleteAction={handleActionComplete}
+          onUpdateAction={handleActionUpdate}
         />
       )}
 
