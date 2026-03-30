@@ -43,6 +43,7 @@ import { hasCompletedOnboarding, markOnboardingComplete } from '@/lib/onboarding
 import { ConversationSidebar } from '@/components/ConversationSidebar';
 import { CompanionDashboard } from '@/components/CompanionDashboard';
 import { useConversationMemory } from '@/lib/memory/useConversationMemory';
+import { ErrorBoundary } from '@/components/ErrorBoundary';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -1768,7 +1769,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     ? activeTab === 'talk'
     : st.scr === 'conversation' || st.scr === 'summary' || st.scr === 'tier';
 
-  return (
+  const appContent = (
     <div
       data-atlas-ready={mounted ? 'true' : 'false'}
       data-restored={restored ? 'true' : 'false'}
@@ -1873,5 +1874,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         </>
       )}
     </div>
+  );
+
+  return (
+    <ErrorBoundary>
+      {appContent}
+    </ErrorBoundary>
   );
 }

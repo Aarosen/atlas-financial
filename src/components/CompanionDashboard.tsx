@@ -6,6 +6,7 @@ import { FinancialSnapshotCard } from './FinancialSnapshotCard';
 import { GoalTrackingCard } from './GoalTrackingCard';
 import { PendingActionCheckIn } from './PendingActionCheckIn';
 import { LoadingSkeleton, ActionPipelineLoadingSkeleton, ProgressLoadingSkeleton } from './LoadingSkeleton';
+import { checkMilestonesAfterGoalUpdate } from '@/lib/celebrations/midSessionMilestoneDetection';
 
 interface CompanionDashboardProps {
   userId: string;
@@ -23,6 +24,7 @@ export function CompanionDashboard({
   const [snapshot, setSnapshot] = useState<any>(null);
   const [pendingAction, setPendingAction] = useState<any>(null);
   const [dashboardLoading, setDashboardLoading] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
   useEffect(() => {
     if (!userId || userId === 'guest') {
@@ -133,11 +135,27 @@ export function CompanionDashboard({
 
       if (response.ok) {
         // Reload dashboard data to reflect updated goal
+        setError(null);
         await loadDashboardData();
+        
+        // Gap 2b: Check for milestones after goal update (e.g., marked as achieved)
+        if (status === 'achieved') {
+          try {
+            const completedCount = goals.filter(g => g.status === 'achieved').length + 1;
+            await checkMilestonesAfterGoalUpdate(userId, 'achieved', completedCount, {});
+          } catch (milestoneError) {
+            console.warn('[dashboard] Milestone check failed (non-fatal):', milestoneError);
+          }
+        }
       } else {
-        console.error('Error updating goal:', response.statusText);
+        const data = await response.json();
+        const errorMsg = data.error || `Failed to update goal: ${response.statusText}`;
+        setError(errorMsg);
+        console.error('Error updating goal:', errorMsg);
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to update goal';
+      setError(errorMsg);
       console.error('Error updating goal:', error);
     }
   };
@@ -163,11 +181,17 @@ export function CompanionDashboard({
 
       if (response.ok) {
         // Reload dashboard data to reflect updated action
+        setError(null);
         await loadDashboardData();
       } else {
-        console.error('Error updating action:', response.statusText);
+        const data = await response.json();
+        const errorMsg = data.error || `Failed to update action: ${response.statusText}`;
+        setError(errorMsg);
+        console.error('Error updating action:', errorMsg);
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to update action';
+      setError(errorMsg);
       console.error('Error updating action:', error);
     }
   };
@@ -193,11 +217,17 @@ export function CompanionDashboard({
 
       if (response.ok) {
         // Reload dashboard data to reflect deleted goal
+        setError(null);
         await loadDashboardData();
       } else {
-        console.error('Error deleting goal:', response.statusText);
+        const data = await response.json();
+        const errorMsg = data.error || `Failed to delete goal: ${response.statusText}`;
+        setError(errorMsg);
+        console.error('Error deleting goal:', errorMsg);
       }
     } catch (error) {
+      const errorMsg = error instanceof Error ? error.message : 'Failed to delete goal';
+      setError(errorMsg);
       console.error('Error deleting goal:', error);
     }
   };
@@ -224,6 +254,26 @@ export function CompanionDashboard({
 
   return (
     <div className="space-y-4 p-4">
+      {/* Error Display */}
+      {error && (
+        <div className="rounded-lg bg-red-50 dark:bg-red-900/20 border border-red-200 dark:border-red-800 p-4">
+          <div className="flex items-start justify-between">
+            <div className="flex-1">
+              <p className="text-sm font-medium text-red-900 dark:text-red-200">
+                {error}
+              </p>
+            </div>
+            <button
+              onClick={() => setError(null)}
+              className="ml-2 text-red-600 dark:text-red-400 hover:text-red-700 dark:hover:text-red-300"
+              aria-label="Dismiss error"
+            >
+              ✕
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Pending Action Check-in */}
       {pendingAction && (
         <PendingActionCheckIn

@@ -5,6 +5,7 @@
 
 import type { FinancialGoal } from '@/lib/goals/multiGoalTypes';
 import { detectGoalsFromMessage } from './goalDetection';
+import { checkMilestonesAfterGoalCreation } from '@/lib/celebrations/midSessionMilestoneDetection';
 
 /**
  * Process assistant response for goals and trigger addNewGoal if detected
@@ -26,7 +27,7 @@ export async function processResponseForGoals(
       // FIX 4: Wire goal persistence to user_goals table
       if (userId && userId !== 'guest') {
         try {
-          await fetch('/api/goals/save', {
+          const saveResponse = await fetch('/api/goals/save', {
             method: 'POST',
             headers: {
               'Content-Type': 'application/json',
@@ -44,8 +45,22 @@ export async function processResponseForGoals(
             }),
             keepalive: true,
           });
+
+          // Gap 7: Check for save errors and throw if failed
+          if (!saveResponse.ok) {
+            const data = await saveResponse.json();
+            throw new Error(data.error || `Failed to save goal: ${saveResponse.status}`);
+          }
+
+          // Gap 2a: Check for milestones after successful goal creation
+          try {
+            await checkMilestonesAfterGoalCreation(userId, detectedGoals.length, {});
+          } catch (milestoneError) {
+            console.warn('[goal-wiring] Milestone check failed (non-fatal):', milestoneError);
+          }
         } catch (error) {
           console.error('Error persisting goal to database:', error);
+          throw error;
         }
       }
     }
