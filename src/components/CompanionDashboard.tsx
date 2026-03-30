@@ -146,9 +146,7 @@ export function CompanionDashboard({
       {actions.length > 0 && (
         <ActionPipelineCard
           actions={actions.slice(0, 3)}
-          onActionClick={(actionId) => {
-            console.log('Action clicked:', actionId);
-          }}
+          onCompleteAction={handleActionComplete}
         />
       )}
 

@@ -10,6 +10,11 @@ export interface PerformanceMetric {
   metadata?: Record<string, any>;
 }
 
+interface PerformanceEntryWithRenderTime extends PerformanceEntry {
+  renderTime?: number;
+  loadTime?: number;
+}
+
 const metrics: PerformanceMetric[] = [];
 const MAX_METRICS = 1000;
 
@@ -108,8 +113,9 @@ export function monitorWebVitals(): void {
     try {
       const lcpObserver = new PerformanceObserver((list) => {
         const entries = list.getEntries();
-        const lastEntry = entries[entries.length - 1];
-        recordMetric('LCP', lastEntry.renderTime || lastEntry.loadTime);
+        const lastEntry = entries[entries.length - 1] as PerformanceEntryWithRenderTime;
+        const lcpTime = lastEntry.renderTime || lastEntry.loadTime || 0;
+        recordMetric('LCP', lcpTime);
       });
       lcpObserver.observe({ entryTypes: ['largest-contentful-paint'] });
     } catch (e) {

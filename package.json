@@ -21,6 +21,7 @@
     "@anthropic-ai/sdk": "^0.39.0",
     "@supabase/ssr": "^0.5.2",
     "@supabase/supabase-js": "^2.49.1",
+    "@vercel/kv": "^3.0.0",
     "framer-motion": "^12.34.0",
     "lucide-react": "^0.542.0",
     "next": "^15.2.0",

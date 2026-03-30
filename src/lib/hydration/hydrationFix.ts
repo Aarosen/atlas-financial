@@ -3,6 +3,8 @@
  * Prevents hydration mismatches caused by args[]=text URL parameters
  */
 
+import { useState, useEffect } from 'react';
+
 export function sanitizeUrlParams(): void {
   if (typeof window === 'undefined') return;
 
@@ -68,10 +70,10 @@ export function useHydrationSafeState<T>(
   }
 
   // On client side, use actual state
-  const [value, setValue] = require('react').useState(initialValue);
-  const [isMounted, setIsMounted] = require('react').useState(false);
+  const [value, setValue] = useState(initialValue);
+  const [isMounted, setIsMounted] = useState(false);
 
-  require('react').useEffect(() => {
+  useEffect(() => {
     setIsMounted(true);
   }, []);
 
@@ -84,23 +86,17 @@ export function useHydrationSafeEffect(
 ): void {
   if (typeof window === 'undefined') return;
 
-  const [isMounted, setIsMounted] = require('react').useState(false);
+  const [isMounted, setIsMounted] = useState(false);
 
-  require('react').useEffect(() => {
+  useEffect(() => {
     setIsMounted(true);
   }, []);
 
-  require('react').useEffect(() => {
+  useEffect(() => {
     if (isMounted) {
       return effect();
     }
   }, deps ? [isMounted, ...deps] : [isMounted]);
-}
-
-export function suppressHydrationWarning(element: HTMLElement): void {
-  if (element) {
-    element.suppressHydrationWarning = true;
-  }
 }
 
 // Initialize hydration fixes on module load

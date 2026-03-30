@@ -24,10 +24,10 @@ export default function DebugConversationPage() {
     { r: 'u', t: '$5000.' },
     { r: 'a', t: 'Great! That gives me a good picture of your financial situation.' },
   ];
-  const [msgs, setMsgs] = useState<ChatMessage[]>(defaultMsgs);
+  const [msgs] = useState<ChatMessage[]>(defaultMsgs);
   const botRef = useRef<HTMLDivElement>(null);
   const [caseParam, setCaseParam] = useState<string | null>(null);
-  const [state, setState] = useState<any>({ msgs: defaultMsgs });
+  const [state, setState] = useState<{ msgs: ChatMessage[]; busy?: boolean; apiErr?: string | null; streaming?: boolean }>({ msgs: defaultMsgs });
 
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
