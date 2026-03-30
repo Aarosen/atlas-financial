@@ -972,7 +972,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             return;
           }
 
-          dispatch({ type: res.ok ? 'STREAM_DONE' : 'STREAM_DONE' });
+          if (!res.ok) {
+            dispatch({ type: 'SEND_ASKED', text: "I'm having trouble connecting right now. Please try again in a moment." });
+          } else {
+            dispatch({ type: 'STREAM_DONE' });
+          }
           if (res.ok) {
             logReplay(
               createReplayEntry({
@@ -1188,7 +1192,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           return;
         }
 
-        dispatch({ type: 'STREAM_DONE' });
+        if (!res.ok) {
+          dispatch({ type: 'SEND_ASKED', text: "I'm having trouble connecting right now. Please try again in a moment." });
+        } else {
+          dispatch({ type: 'STREAM_DONE' });
+        }
 
         // COMPANION: Capture sessionId returned from first response, persist to sessionStorage
         // This ensures finalization, action tracking, and progress display work on subsequent requests

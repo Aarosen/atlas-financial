@@ -200,21 +200,28 @@ async function callAnthropic(args: {
   system: string;
   messages: any[];
 }) {
-  return await fetch(ANTHROPIC_API, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': args.apiKey,
-      Authorization: `Bearer ${args.apiKey}`,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: args.model,
-      max_tokens: args.maxTokens,
-      system: args.system,
-      messages: args.messages,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25_000); // 25s server-side limit
+  try {
+    return await fetch(ANTHROPIC_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': args.apiKey,
+        Authorization: `Bearer ${args.apiKey}`,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: args.model,
+        max_tokens: args.maxTokens,
+        system: args.system,
+        messages: args.messages,
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 async function callAnthropicStream(args: {
@@ -224,22 +231,29 @@ async function callAnthropicStream(args: {
   system: string;
   messages: any[];
 }) {
-  return await fetch(ANTHROPIC_API, {
-    method: 'POST',
-    headers: {
-      'Content-Type': 'application/json',
-      'x-api-key': args.apiKey,
-      Authorization: `Bearer ${args.apiKey}`,
-      'anthropic-version': '2023-06-01',
-    },
-    body: JSON.stringify({
-      model: args.model,
-      max_tokens: args.maxTokens,
-      system: args.system,
-      messages: args.messages,
-      stream: true,
-    }),
-  });
+  const controller = new AbortController();
+  const timeoutId = setTimeout(() => controller.abort(), 25_000); // 25s server-side limit
+  try {
+    return await fetch(ANTHROPIC_API, {
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'x-api-key': args.apiKey,
+        Authorization: `Bearer ${args.apiKey}`,
+        'anthropic-version': '2023-06-01',
+      },
+      body: JSON.stringify({
+        model: args.model,
+        max_tokens: args.maxTokens,
+        system: args.system,
+        messages: args.messages,
+        stream: true,
+      }),
+      signal: controller.signal,
+    });
+  } finally {
+    clearTimeout(timeoutId);
+  }
 }
 
 export async function OPTIONS() {
@@ -708,7 +722,7 @@ Return ONLY the rewritten text.`;
 
       // FINANCIAL VALIDATION: Validate extracted financial snapshot for implausible values
       // This catches typos and suspicious data before analysis runs
-      const validation = validateFinancialSnapshot(extractedFields as any);
+      const validation = validateFinancialSnapshot((extractedFields || {}) as any);
       let validationContext = '';
       if (!validation.isValid) {
         validationContext = `\n\n${buildValidationPrompt(validation)}`;
@@ -889,8 +903,8 @@ Return ONLY the rewritten text.`;
       const agentContext = lastUserMsg
         ? `\n\nPRIMARY AGENT: ${routeAgentForText(lastUserMsg).label}.`
         : '';
-      const advancedContext = buildAdvancedTopicContext(fin as any)
-        ? `\n\nADVANCED TOPIC CONTEXT: ${buildAdvancedTopicContext(fin as any)}`
+      const advancedContext = buildAdvancedTopicContext((fin || {}) as any)
+        ? `\n\nADVANCED TOPIC CONTEXT: ${buildAdvancedTopicContext((fin || {}) as any)}`
         : '';
       const compSignal = detectComprehensionSignal(lastUserMsg);
       const comprehensionContext = compSignal
