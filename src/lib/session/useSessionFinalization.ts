@@ -1,6 +1,7 @@
 import { useCallback, useEffect } from 'react';
 import { persistFinancialProfile } from '@/lib/ai/conversationGoalWiring';
 import { createSessionSnapshot } from '@/lib/db/supabaseIntegration';
+import { updateGoalProgressFromSnapshot } from '@/lib/goals/goalProgressTracking';
 
 /**
  * Hook to handle session finalization when user closes conversation
@@ -61,7 +62,18 @@ export function useSessionFinalization() {
         // SNAPSHOT CREATION: Create financial snapshot for progress tracking
         await createSessionSnapshot(userId, sessionId, financialData);
         
-        // FIX 7: Wire milestone celebrations
+        // FIX 7: Update goal progress from financial snapshot
+        // Connect snapshot data to goal current_amount for progress tracking
+        if (token && userId !== 'guest') {
+          await updateGoalProgressFromSnapshot(userId, {
+            totalSavings: financialData.totalSavings,
+            totalDebt: financialData.totalDebt,
+            monthlyIncome: financialData.monthlyIncome,
+            essentialExpenses: financialData.essentialExpenses,
+          });
+        }
+        
+        // Wire milestone celebrations
         // Detect and surface milestone celebrations at session end
         try {
           const { checkMilestones } = await import('@/lib/celebrations/milestoneCelebrations');
