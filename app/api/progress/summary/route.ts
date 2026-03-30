@@ -94,10 +94,16 @@ export async function POST(request: NextRequest) {
     if (snapshots && snapshots.length >= 2) {
       const [current, previous] = snapshots;
 
-      // Calculate days between snapshots
+      // Calculate days between snapshots with date validation
       const currentDate = new Date(current.snapshot_date);
       const previousDate = new Date(previous.snapshot_date);
-      daysSinceLast = Math.floor((currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24));
+      
+      // Validate dates are valid
+      if (!isNaN(currentDate.getTime()) && !isNaN(previousDate.getTime())) {
+        daysSinceLast = Math.floor((currentDate.getTime() - previousDate.getTime()) / (1000 * 60 * 60 * 24));
+      } else {
+        daysSinceLast = 0;
+      }
 
       // High-interest debt delta
       if (current.total_debt !== null && previous.total_debt !== null) {
