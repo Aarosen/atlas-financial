@@ -6,6 +6,7 @@ import { FinancialSnapshotCard } from './FinancialSnapshotCard';
 import { GoalTrackingCard } from './GoalTrackingCard';
 import { PendingActionCheckIn } from './PendingActionCheckIn';
 import { LoadingSkeleton, ActionPipelineLoadingSkeleton, ProgressLoadingSkeleton } from './LoadingSkeleton';
+import { FinancialProgressChart } from './FinancialProgressChart';
 import { checkMilestonesAfterGoalUpdate } from '@/lib/celebrations/midSessionMilestoneDetection';
 
 interface CompanionDashboardProps {
@@ -302,6 +303,9 @@ export function CompanionDashboard({
       {snapshot && (
         <FinancialSnapshotCard snapshot={snapshot} />
       )}
+
+      {/* Financial Progress Chart */}
+      <FinancialProgressChart userId={userId} accessToken={token} />
 
       {/* Goal Tracking */}
       {goals.length > 0 && (

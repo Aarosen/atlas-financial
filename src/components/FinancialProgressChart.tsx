@@ -18,7 +18,7 @@ interface ChartData {
   netWorth: number;
 }
 
-export function FinancialProgressChart({ userId }: { userId: string | null }) {
+export function FinancialProgressChart({ userId, accessToken }: { userId: string | null; accessToken?: string }) {
   const [data, setData] = useState<ChartData[]>([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
@@ -31,11 +31,16 @@ export function FinancialProgressChart({ userId }: { userId: string | null }) {
 
     const fetchSnapshots = async () => {
       try {
+        const headers: Record<string, string> = {
+          'Content-Type': 'application/json',
+        };
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+
         const response = await fetch('/api/snapshots/history', {
           method: 'GET',
-          headers: {
-            'Content-Type': 'application/json',
-          },
+          headers,
         });
 
         if (!response.ok) {

@@ -12,6 +12,41 @@ export default function SettingsPage() {
   const [deleteConfirm, setDeleteConfirm] = useState('');
   const [error, setError] = useState<string | null>(null);
   const [success, setSuccess] = useState<string | null>(null);
+  const [isExporting, setIsExporting] = useState(false);
+
+  const handleExportData = async () => {
+    setIsExporting(true);
+    setError(null);
+
+    try {
+      const response = await fetch('/api/user/export', {
+        method: 'GET',
+        headers: {
+          'Authorization': `Bearer ${accessToken || ''}`,
+        },
+      });
+
+      if (!response.ok) {
+        throw new Error('Failed to export data');
+      }
+
+      const blob = await response.blob();
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.href = url;
+      link.download = `atlas-data-export-${userId}-${new Date().toISOString().split('T')[0]}.json`;
+      document.body.appendChild(link);
+      link.click();
+      document.body.removeChild(link);
+      URL.revokeObjectURL(url);
+
+      setSuccess('Data exported successfully');
+    } catch (err) {
+      setError(err instanceof Error ? err.message : 'Failed to export data');
+    } finally {
+      setIsExporting(false);
+    }
+  };
 
   const handleDeleteAccount = async () => {
     if (deleteConfirm !== 'DELETE') {
@@ -87,7 +122,14 @@ export default function SettingsPage() {
           <p className="text-sm text-slate-600 dark:text-slate-400 mb-4">
             Your financial data is stored securely in our Supabase database. You can request to download or delete your data at any time.
           </p>
-          <div className="space-y-2">
+          <div className="space-y-3">
+            <button
+              onClick={handleExportData}
+              disabled={isExporting}
+              className="w-full px-4 py-2 bg-blue-600 hover:bg-blue-700 disabled:opacity-50 text-white rounded font-medium text-sm"
+            >
+              {isExporting ? 'Exporting...' : 'Download My Data'}
+            </button>
             <p className="text-sm">
               <Link href="/privacy" className="text-blue-600 hover:underline">
                 View Privacy Policy

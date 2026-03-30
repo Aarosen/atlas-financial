@@ -278,10 +278,22 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   // First-session onboarding: inject opening message if conversation is empty
   useEffect(() => {
     if (st.msgs.length === 0 && mounted && st.scr === 'conversation') {
-      const openingMessage = "Hi! I'm Atlas, your financial companion. I'm here to help you build a stronger financial foundation, one conversation at a time. What's on your mind financially right now?";
+      // Check if user has prior conversations (returning user)
+      const isReturningUser = memory && Object.keys(memory).length > 0;
+      
+      let openingMessage: string;
+      if (isReturningUser) {
+        // Returning user: personalized greeting
+        const primaryGoal = st.fin?.primaryGoal || 'your financial goals';
+        openingMessage = `Welcome back! Ready to continue working on ${primaryGoal}? What's on your mind today?`;
+      } else {
+        // First-time user: introduction
+        openingMessage = "Hi! I'm Atlas, your financial companion. I'm here to help you build a stronger financial foundation, one conversation at a time. What's on your mind financially right now?";
+      }
+      
       dispatch({ type: 'SEND_ASKED', text: openingMessage });
     }
-  }, [st.msgs.length, mounted, st.scr]);
+  }, [st.msgs.length, mounted, st.scr, memory, st.fin?.primaryGoal]);
 
   // Auto-save conversation messages every 5 messages
   useEffect(() => {
@@ -1305,7 +1317,13 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         // GOAL DETECTION: Process response for goals and trigger addNewGoal if detected
         // FIX 4: Pass userId and token for goal persistence
         const token = authSession?.accessToken || undefined;
-        await processResponseForGoals(adaptiveAsk || action.text, addNewGoal, userId !== 'guest' ? userId : undefined, token);
+        const financialProfile = finRef.current ? {
+          totalSavings: finRef.current.totalSavings,
+          highInterestDebt: finRef.current.highInterestDebt || 0,
+          monthlyIncome: finRef.current.monthlyIncome,
+          essentialExpenses: finRef.current.essentialExpenses,
+        } : undefined;
+        await processResponseForGoals(adaptiveAsk || action.text, addNewGoal, userId !== 'guest' ? userId : undefined, token, undefined, financialProfile);
         
         // Only dispatch SEND_ASKED if streaming produced nothing
         // The streamed content is already in the UI via STREAM_DELTA
