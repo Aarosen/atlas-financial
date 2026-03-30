@@ -1777,7 +1777,17 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       {/* Render sidebar and conversation together for authenticated users */}
       {user && st.scr === 'conversation' && (
         <div style={{ display: 'flex', height: '100vh' }}>
-          <div style={{ width: '280px', borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'var(--bg-secondary)' }}>
+          {/* Mobile hamburger button */}
+          <button
+            onClick={() => setShowSidebar(s => !s)}
+            className="md:hidden fixed top-4 left-4 z-50 p-2 rounded-lg hover:bg-gray-100 dark:hover:bg-gray-700"
+            aria-label="Toggle sidebar"
+          >
+            ☰
+          </button>
+          
+          {/* Sidebar - hidden on mobile, visible on md+ screens */}
+          <div className={`${showSidebar ? 'flex' : 'hidden'} md:flex w-[280px] flex-shrink-0 border-r border-slate-200 dark:border-slate-700 overflow-y-auto bg-slate-50 dark:bg-slate-900`} style={{ borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'var(--bg-secondary)' }}>
             <ConversationSidebar
               currentSessionId={currentSessionId}
               onSelectSession={handleSelectSession}

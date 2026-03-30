@@ -62,6 +62,7 @@ export function useAuth() {
             console.warn('[auth] Token refresh failed, clearing session');
             clearStoredSession();
             setSession(null);
+            setError('Your session expired. Please sign in again.');
           }
         } catch (err) {
           console.error('[auth] Error refreshing token:', err);

@@ -56,8 +56,7 @@ export async function PATCH(req: NextRequest) {
       .from('user_actions')
       .update({
         status,
-        ...(status === 'completed' && { completed_at: new Date().toISOString() }),
-        ...(status === 'dismissed' && { dismissed_at: new Date().toISOString() }),
+        ...(status === 'completed' && { completion_verified_at: new Date().toISOString() }),
       })
       .eq('id', actionId)
       .eq('user_id', user.id)

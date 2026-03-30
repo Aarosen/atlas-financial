@@ -107,7 +107,7 @@ export function ActionPipelineCard({
                       if (!onUpdateAction) return;
                       setUpdatingId(action.id);
                       try {
-                        await onUpdateAction(action.id, 'dismissed');
+                        await onUpdateAction(action.id, 'skipped');
                       } finally {
                         setUpdatingId(null);
                       }
@@ -115,7 +115,7 @@ export function ActionPipelineCard({
                     disabled={updatingId === action.id || isLoading}
                     className="text-xs px-2 py-1 bg-slate-100 text-slate-700 dark:bg-slate-700 dark:text-slate-200 rounded hover:bg-slate-200 dark:hover:bg-slate-600 disabled:opacity-50 font-medium transition-colors"
                   >
-                    {updatingId === action.id ? 'Dismissing...' : 'Dismiss'}
+                    {updatingId === action.id ? 'Skipping...' : 'Skip'}
                   </button>
                 </div>
               )}

@@ -19,6 +19,11 @@ export async function POST(request: NextRequest) {
       goal.goal_type = 'other';
     }
 
+    // Validate target_amount - must be a positive number
+    if (!goal.target_amount || isNaN(goal.target_amount) || goal.target_amount <= 0) {
+      goal.target_amount = 0;
+    }
+
     // Verify Bearer token for authenticated users
     const authHeader = request.headers.get('Authorization');
     if (userId && userId !== 'guest') {
@@ -57,12 +62,14 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Check if goal of this type already exists for this user
+    // Check if goal of this type with this description already exists for this user
+    // This allows multiple goals of the same type as long as they have different descriptions
     const { data: existing, error: checkError } = await supabase
       .from('user_goals')
       .select('id')
       .eq('user_id', userId)
       .eq('goal_type', goal.goal_type)
+      .eq('description', goal.description || '')
       .maybeSingle();
 
     if (checkError && checkError.code !== 'PGRST116') {
