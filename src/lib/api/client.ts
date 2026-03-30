@@ -522,7 +522,7 @@ export class ClaudeClient {
       if (v !== null && v >= 0) x.lowInterestDebt = v;
     }
 
-    if (/no\s+(?:debt|loan|credit)|(?:debt|loan).free|zero\s+debt/i.test(t)) {
+    if (/no\s+(?:debt|loan|credit)|(?:debt|loan).free|zero\s+debt|no\s+(?:debt|loans?|credit)\s+(?:at\s+all|whatsoever|period)/i.test(t)) {
       if (!('highInterestDebt' in x)) x.highInterestDebt = 0;
       if (!('lowInterestDebt' in x)) x.lowInterestDebt = 0;
     }
