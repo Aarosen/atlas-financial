@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import {
   generateDebtPayoffPipeline,
   generateEmergencyFundPipeline,
@@ -11,6 +12,7 @@ import {
 /**
  * API endpoint for managing action pipelines
  * Handles creation, retrieval, and progression of sequential actions
+ * SECURITY: Verifies Bearer token matches requested userId
  */
 export async function POST(request: NextRequest) {
   try {
@@ -22,6 +24,35 @@ export async function POST(request: NextRequest) {
         { ok: false, error: 'Missing userId or sessionId' },
         { status: 400 }
       );
+    }
+
+    // Verify Bearer token for authenticated users
+    const authHeader = request.headers.get('Authorization');
+    if (userId && userId !== 'guest') {
+      if (!authHeader?.startsWith('Bearer ')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const token = authHeader.slice(7);
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.warn('[actions] Supabase not configured');
+        // Continue without auth verification if Supabase not configured
+      } else {
+        const supabase = createClient(supabaseUrl, supabaseAnonKey);
+        const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+        if (authError || !user) {
+          return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+        }
+
+        // Verify the requested userId matches the authenticated user
+        if (userId !== user.id) {
+          return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+        }
+      }
     }
 
     // CREATE: Generate new pipeline based on goal
