@@ -275,6 +275,14 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     }
   }, [userId, loadMemory]);
 
+  // First-session onboarding: inject opening message if conversation is empty
+  useEffect(() => {
+    if (st.msgs.length === 0 && mounted && st.scr === 'conversation') {
+      const openingMessage = "Hi! I'm Atlas, your financial companion. I'm here to help you build a stronger financial foundation, one conversation at a time. What's on your mind financially right now?";
+      dispatch({ type: 'SEND_ASKED', text: openingMessage });
+    }
+  }, [st.msgs.length, mounted, st.scr]);
+
   // Auto-save conversation messages every 5 messages
   useEffect(() => {
     if (st.msgs.length > 0 && st.msgs.length % 5 === 0 && userId && userId !== 'guest') {
