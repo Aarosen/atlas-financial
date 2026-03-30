@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimitKv, getRateLimitHeaders } from '@/lib/api/rateLimitKv';
 
 /**
  * DELETE /api/auth/delete-account
  * Deletes user account and all associated data (GDPR/CCPA compliance)
  * Requires authentication token
+ * Rate limited: 3 requests per hour per userId
  */
 export async function POST(request: NextRequest) {
   try {
@@ -47,6 +49,27 @@ export async function POST(request: NextRequest) {
       return NextResponse.json(
         { error: 'Unauthorized' },
         { status: 401 }
+      );
+    }
+
+    // Apply rate limiting: 3 requests per hour per userId
+    const rateLimitKey = `delete-account:${userId}`;
+    const rateLimitResult = await checkRateLimitKv(rateLimitKey, 'delete-account');
+    
+    if (!rateLimitResult.allowed) {
+      const headers = getRateLimitHeaders(rateLimitResult);
+      const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+      
+      return NextResponse.json(
+        {
+          error: 'rate_limited',
+          message: `Account deletion is rate limited. Please try again in ${retryAfterSeconds} seconds.`,
+          retryAfter: retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers,
+        }
       );
     }
 

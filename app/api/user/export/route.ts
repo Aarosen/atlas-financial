@@ -1,10 +1,12 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { checkRateLimitKv, getRateLimitHeaders } from '@/lib/api/rateLimitKv';
 
 /**
  * GET /api/user/export
  * Exports all user data as JSON (GDPR right to data portability)
  * Requires authentication token
+ * Rate limited: 10 requests per hour per userId
  */
 export async function GET(request: NextRequest) {
   try {
@@ -42,6 +44,27 @@ export async function GET(request: NextRequest) {
     }
 
     const userId = user.id;
+
+    // Apply rate limiting: 10 requests per hour per userId
+    const rateLimitKey = `export:${userId}`;
+    const rateLimitResult = await checkRateLimitKv(rateLimitKey, 'export');
+    
+    if (!rateLimitResult.allowed) {
+      const headers = getRateLimitHeaders(rateLimitResult);
+      const retryAfterSeconds = Math.ceil((rateLimitResult.resetAt - Date.now()) / 1000);
+      
+      return NextResponse.json(
+        {
+          error: 'rate_limited',
+          message: `Data export is rate limited. Please try again in ${retryAfterSeconds} seconds.`,
+          retryAfter: retryAfterSeconds,
+        },
+        {
+          status: 429,
+          headers,
+        }
+      );
+    }
 
     // Fetch all user data
     const [
