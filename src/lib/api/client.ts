@@ -535,7 +535,7 @@ export class ClaudeClient {
     if (/no\s+savings?|zero\s+saved|nothing\s+saved/i.test(t)) x.totalSavings = 0;
 
     if (/stable|stability|secure|peace.of.mind/i.test(t)) x.primaryGoal = 'stability';
-    else if (/wealth|retire|financial.independence|FIRE|passive/i.test(t)) x.primaryGoal = 'wealth_building';
+    else if (/wealth|retire|financial.independence|fire|f\.i\.r\.e|passive|early.retire/i.test(t)) x.primaryGoal = 'wealth_building';
     else if (/grow|invest|returns|portfolio/i.test(t)) x.primaryGoal = 'growth';
     else if (/flexib|freedom|liquid/i.test(t)) x.primaryGoal = 'flexibility';
 
