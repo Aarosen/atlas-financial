@@ -22,6 +22,7 @@ import { detectAppropriateTone, generatePersonalityPrompt, injectPersonality } f
 import { buildToolkitContext } from '@/lib/ai/financialToolkit';
 import { atlasEvalMonitor } from '@/lib/monitoring/atlasEvalMonitor';
 import { maybeQueueFailureSample } from '@/lib/monitoring/failureSampler';
+import { captureException, captureMessage, addBreadcrumb, setUserContext } from '@/lib/monitoring/sentry';
 import { orchestrate } from '@/lib/ai/conversationOrchestrator';
 import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
 import { extractFinancialSnapshot } from '@/lib/ai/financialExtractor';
@@ -265,7 +266,8 @@ export async function POST(req: Request) {
   let body: any;
   try {
     body = await req.json();
-  } catch {
+  } catch (error) {
+    captureException(error, { context: 'chat_route_json_parse' });
     return jsonError(400, 'Invalid JSON body');
   }
 
@@ -285,11 +287,18 @@ export async function POST(req: Request) {
     sessionId?: string;
   };
 
+  // Set user context for error monitoring
+  if (userId && userId !== 'guest') {
+    setUserContext(userId);
+    addBreadcrumb(`Chat request from user ${userId}`, 'chat', 'info', { sessionId });
+  }
+
   // RATE LIMITING: Per-user limits (higher for authenticated users)
   // Use userId if available, otherwise use IP address
   const isAuthenticated = !!(userId && userId !== 'guest');
   const rateLimitIdentifier = isAuthenticated ? (userId as string) : ip;
   if (!checkRateLimit(rateLimitIdentifier, isAuthenticated)) {
+    captureMessage('Rate limit exceeded', 'warning', { userId, ip });
     return jsonError(429, 'Too many requests. Please wait a moment.');
   }
 
