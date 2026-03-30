@@ -142,7 +142,14 @@ export function CompanionDashboard({
         if (status === 'achieved') {
           try {
             const completedCount = goals.filter(g => g.status === 'achieved').length + 1;
-            await checkMilestonesAfterGoalUpdate(userId, 'achieved', completedCount, {});
+            const financialProfile = snapshot ? {
+              highInterestDebt: snapshot.high_interest_debt,
+              lowInterestDebt: snapshot.low_interest_debt,
+              totalSavings: snapshot.total_savings,
+              monthlyIncome: snapshot.monthly_income,
+              essentialExpenses: snapshot.essential_expenses,
+            } : undefined;
+            await checkMilestonesAfterGoalUpdate(userId, 'achieved', completedCount, financialProfile);
           } catch (milestoneError) {
             console.warn('[dashboard] Milestone check failed (non-fatal):', milestoneError);
           }

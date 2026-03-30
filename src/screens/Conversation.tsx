@@ -128,7 +128,6 @@ export function ConversationScreen({
   onLanguageChange?: (lang: SupportedLanguage) => void;
   hydrated?: boolean;
   inputEnabled?: boolean;
-  rateLimitRemaining?: number;
 }) {
   const lastUserIdx = (() => {
     for (let i = msgs.length - 1; i >= 0; i--) {
@@ -842,11 +841,6 @@ export function ConversationScreen({
             <div style={{ marginTop: 6, textAlign: 'center', fontSize: 11, color: 'var(--ink3)' }}>Enter to send • Shift+Enter for a new line</div>
           )}
           <div style={{ textAlign: 'center', fontSize: 10, color: 'var(--ink3)', marginTop: '8px', paddingBottom: '4px' }}>Messages you type may be sent to our AI provider to generate responses. Atlas only sends what you type for the current request.</div>
-          {rateLimitRemaining !== undefined && rateLimitRemaining >= 0 && (
-            <div style={{ textAlign: 'center', fontSize: 9, color: 'var(--ink3)', marginTop: '4px', paddingBottom: '2px' }}>
-              {rateLimitRemaining} messages remaining today
-            </div>
-          )}
         </div>
       </div>
     </div>

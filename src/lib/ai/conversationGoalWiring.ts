@@ -15,7 +15,8 @@ export async function processResponseForGoals(
   addNewGoal: (goal: FinancialGoal) => void,
   userId?: string,
   token?: string,
-  apiKey?: string
+  apiKey?: string,
+  financialProfile?: Record<string, any>
 ): Promise<void> {
   try {
     // Use regex-based detection (fast fallback) instead of AI extraction
@@ -56,7 +57,7 @@ export async function processResponseForGoals(
 
           // Gap 2a: Check for milestones after successful goal creation
           try {
-            await checkMilestonesAfterGoalCreation(userId, detectedGoals.length, {});
+            await checkMilestonesAfterGoalCreation(userId, detectedGoals.length, financialProfile);
           } catch (milestoneError) {
             console.warn('[goal-wiring] Milestone check failed (non-fatal):', milestoneError);
           }
