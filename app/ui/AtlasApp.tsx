@@ -1470,6 +1470,16 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             onDismiss={() => setPendingActionCompletion(null)}
           />
         )}
+        {/* FIX 7: Milestone celebration UI */}
+        {milestonesToCelebrate.length > 0 && (
+          <div className="fixed bottom-6 left-1/2 -translate-x-1/2 z-50 flex flex-col gap-2 items-center">
+            {milestonesToCelebrate.map((m: any, i: number) => (
+              <div key={i} className="bg-green-500 text-white px-6 py-3 rounded-2xl shadow-lg text-sm font-medium animate-bounce">
+                🎉 {m.message || m.title || 'Milestone reached!'}
+              </div>
+            ))}
+          </div>
+        )}
         <ConversationScreen
           inputEnabled={mounted}
           theme={theme ?? 'dark'}

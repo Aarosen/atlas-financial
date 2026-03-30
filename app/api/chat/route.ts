@@ -1117,7 +1117,9 @@ Return ONLY the rewritten text.`;
                       // Extract incoming auth header to forward to /api/actions/save
                       const incomingAuth = req.headers.get('Authorization');
                       
-                      await fetch('/api/actions/save', {
+                      // FIX 5: Use full URL with NEXT_PUBLIC_APP_URL for Edge Runtime compatibility
+                      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://atlas-financial.vercel.app';
+                      await fetch(`${appUrl}/api/actions/save`, {
                         method: 'POST',
                         headers: {
                           'Content-Type': 'application/json',
