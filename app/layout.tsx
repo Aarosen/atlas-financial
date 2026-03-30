@@ -6,6 +6,7 @@ import NavBar from './ui/NavBar';
 import Footer from './ui/Footer';
 import PageTransition from './ui/PageTransition';
 import { UserProvider } from '@/lib/auth/userProvider';
+import { ClientInitializer } from './ui/ClientInitializer';
 
 const inter = Inter({ subsets: ['latin'], variable: '--font-inter', display: 'swap' });
 const sora = Sora({ subsets: ['latin'], variable: '--font-sora', display: 'swap' });
@@ -41,6 +42,7 @@ export default function RootLayout({ children }: { children: ReactNode }) {
       </head>
       <body className={`${inter.variable} ${sora.variable}`}>
         <UserProvider>
+          <ClientInitializer />
           <header role="banner" style={{ display: 'contents' }}>
             <NavBar />
           </header>

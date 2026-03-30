@@ -8,7 +8,7 @@ import { createSessionSnapshot } from '@/lib/db/supabaseIntegration';
  */
 export function useSessionFinalization() {
   const finalizeSession = useCallback(
-    async (userId: string | null, sessionId: string | null, conversationText: string, financialData: Record<string, any>) => {
+    async (userId: string | null, sessionId: string | null, conversationText: string, financialData: Record<string, any>, token?: string) => {
       if (!userId || !sessionId) {
         return;
       }
@@ -20,6 +20,11 @@ export function useSessionFinalization() {
           conversationText,
           financialData,
         });
+
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (token && userId !== 'guest') {
+          headers['Authorization'] = `Bearer ${token}`;
+        }
 
         // Try sendBeacon first (reliable on unload), fall back to fetch for normal flow
         if (navigator.sendBeacon) {
@@ -37,7 +42,7 @@ export function useSessionFinalization() {
         // Fallback to fetch for normal navigation
         const response = await fetch('/api/chat/finalize', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: payload,
           // Use keepalive to ensure request completes even if page unloads
           keepalive: true,

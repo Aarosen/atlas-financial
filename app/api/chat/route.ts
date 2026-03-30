@@ -41,6 +41,7 @@ import {
 import { injectNudgeIfAppropriate } from '@/lib/notifications/nudgeInjection';
 import { loadUserContext } from '@/lib/db/userContext';
 import { initializeConversationSession } from '@/lib/db/supabaseIntegration';
+import { applyRateLimit } from './rateLimitMiddleware';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
@@ -311,8 +312,17 @@ export async function POST(req: Request) {
   // Use userId if available, otherwise use IP address
   const isAuthenticated = !!(userId && userId !== 'guest');
   const rateLimitIdentifier = isAuthenticated ? (userId as string) : ip;
+  
+  // Check distributed KV rate limit first (persists across cold starts)
+  const kvRateLimitResult = await applyRateLimit(req, rateLimitIdentifier);
+  if (!kvRateLimitResult.allowed && kvRateLimitResult.response) {
+    captureMessage('Rate limit exceeded (KV)', 'warning', { userId, ip });
+    return kvRateLimitResult.response;
+  }
+  
+  // Fall back to in-memory check as fast pre-check
   if (!checkRateLimit(rateLimitIdentifier, isAuthenticated)) {
-    captureMessage('Rate limit exceeded', 'warning', { userId, ip });
+    captureMessage('Rate limit exceeded (in-memory)', 'warning', { userId, ip });
     return jsonError(429, 'Too many requests. Please wait a moment.');
   }
 

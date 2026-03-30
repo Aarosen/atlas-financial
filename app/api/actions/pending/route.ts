@@ -6,9 +6,20 @@ import { createClient } from '@supabase/supabase-js';
  * Called on session start to show ActionCompletionCard if user has overdue actions
  * SECURITY: Verifies Bearer token matches requested userId
  */
-export async function POST(request: NextRequest) {
+async function handlePendingActionsRequest(request: NextRequest, isGet: boolean = false) {
   try {
-    const { userId, sessionId } = await request.json();
+    let userId: string | null = null;
+    let sessionId: string | null = null;
+
+    if (isGet) {
+      const { searchParams } = new URL(request.url);
+      userId = searchParams.get('userId');
+      sessionId = searchParams.get('sessionId');
+    } else {
+      const body = await request.json();
+      userId = body.userId;
+      sessionId = body.sessionId;
+    }
 
     // Verify Bearer token for authenticated users
     const authHeader = request.headers.get('Authorization');
@@ -113,4 +124,12 @@ export async function POST(request: NextRequest) {
       { status: 200 }
     );
   }
+}
+
+export async function GET(request: NextRequest) {
+  return handlePendingActionsRequest(request, true);
+}
+
+export async function POST(request: NextRequest) {
+  return handlePendingActionsRequest(request, false);
 }

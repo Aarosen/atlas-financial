@@ -40,6 +40,9 @@ import { ProgressDisplay } from '@/components/ProgressDisplay';
 import { processResponseForGoals } from '@/lib/ai/conversationGoalWiring';
 import { OnboardingModal } from '@/components/OnboardingModal';
 import { hasCompletedOnboarding, markOnboardingComplete } from '@/lib/onboarding/onboardingFlow';
+import { ConversationSidebar } from '@/components/ConversationSidebar';
+import { CompanionDashboard } from '@/components/CompanionDashboard';
+import { useConversationMemory } from '@/lib/memory/useConversationMemory';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -88,6 +91,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [showProgress, setShowProgress] = useState(false);
   const [currentMission, setCurrentMission] = useState<{ text: string; daysUntilCheckIn: number } | null>(null);
   const [showOnboarding, setShowOnboarding] = useState(false);
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(null);
+  const token = authSession?.accessToken || '';
+  const { memory, loadMemory, saveMemory } = useConversationMemory(userId || 'guest', sessionId || '');
   const voice = useMemo(
     () =>
       createVoice({
@@ -209,18 +215,44 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     claude.setUserContext(userId !== 'guest' ? userId : null, sessionId);
   }, [claude, userId, sessionId]);
 
+  // Load conversation memory for authenticated users
+  useEffect(() => {
+    if (userId && userId !== 'guest') {
+      loadMemory();
+    }
+  }, [userId, loadMemory]);
+
+  // Auto-save conversation messages every 5 messages
+  useEffect(() => {
+    if (st.msgs.length > 0 && st.msgs.length % 5 === 0 && userId && userId !== 'guest') {
+      saveMemory(st.msgs, { primaryGoal: st.fin?.primaryGoal, financialSnapshot: st.fin });
+    }
+  }, [st.msgs.length, userId, st.fin, saveMemory]);
+
+  // Handler for loading a session from the sidebar
+  const handleSelectSession = useCallback((sessionId: string, messages?: any[]) => {
+    if (messages && messages.length > 0) {
+      const formattedMessages = messages.map((m: any) => ({
+        r: m.role === 'user' ? ('u' as const) : ('a' as const),
+        t: m.content,
+      }));
+      dispatch({ type: 'LOAD_SESSION', messages: formattedMessages });
+    }
+    setCurrentSessionId(sessionId);
+  }, [dispatch]);
+
   // Finalize session when leaving conversation
   useEffect(() => {
     const handleBeforeUnload = () => {
       if (userId !== 'guest' && sessionId && st.msgs.length > 0) {
         const conversationText = st.msgs.map((m) => `${m.r === 'u' ? 'User' : 'Atlas'}: ${m.t}`).join('\n');
-        finalizeSession(userId, sessionId, conversationText, st.fin);
+        finalizeSession(userId, sessionId, conversationText, st.fin, token);
       }
     };
 
     window.addEventListener('beforeunload', handleBeforeUnload);
     return () => window.removeEventListener('beforeunload', handleBeforeUnload);
-  }, [userId, sessionId, st.msgs, st.fin, finalizeSession]);
+  }, [userId, sessionId, st.msgs, st.fin, finalizeSession, token]);
 
   const updateInput = useCallback(
     (text: string) => {
@@ -1551,6 +1583,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           </div>
         </div>
       </div>
+    ) : user ? (
+      <div style={{ minHeight: '100dvh', padding: 'var(--padY) var(--padX)', background: 'var(--bg)' }}>
+        <CompanionDashboard userId={userId} token={token} />
+      </div>
     ) : (
       <DashboardScreen
         theme={theme ?? 'dark'}
@@ -1687,7 +1723,28 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
       {st.scr === 'landing' && <LandingScreen theme={theme ?? 'dark'} onToggleTheme={toggleTheme} onStart={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} />}
 
-      <div style={{ display: talkVisible ? 'block' : 'none' }}>{renderTalkStack(talkScr)}</div>
+      {/* Render sidebar and conversation together for authenticated users */}
+      {user && st.scr === 'conversation' && (
+        <div style={{ display: 'flex', height: '100vh' }}>
+          <div style={{ width: '280px', borderRight: '1px solid var(--border)', overflowY: 'auto', background: 'var(--bg-secondary)' }}>
+            <ConversationSidebar
+              currentSessionId={currentSessionId}
+              onSelectSession={handleSelectSession}
+              onNewConversation={() => dispatch({ type: 'NEW_CONVERSATION' })}
+              userId={userId}
+              token={token}
+            />
+          </div>
+          <div style={{ flex: 1, display: 'flex', flexDirection: 'column' }}>
+            {renderTalkStack(talkScr)}
+          </div>
+        </div>
+      )}
+
+      {/* Render conversation without sidebar for guests or non-conversation screens */}
+      {(!user || st.scr !== 'conversation') && (
+        <div style={{ display: talkVisible ? 'block' : 'none' }}>{renderTalkStack(talkScr)}</div>
+      )}
 
       {showTabs ? (
         <>

@@ -35,6 +35,8 @@ export type ConversationEvent =
   | { type: 'HYDRATE_BASELINE'; baseline: Strategy | null }
   | { type: 'SET_MODE'; mode: AtlasMode }
   | { type: 'RESTORE'; state: ConversationState }
+  | { type: 'LOAD_SESSION'; messages: ChatMessage[] }
+  | { type: 'NEW_CONVERSATION' }
   | { type: 'SEND_START'; text: string }
   | { type: 'STREAM_START' }
   | { type: 'STREAM_DELTA'; delta: string }
@@ -230,6 +232,23 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
         busy: false,
         streaming: false,
         apiErr: ev.err,
+      };
+
+    case 'LOAD_SESSION':
+      return {
+        ...state,
+        msgs: ev.messages,
+        streaming: false,
+        busy: false,
+      };
+
+    case 'NEW_CONVERSATION':
+      return {
+        ...state,
+        msgs: [createInitialAssistantMessage('en')],
+        inp: '',
+        streaming: false,
+        busy: false,
       };
 
     case 'RESET':

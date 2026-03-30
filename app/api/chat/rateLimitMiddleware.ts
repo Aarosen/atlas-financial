@@ -1,4 +1,4 @@
-import { NextRequest, NextResponse } from 'next/server';
+import { NextResponse } from 'next/server';
 import { checkRateLimitKv, getRateLimitHeaders } from '@/lib/api/rateLimitKv';
 
 /**
@@ -6,7 +6,7 @@ import { checkRateLimitKv, getRateLimitHeaders } from '@/lib/api/rateLimitKv';
  * Uses Vercel KV for distributed rate limiting
  */
 export async function applyRateLimit(
-  request: NextRequest,
+  request: Request,
   identifier: string
 ): Promise<{ allowed: boolean; response?: NextResponse }> {
   try {
