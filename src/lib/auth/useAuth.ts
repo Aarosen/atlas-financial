@@ -35,7 +35,7 @@ export function useAuth() {
     initAuth();
   }, []);
 
-  // Fix C: Token refresh monitoring - check expiry every 5 minutes
+  // Fix C & 7: Token refresh monitoring - check expiry every 5 minutes
   useEffect(() => {
     if (!session) return;
 
@@ -43,8 +43,8 @@ export function useAuth() {
       const now = Date.now();
       const timeUntilExpiry = session.expiresAt - now;
       
-      // If token expires within 5 minutes, attempt refresh
-      if (timeUntilExpiry > 0 && timeUntilExpiry < 5 * 60 * 1000) {
+      // If token expires within 5 minutes OR is already expired, attempt refresh
+      if (timeUntilExpiry < 5 * 60 * 1000) {
         try {
           const response = await fetch('/api/auth/refresh', {
             method: 'POST',
@@ -67,13 +67,6 @@ export function useAuth() {
           console.error('[auth] Error refreshing token:', err);
           // On network error, keep session but log the issue
         }
-      }
-      
-      // If token already expired, clear session
-      if (timeUntilExpiry <= 0) {
-        console.warn('[auth] Token expired, clearing session');
-        clearStoredSession();
-        setSession(null);
       }
     };
 

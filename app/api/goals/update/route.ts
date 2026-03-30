@@ -56,8 +56,7 @@ export async function PATCH(req: NextRequest) {
       .from('user_goals')
       .update({
         status,
-        updated_at: new Date().toISOString(),
-        ...(status === 'completed' && { achieved_at: new Date().toISOString() }),
+        ...(status === 'achieved' && { achieved_at: new Date().toISOString() }),
       })
       .eq('id', goalId)
       .eq('user_id', user.id)

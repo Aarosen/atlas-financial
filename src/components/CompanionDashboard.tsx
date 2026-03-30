@@ -112,6 +112,36 @@ export function CompanionDashboard({
     }
   };
 
+  const handleGoalUpdate = async (goalId: string, status: string) => {
+    try {
+      const headers: Record<string, string> = {
+        'Content-Type': 'application/json',
+      };
+
+      if (token) {
+        headers['Authorization'] = `Bearer ${token}`;
+      }
+
+      const response = await fetch('/api/goals/update', {
+        method: 'PATCH',
+        headers,
+        body: JSON.stringify({
+          goalId,
+          status,
+        }),
+      });
+
+      if (response.ok) {
+        // Reload dashboard data to reflect updated goal
+        await loadDashboardData();
+      } else {
+        console.error('Error updating goal:', response.statusText);
+      }
+    } catch (error) {
+      console.error('Error updating goal:', error);
+    }
+  };
+
   if (isLoading || dashboardLoading) {
     return (
       <div className="space-y-4 p-4">
@@ -157,7 +187,7 @@ export function CompanionDashboard({
 
       {/* Goal Tracking */}
       {goals.length > 0 && (
-        <GoalTrackingCard goals={goals} />
+        <GoalTrackingCard goals={goals} onGoalUpdate={handleGoalUpdate} />
       )}
 
       {/* Empty State */}

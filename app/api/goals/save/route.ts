@@ -58,12 +58,13 @@ export async function POST(request: NextRequest) {
         {
           user_id: userId,
           goal_type: goal.goal_type,
+          goal_label: goal.goal_label || goal.title,
           description: goal.description,
           target_amount: goal.target_amount,
+          starting_amount: 0,
           target_date: goal.target_date,
           status: goal.status || 'active',
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         },
         { onConflict: 'user_id,goal_type,description' }
       );

@@ -10,7 +10,7 @@ interface Goal {
   currentAmount?: number;
   deadline?: string;
   priority?: 'critical' | 'high' | 'medium' | 'low';
-  status?: 'active' | 'completed' | 'paused';
+  status?: 'active' | 'achieved' | 'paused' | 'abandoned';
 }
 
 interface GoalTrackingCardProps {
@@ -134,14 +134,14 @@ export function GoalTrackingCard({
               )}
 
               {/* Goal Actions */}
-              {goal.status !== 'completed' && (
+              {goal.status !== 'achieved' && goal.status !== 'abandoned' && (
                 <div className="flex gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
                   <button
                     onClick={async () => {
                       if (!onGoalUpdate) return;
                       setUpdatingGoalId(goal.id);
                       try {
-                        await onGoalUpdate(goal.id, 'completed');
+                        await onGoalUpdate(goal.id, 'achieved');
                       } finally {
                         setUpdatingGoalId(null);
                       }
@@ -170,9 +170,9 @@ export function GoalTrackingCard({
               )}
 
               {/* Completed Badge */}
-              {goal.status === 'completed' && (
+              {goal.status === 'achieved' && (
                 <div className="flex items-center gap-2 mt-3 pt-3 border-t border-slate-100 dark:border-slate-700">
-                  <span className="text-xs font-semibold text-green-600 dark:text-green-400">✓ Completed</span>
+                  <span className="text-xs font-semibold text-green-600 dark:text-green-400">✓ Achieved</span>
                 </div>
               )}
             </div>
