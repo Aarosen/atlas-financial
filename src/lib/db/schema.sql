@@ -64,6 +64,7 @@ CREATE TABLE IF NOT EXISTS user_actions (
   user_reported_outcome TEXT,
   actual_amount NUMERIC,
   impact_per_month NUMERIC,
+  email_notifications BOOLEAN DEFAULT true,
   created_at TIMESTAMPTZ DEFAULT NOW(),
   updated_at TIMESTAMPTZ DEFAULT NOW()
 );
@@ -90,6 +91,7 @@ CREATE TABLE IF NOT EXISTS user_goals (
   user_id UUID REFERENCES auth.users(id) ON DELETE CASCADE NOT NULL,
   goal_type TEXT NOT NULL CHECK (goal_type IN ('emergency_fund','debt_payoff','savings_target','invest_start','other')),
   goal_label TEXT,
+  description TEXT,
   target_amount NUMERIC NOT NULL,
   starting_amount NUMERIC NOT NULL,
   current_amount NUMERIC,

@@ -1,39 +1,36 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { kv } from '@vercel/kv';
 
-// In-memory rate limit store for magic-link requests (email-based)
-// Maps email -> { count: number; resetAt: number }
-const magicLinkRateLimit = new Map<string, { count: number; resetAt: number }>();
 const MAX_MAGIC_LINKS_PER_HOUR = 3;
-const HOUR_IN_MS = 60 * 60 * 1000;
+const HOUR_IN_SECONDS = 60 * 60;
 
 /**
- * Check if email has exceeded magic link rate limit
+ * Check if email has exceeded magic link rate limit using Vercel KV
+ * KV is persistent and shared across all Vercel instances
  */
-function checkMagicLinkRateLimit(email: string): { allowed: boolean; resetAt?: number } {
-  const now = Date.now();
-  const entry = magicLinkRateLimit.get(email);
-
-  if (!entry) {
-    // First request for this email
-    magicLinkRateLimit.set(email, { count: 1, resetAt: now + HOUR_IN_MS });
+async function checkMagicLinkRateLimit(email: string): Promise<{ allowed: boolean; resetAt?: number }> {
+  try {
+    const key = `magic_link_rl:${email.toLowerCase()}`;
+    const count = await kv.incr(key);
+    
+    // Set TTL on first request
+    if (count === 1) {
+      await kv.expire(key, HOUR_IN_SECONDS);
+    }
+    
+    if (count > MAX_MAGIC_LINKS_PER_HOUR) {
+      const ttl = await kv.ttl(key);
+      const resetAt = Date.now() + (ttl * 1000);
+      return { allowed: false, resetAt };
+    }
+    
+    return { allowed: true };
+  } catch (error) {
+    console.error('[magic-link] KV rate limit error:', error);
+    // Fail open - allow request if KV fails
     return { allowed: true };
   }
-
-  if (now > entry.resetAt) {
-    // Hour has passed, reset counter
-    magicLinkRateLimit.set(email, { count: 1, resetAt: now + HOUR_IN_MS });
-    return { allowed: true };
-  }
-
-  // Still within the hour window
-  if (entry.count >= MAX_MAGIC_LINKS_PER_HOUR) {
-    return { allowed: false, resetAt: entry.resetAt };
-  }
-
-  // Increment counter
-  entry.count++;
-  return { allowed: true };
 }
 
 /**
@@ -53,8 +50,8 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // Check rate limit for this email
-    const rateLimitCheck = checkMagicLinkRateLimit(email.toLowerCase());
+    // Check rate limit for this email (using KV for distributed rate limiting)
+    const rateLimitCheck = await checkMagicLinkRateLimit(email.toLowerCase());
     if (!rateLimitCheck.allowed) {
       const secondsUntilReset = Math.ceil((rateLimitCheck.resetAt! - Date.now()) / 1000);
       return NextResponse.json(
