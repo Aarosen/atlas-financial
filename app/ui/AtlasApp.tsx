@@ -38,6 +38,8 @@ import { AuthPromptCard } from '@/components/AuthPromptCard';
 import { ActionCompletionCard } from '@/components/ActionCompletionCard';
 import { ProgressDisplay } from '@/components/ProgressDisplay';
 import { processResponseForGoals } from '@/lib/ai/conversationGoalWiring';
+import { OnboardingModal } from '@/components/OnboardingModal';
+import { hasCompletedOnboarding, markOnboardingComplete } from '@/lib/onboarding/onboardingFlow';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -85,6 +87,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [daysSinceLast, setDaysSinceLast] = useState(0);
   const [showProgress, setShowProgress] = useState(false);
   const [currentMission, setCurrentMission] = useState<{ text: string; daysUntilCheckIn: number } | null>(null);
+  const [showOnboarding, setShowOnboarding] = useState(false);
   const voice = useMemo(
     () =>
       createVoice({
@@ -110,13 +113,26 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   }, [literacyLevel, responsePref]);
 
   // TASK 1.4 PART B: Initialize theme from localStorage with system preference fallback
-  const [theme, setTheme] = useState<'light' | 'dark'>(() => {
-    if (typeof window === 'undefined') return 'light';
+  // Use null initially to avoid hydration mismatch, then set from useEffect
+  const [theme, setTheme] = useState<'light' | 'dark' | null>(null);
+
+  useEffect(() => {
     const saved = localStorage.getItem('atlas_theme');
-    if (saved === 'light' || saved === 'dark') return saved;
+    if (saved === 'light' || saved === 'dark') {
+      setTheme(saved);
+      return;
+    }
     // Check system preference if no saved choice
-    return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
-  });
+    const isDark = window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches;
+    setTheme(isDark ? 'dark' : 'light');
+  }, []);
+
+  // Check if user has completed onboarding
+  useEffect(() => {
+    if (!hasCompletedOnboarding()) {
+      setShowOnboarding(true);
+    }
+  }, []);
 
   // TASK 1.4 PART C: Three-state theme toggle (light → dark → system)
   const toggleTheme = () => {
@@ -457,7 +473,6 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   useEffect(() => {
     if (authLoading) return;
     if (userId === 'guest') return; // Only for authenticated users
-    if (st.scr !== 'conversation') return;
     if (st.msgs.length > 0) return; // Only on session start (no messages yet)
 
     // Fetch progress data from backend
@@ -650,6 +665,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   // TASK 1.4 PART B: Update theme in DOM and localStorage
   useEffect(() => {
+    if (!theme) return; // Don't update until theme is initialized
     document.documentElement.setAttribute('data-theme', theme);
     db.set('prefs', { k: 'theme', v: theme }).catch(() => {});
     try {
@@ -1398,7 +1414,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         )}
         <ConversationScreen
           inputEnabled={mounted}
-          theme={theme}
+          theme={theme ?? 'dark'}
           onToggleTheme={toggleTheme}
           apiErr={st.apiErr}
           apiStatus={apiStatus}
@@ -1474,7 +1490,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       {st.baseline && (
         <div style={{ display: scr === 'summary' ? 'block' : 'none' }}>
           <SummaryScreen
-            theme={theme}
+            theme={theme ?? 'dark'}
             onToggleTheme={toggleTheme}
             apiErr={st.apiErr}
             apiStatus={claude.status}
@@ -1490,7 +1506,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       {st.baseline && (
         <div style={{ display: scr === 'tier' ? 'block' : 'none' }}>
           <TierRevealScreen
-            theme={theme}
+            theme={theme ?? 'dark'}
             onToggleTheme={toggleTheme}
             apiErr={st.apiErr}
             apiStatus={claude.status}
@@ -1529,7 +1545,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       </div>
     ) : (
       <DashboardScreen
-        theme={theme}
+        theme={theme ?? 'dark'}
         onToggleTheme={toggleTheme}
         apiErr={st.apiErr}
         apiStatus={apiStatus}
@@ -1567,7 +1583,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     if (st.scr === 'strategy') {
       return (
         <StrategyScreen
-          theme={theme}
+          theme={theme ?? 'dark'}
           onToggleTheme={toggleTheme}
           apiErr={st.apiErr}
           apiStatus={claude.status}
@@ -1580,7 +1596,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     }
     return (
       <PlanScreen
-        theme={theme}
+        theme={theme ?? 'dark'}
         onToggleTheme={toggleTheme}
         apiErr={st.apiErr}
         apiStatus={claude.status}
@@ -1592,7 +1608,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   const renderSettings = () => (
     <SettingsScreen
-      theme={theme}
+      theme={theme ?? 'dark'}
       onToggleTheme={toggleTheme}
       apiErr={st.apiErr}
       apiStatus={claude.status}
@@ -1652,7 +1668,16 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       data-mounted={mounted ? 'true' : 'false'}
       style={{ minHeight: '100vh', background: 'var(--bg)' }}
     >
-      {st.scr === 'landing' && <LandingScreen theme={theme} onToggleTheme={toggleTheme} onStart={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} />}
+      {showOnboarding && (
+        <OnboardingModal
+          onComplete={() => {
+            markOnboardingComplete();
+            setShowOnboarding(false);
+          }}
+        />
+      )}
+
+      {st.scr === 'landing' && <LandingScreen theme={theme ?? 'dark'} onToggleTheme={toggleTheme} onStart={() => dispatch({ type: 'NAVIGATE', scr: 'conversation' })} />}
 
       <div style={{ display: talkVisible ? 'block' : 'none' }}>{renderTalkStack(talkScr)}</div>
 

@@ -4,24 +4,32 @@ import { createClient } from '@supabase/supabase-js';
 /**
  * API endpoint for fetching user's action pipeline
  * Called to populate action pipeline visualization
+ * SECURITY: Verifies session token matches requested userId
  */
 export async function GET(request: NextRequest) {
   try {
     const { searchParams } = new URL(request.url);
-    const userId = searchParams.get('userId');
-    const status = searchParams.get('status'); // 'recommended', 'committed', 'completed', etc.
+    const userIdParam = searchParams.get('userId');
+    const statusParam = searchParams.get('status'); // 'recommended', 'committed', 'completed', etc.
 
-    if (!userId || userId === 'guest') {
-      return NextResponse.json(
-        { ok: true, actions: [] },
-        { status: 200 }
-      );
+    // Verify session token
+    const authHeader = request.headers.get('authorization');
+    if (!authHeader?.startsWith('Bearer ')) {
+      // Allow guest access without token
+      if (!userIdParam || userIdParam === 'guest') {
+        return NextResponse.json(
+          { ok: true, actions: [] },
+          { status: 200 }
+        );
+      }
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
 
+    const token = authHeader.slice(7);
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
-    const supabaseKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+    const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
 
-    if (!supabaseUrl || !supabaseKey) {
+    if (!supabaseUrl || !supabaseAnonKey) {
       console.warn('[actions] Supabase not configured');
       return NextResponse.json(
         { ok: true, actions: [] },
@@ -29,17 +37,48 @@ export async function GET(request: NextRequest) {
       );
     }
 
-    const supabase = createClient(supabaseUrl, supabaseKey);
+    const supabase = createClient(supabaseUrl, supabaseAnonKey);
+    const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+    if (authError || !user) {
+      return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+    }
+
+    // Verify the requested userId matches the authenticated user
+    if (userIdParam && userIdParam !== user.id) {
+      return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+    }
+
+    const requestedUserId = user.id;
+    if (!requestedUserId || requestedUserId === 'guest') {
+      return NextResponse.json(
+        { ok: true, actions: [] },
+        { status: 200 }
+      );
+    }
+
+    const supabaseServiceUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+    const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+    if (!supabaseServiceUrl || !supabaseServiceKey) {
+      console.warn('[actions] Supabase not configured');
+      return NextResponse.json(
+        { ok: true, actions: [] },
+        { status: 200 }
+      );
+    }
+
+    const supabaseService = createClient(supabaseServiceUrl, supabaseServiceKey);
 
     // Build query
-    let query = supabase
+    let query = supabaseService
       .from('user_actions')
       .select('id, action_text, status, check_in_due_at, target_amount, target_frequency, recommended_at, committed_at, completion_verified_at')
-      .eq('user_id', userId);
+      .eq('user_id', requestedUserId);
 
     // Filter by status if provided
-    if (status) {
-      query = query.eq('status', status);
+    if (statusParam && typeof statusParam === 'string') {
+      query = query.eq('status', statusParam);
     } else {
       // Default: show recommended and committed actions
       query = query.in('status', ['recommended', 'committed']);
