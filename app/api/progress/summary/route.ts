@@ -13,10 +13,43 @@ interface ProgressSnapshot {
  * API endpoint for fetching user progress summary
  * Called on session start to show returning users their progress
  * Closes the marathon gap by displaying concrete progress over time
+ * SECURITY: Verifies Bearer token matches requested userId
  */
 export async function POST(request: NextRequest) {
   try {
     const { userId, sessionId } = await request.json();
+
+    // Verify Bearer token for authenticated users
+    const authHeader = request.headers.get('Authorization');
+    if (userId && userId !== 'guest') {
+      if (!authHeader?.startsWith('Bearer ')) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      const token = authHeader.slice(7);
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseAnonKey = process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY;
+
+      if (!supabaseUrl || !supabaseAnonKey) {
+        console.warn('[progress] Supabase not configured');
+        return NextResponse.json(
+          { ok: true, snapshots: [], daysSinceLast: 0 },
+          { status: 200 }
+        );
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseAnonKey);
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+      if (authError || !user) {
+        return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
+      }
+
+      // Verify the requested userId matches the authenticated user
+      if (userId !== user.id) {
+        return NextResponse.json({ error: 'Forbidden' }, { status: 403 });
+      }
+    }
 
     if (!userId || userId === 'guest') {
       return NextResponse.json(
