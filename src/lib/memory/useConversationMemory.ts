@@ -15,7 +15,7 @@ interface ConversationMemory {
   };
 }
 
-export function useConversationMemory(userId: string, sessionId: string) {
+export function useConversationMemory(userId: string, sessionId: string, accessToken?: string) {
   const [memory, setMemory] = useState<ConversationMemory | null>(null);
   const [isLoading, setIsLoading] = useState(false);
   const [isLoaded, setIsLoaded] = useState(false);
@@ -29,17 +29,22 @@ export function useConversationMemory(userId: string, sessionId: string) {
 
     setIsLoading(true);
     try {
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+      if (accessToken) {
+        headers['Authorization'] = `Bearer ${accessToken}`;
+      }
+
       const response = await fetch(
         `/api/memory/load?userId=${encodeURIComponent(userId)}&sessionId=${encodeURIComponent(sessionId)}`,
         {
           method: 'GET',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
         }
       );
 
       if (response.ok) {
         const data = await response.json();
-        setMemory(data.memory);
+        setMemory(data);
       }
     } catch (error) {
       console.error('Error loading conversation memory:', error);
@@ -47,7 +52,7 @@ export function useConversationMemory(userId: string, sessionId: string) {
       setIsLoading(false);
       setIsLoaded(true);
     }
-  }, [userId, sessionId]);
+  }, [userId, sessionId, accessToken]);
 
   // Save conversation memory to Supabase
   const saveMemory = useCallback(

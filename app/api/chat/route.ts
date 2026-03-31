@@ -725,7 +725,7 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
           'Content-Type': 'text/event-stream; charset=utf-8',
           'Cache-Control': 'no-cache, no-transform',
           Connection: 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': 'https://atlas-financial.vercel.app',
         },
       });
     }
@@ -1044,6 +1044,7 @@ Return ONLY the rewritten text.`;
       const promptSections: string[] = [
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
         sessionStateBlock,           // ← Always included, never trimmed (position 1)
+        ...(priorContextBlock ? [priorContextBlock] : []), // ← PRIOR CONTEXT = cross-device memory from Supabase
         ...(companionContext ? [companionContext] : []), // ← COMPANION CONTEXT = injected after session state
         ...(multiGoalContext ? [multiGoalContext] : []), // ← MULTI-GOAL CONTEXT = injected after companion context
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← SECOND = always preserved before other sections get trimmed

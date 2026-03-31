@@ -97,7 +97,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [showSidebar, setShowSidebar] = useState(true);
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number | undefined>(undefined);
   const token = authSession?.accessToken || '';
-  const { memory, loadMemory, saveMemory, isLoaded } = useConversationMemory(userId || 'guest', sessionId || '');
+  const { memory, loadMemory, saveMemory, isLoaded } = useConversationMemory(userId || 'guest', sessionId || '', token);
   const voice = useMemo(
     () =>
       createVoice({
