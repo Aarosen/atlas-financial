@@ -284,7 +284,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       let openingMessage: string;
       if (isReturningUser) {
         // Returning user: personalized greeting
-        const primaryGoal = st.fin?.primaryGoal || 'your financial goals';
+        const primaryGoal = (memory as any)?.primaryGoal || st.fin?.primaryGoal || 'your financial goals';
         openingMessage = `Welcome back! Ready to continue working on ${primaryGoal}? What's on your mind today?`;
       } else {
         // First-time user: introduction

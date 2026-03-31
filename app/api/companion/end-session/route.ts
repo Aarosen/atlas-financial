@@ -52,13 +52,11 @@ export async function POST(request: NextRequest) {
 
     const supabase = createClient(supabaseUrl, supabaseKey);
 
-    // Update session status to completed
+    // Update session to mark as ended
     const { error: sessionError } = await supabase
       .from('conversation_sessions')
       .update({
-        status: 'completed',
         ended_at: new Date().toISOString(),
-        final_profile: finalProfile || {},
       })
       .eq('id', sessionId)
       .eq('user_id', userId);
@@ -74,17 +72,12 @@ export async function POST(request: NextRequest) {
         .insert({
           user_id: userId,
           session_id: sessionId,
-          snapshot_date: new Date().toISOString(),
+          created_at: new Date().toISOString(),
           monthly_income: finalProfile.monthlyIncome || null,
           essential_expenses: finalProfile.essentialExpenses || null,
           total_savings: finalProfile.totalSavings || null,
           high_interest_debt: finalProfile.highInterestDebt || null,
           low_interest_debt: finalProfile.lowInterestDebt || null,
-          total_debt: (finalProfile.highInterestDebt || 0) + (finalProfile.lowInterestDebt || 0),
-          net_worth: (finalProfile.totalSavings || 0) - ((finalProfile.highInterestDebt || 0) + (finalProfile.lowInterestDebt || 0)),
-          primary_goal: finalProfile.primaryGoal || null,
-          risk_tolerance: finalProfile.riskTolerance || null,
-          profile_data: finalProfile,
         });
 
       if (snapshotError) {
@@ -102,10 +95,10 @@ export async function POST(request: NextRequest) {
               id: action.id || `action_${Date.now()}_${Math.random()}`,
               user_id: userId,
               session_id: sessionId,
-              title: action.title,
-              description: action.description,
+              action_text: action.title || action.action_text,
+              action_category: action.category || 'general',
               status: action.status || 'pending',
-              due_date: action.dueDate || null,
+              check_in_due_at: action.dueDate || action.check_in_due_at || null,
               created_at: action.createdAt || new Date().toISOString(),
               updated_at: new Date().toISOString(),
             },
@@ -130,6 +123,7 @@ export async function POST(request: NextRequest) {
               user_id: userId,
               role: message.r === 'u' ? 'user' : 'assistant',
               content: message.t,
+              turn_index: message.turn_index || 0,
               created_at: message.createdAt || new Date().toISOString(),
             },
             { onConflict: 'id' }
@@ -141,27 +135,10 @@ export async function POST(request: NextRequest) {
       }
     }
 
-    // Schedule follow-up check-in (24 hours from now)
-    const checkInTime = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
-    const { error: checkInError } = await supabase
-      .from('user_checkins')
-      .insert({
-        user_id: userId,
-        session_id: sessionId,
-        scheduled_for: checkInTime,
-        status: 'pending',
-        created_at: new Date().toISOString(),
-      });
-
-    if (checkInError) {
-      console.error('[companion-end] Error scheduling check-in:', checkInError);
-    }
-
     return NextResponse.json(
       {
         ok: true,
         sessionEnded: true,
-        nextCheckIn: checkInTime,
       },
       { status: 200 }
     );

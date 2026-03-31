@@ -57,7 +57,7 @@ export async function processResponseForGoals(
 
           // Gap 2a: Check for milestones after successful goal creation
           try {
-            await checkMilestonesAfterGoalCreation(userId, detectedGoals.length, financialProfile);
+            await checkMilestonesAfterGoalCreation(userId, detectedGoals.length, financialProfile, token);
           } catch (milestoneError) {
             console.warn('[goal-wiring] Milestone check failed (non-fatal):', milestoneError);
           }

@@ -150,7 +150,7 @@ export function CompanionDashboard({
               monthlyIncome: snapshot.monthly_income,
               essentialExpenses: snapshot.essential_expenses,
             } : undefined;
-            await checkMilestonesAfterGoalUpdate(userId, 'achieved', completedCount, financialProfile);
+            await checkMilestonesAfterGoalUpdate(userId, 'achieved', completedCount, financialProfile, token);
           } catch (milestoneError) {
             console.warn('[dashboard] Milestone check failed (non-fatal):', milestoneError);
           }

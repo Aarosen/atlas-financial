@@ -406,7 +406,7 @@ export async function POST(req: Request) {
           }
           
           if (goals && goals.length > 0) {
-            const goalSummary = goals.map((g: any) => `${g.title} (${g.type})`).join(', ');
+            const goalSummary = goals.map((g: any) => `${g.goal_label || g.goal_type} (${g.goal_type})`).join(', ');
             contextParts.push(`Active Goals: ${goalSummary}`);
           }
           
