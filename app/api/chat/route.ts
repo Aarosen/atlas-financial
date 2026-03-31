@@ -355,6 +355,71 @@ export async function POST(req: Request) {
     await Promise.race([sessionInitPromise, sessionInitTimeout]);
   }
 
+  // MEMORY INTEGRATION: Load prior context from Supabase for cross-session memory
+  // This enables the AI to reference prior financial data and goals across device/session boundaries
+  let priorContextBlock = '';
+  if (userId && userId !== 'guest' && type === 'chat') {
+    const priorContextTimeout = new Promise<void>((resolve) => {
+      setTimeout(() => {
+        console.warn('[memory] Prior context load timeout - continuing without prior context');
+        resolve();
+      }, 2000);
+    });
+
+    const priorContextPromise = (async () => {
+      try {
+        const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+        const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+        
+        if (!supabaseUrl || !supabaseServiceKey) {
+          console.warn('[memory] Supabase not configured for prior context');
+          return;
+        }
+
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Fetch most recent financial snapshot
+        const { data: snapshots } = await supabase
+          .from('financial_snapshots')
+          .select('*')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: false })
+          .limit(1);
+
+        const latestSnapshot = snapshots?.[0];
+
+        // Fetch active goals
+        const { data: goals } = await supabase
+          .from('user_goals')
+          .select('*')
+          .eq('user_id', userId)
+          .eq('status', 'active')
+          .order('created_at', { ascending: false });
+
+        // Build prior context block
+        if (latestSnapshot || (goals && goals.length > 0)) {
+          let contextParts = ['[PRIOR_CONTEXT]'];
+          
+          if (latestSnapshot) {
+            contextParts.push(`Financial Snapshot: Monthly income $${latestSnapshot.monthly_income}, expenses $${latestSnapshot.essential_expenses}, savings $${latestSnapshot.total_savings}, high-interest debt $${latestSnapshot.high_interest_debt}, low-interest debt $${latestSnapshot.low_interest_debt}`);
+          }
+          
+          if (goals && goals.length > 0) {
+            const goalSummary = goals.map((g: any) => `${g.title} (${g.type})`).join(', ');
+            contextParts.push(`Active Goals: ${goalSummary}`);
+          }
+          
+          priorContextBlock = '\n\n' + contextParts.join('\n');
+        }
+      } catch (error) {
+        console.error('[memory] Error loading prior context:', error);
+      }
+    })();
+
+    await Promise.race([priorContextPromise, priorContextTimeout]);
+  }
+
   if (!type || !['extract', 'chat', 'answer', 'answer_stream', 'answer_explain', 'answer_explain_stream'].includes(type)) {
     return jsonError(400, 'Invalid request type.');
   }
@@ -503,6 +568,7 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
     : trimPromptSections(
         [
           ATLAS_SYSTEM_PROMPT,
+          priorContextBlock,
           memoryContext,
           emotionContext,
           disclaimerContext,

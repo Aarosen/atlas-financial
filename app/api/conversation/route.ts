@@ -1,14 +1,45 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import { ConversationDb } from '@/lib/db/conversationDb';
 import { RateLimitDb } from '@/lib/db/rateLimitDb';
 
 const conversationDb = new ConversationDb();
 const rateLimitDb = new RateLimitDb();
 
+// Verify JWT token and extract userId
+async function verifyToken(request: NextRequest): Promise<string | null> {
+  const authHeader = request.headers.get('Authorization');
+  if (!authHeader || !authHeader.startsWith('Bearer ')) {
+    return null;
+  }
+
+  const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+  if (!supabaseUrl || !supabaseServiceKey) {
+    console.error('Supabase not configured');
+    return null;
+  }
+
+  const supabase = createClient(supabaseUrl, supabaseServiceKey);
+  const token = authHeader.replace('Bearer ', '');
+  
+  try {
+    const { data: { user }, error } = await supabase.auth.getUser(token);
+    if (error || !user) {
+      return null;
+    }
+    return user.id;
+  } catch (error) {
+    console.error('Token verification error:', error);
+    return null;
+  }
+}
+
 // POST /api/conversation - Create new conversation session
 export async function POST(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const userId = await verifyToken(request);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }
@@ -38,7 +69,7 @@ export async function POST(request: NextRequest) {
 // GET /api/conversation - Get user's conversation sessions
 export async function GET(request: NextRequest) {
   try {
-    const userId = request.headers.get('x-user-id');
+    const userId = await verifyToken(request);
     if (!userId) {
       return NextResponse.json({ error: 'Unauthorized' }, { status: 401 });
     }

@@ -55,11 +55,49 @@ export async function checkMilestonesAfterGoalCreation(
   financialProfile?: Record<string, any>
 ): Promise<Milestone[]> {
   try {
+    // Fetch real data from Supabase
+    let actionsCompleted = 0;
+    let daysSinceFirstMessage = 0;
+
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (supabaseUrl && supabaseServiceKey) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Count completed actions
+        const { data: actions } = await supabase
+          .from('user_actions')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('status', 'completed');
+        actionsCompleted = actions?.length || 0;
+
+        // Calculate days since first message
+        const { data: messages } = await supabase
+          .from('conversation_messages')
+          .select('created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: true })
+          .limit(1);
+        
+        if (messages && messages.length > 0) {
+          const firstMessageDate = new Date(messages[0].created_at);
+          const now = new Date();
+          daysSinceFirstMessage = Math.floor((now.getTime() - firstMessageDate.getTime()) / (1000 * 60 * 60 * 24));
+        }
+      }
+    } catch (error) {
+      console.warn('[mid-session-milestones] Error fetching real data, using defaults:', error);
+    }
+
     // Build financial data snapshot for milestone checking
     const financialData = {
       goalsSet: goalsCount,
-      actionsCompleted: 0,
-      daysSinceFirstMessage: 0,
+      actionsCompleted,
+      daysSinceFirstMessage,
       debtPayoffProgress: financialProfile?.highInterestDebt ? 0 : undefined,
       emergencyFundProgress: financialProfile?.emergencyFund ? 0 : undefined,
       savingsProgress: financialProfile?.totalSavings ? 0 : undefined,
@@ -88,11 +126,49 @@ export async function checkMilestonesAfterGoalUpdate(
       return [];
     }
     
+    // Fetch real data from Supabase
+    let actionsCompleted = 0;
+    let daysSinceFirstMessage = 0;
+
+    try {
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+      
+      if (supabaseUrl && supabaseServiceKey) {
+        const { createClient } = await import('@supabase/supabase-js');
+        const supabase = createClient(supabaseUrl, supabaseServiceKey);
+
+        // Count completed actions
+        const { data: actions } = await supabase
+          .from('user_actions')
+          .select('id')
+          .eq('user_id', userId)
+          .eq('status', 'completed');
+        actionsCompleted = actions?.length || 0;
+
+        // Calculate days since first message
+        const { data: messages } = await supabase
+          .from('conversation_messages')
+          .select('created_at')
+          .eq('user_id', userId)
+          .order('created_at', { ascending: true })
+          .limit(1);
+        
+        if (messages && messages.length > 0) {
+          const firstMessageDate = new Date(messages[0].created_at);
+          const now = new Date();
+          daysSinceFirstMessage = Math.floor((now.getTime() - firstMessageDate.getTime()) / (1000 * 60 * 60 * 24));
+        }
+      }
+    } catch (error) {
+      console.warn('[mid-session-milestones] Error fetching real data, using defaults:', error);
+    }
+    
     // Build financial data snapshot for milestone checking
     const financialData = {
       goalsSet: 0,
-      actionsCompleted: 0,
-      daysSinceFirstMessage: 0,
+      actionsCompleted,
+      daysSinceFirstMessage,
       goalsCompleted,
       debtPayoffProgress: financialProfile?.highInterestDebt ? 0 : undefined,
       emergencyFundProgress: financialProfile?.emergencyFund ? 0 : undefined,
