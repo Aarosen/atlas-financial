@@ -398,8 +398,18 @@ export async function POST(req: Request) {
           .eq('status', 'active')
           .order('created_at', { ascending: false });
 
+        // Fetch overdue actions for accountability loop
+        const { data: overdueActions } = await supabase
+          .from('user_actions')
+          .select('action_text, check_in_due_at, status, action_category')
+          .eq('user_id', userId)
+          .in('status', ['recommended', 'committed'])
+          .lt('check_in_due_at', new Date().toISOString())
+          .order('check_in_due_at', { ascending: true })
+          .limit(3);
+
         // Build prior context block
-        if (latestSnapshot || (goals && goals.length > 0)) {
+        if (latestSnapshot || (goals && goals.length > 0) || (overdueActions && overdueActions.length > 0)) {
           let contextParts = ['[PRIOR_CONTEXT]'];
           
           if (latestSnapshot) {
@@ -409,6 +419,17 @@ export async function POST(req: Request) {
           if (goals && goals.length > 0) {
             const goalSummary = goals.map((g: any) => `${g.goal_label || g.goal_type} (${g.goal_type})`).join(', ');
             contextParts.push(`Active Goals: ${goalSummary}`);
+          }
+
+          if (overdueActions && overdueActions.length > 0) {
+            contextParts.push('OVERDUE COMMITMENTS (user agreed to these but hasn\'t reported back):');
+            overdueActions.forEach((a: any, i: number) => {
+              const daysOverdue = Math.floor(
+                (Date.now() - new Date(a.check_in_due_at).getTime()) / (1000 * 60 * 60 * 24)
+              );
+              contextParts.push(`${i + 1}. "${a.action_text}" — ${daysOverdue} day(s) overdue`);
+            });
+            contextParts.push('IMPORTANT: Ask the user about their progress on these commitments early in the conversation. Do not skip this.');
           }
           
           priorContextBlock = '\n\n' + contextParts.join('\n');

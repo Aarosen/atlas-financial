@@ -40,6 +40,13 @@ function redact(text: string) {
 }
 
 export async function POST(req: Request) {
+  // Verify internal API key
+  const internalKey = req.headers.get('x-atlas-eval-key');
+  const expectedKey = process.env.ATLAS_EVAL_KEY;
+  if (!expectedKey || internalKey !== expectedKey) {
+    return new Response(JSON.stringify({ error: 'unauthorized' }), { status: 401 });
+  }
+
   let payload: FailureSample | null = null;
   try {
     payload = (await req.json()) as FailureSample;

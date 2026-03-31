@@ -44,6 +44,8 @@ import { ConversationSidebar } from '@/components/ConversationSidebar';
 import { CompanionDashboard } from '@/components/CompanionDashboard';
 import { useConversationMemory } from '@/lib/memory/useConversationMemory';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
+import { validateMessageLength } from '@/lib/api/messageLengthValidator';
+import { preserveUnsentMessage, retrieveUnsentMessage, clearUnsentMessage } from '@/lib/api/offlineHandler';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 

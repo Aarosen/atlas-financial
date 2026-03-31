@@ -96,11 +96,10 @@ export async function POST(request: NextRequest) {
               user_id: userId,
               session_id: sessionId,
               action_text: action.title || action.action_text,
-              action_category: action.category || 'general',
-              status: action.status || 'pending',
-              check_in_due_at: action.dueDate || action.check_in_due_at || null,
+              action_category: action.category || 'other',
+              status: action.status || 'recommended',
+              check_in_due_at: action.dueDate || action.check_in_due_at || new Date(Date.now() + 7 * 24 * 60 * 60 * 1000).toISOString(),
               created_at: action.createdAt || new Date().toISOString(),
-              updated_at: new Date().toISOString(),
             },
             { onConflict: 'id' }
           );

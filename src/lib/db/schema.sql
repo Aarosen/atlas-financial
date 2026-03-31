@@ -255,3 +255,17 @@ CREATE TRIGGER update_user_behavior_profiles_updated_at
   BEFORE UPDATE ON user_behavior_profiles
   FOR EACH ROW
   EXECUTE FUNCTION update_updated_at_column();
+
+-- Stores cron job execution logs
+CREATE TABLE IF NOT EXISTS cron_logs (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  job_name TEXT NOT NULL,
+  ran_at TIMESTAMPTZ DEFAULT NOW(),
+  status TEXT NOT NULL CHECK (status IN ('success', 'partial', 'error')),
+  records_processed INTEGER DEFAULT 0,
+  error_message TEXT,
+  duration_ms INTEGER
+);
+
+CREATE INDEX IF NOT EXISTS idx_cron_logs_ran_at ON cron_logs(ran_at);
+CREATE INDEX IF NOT EXISTS idx_cron_logs_job_name ON cron_logs(job_name);

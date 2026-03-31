@@ -50,9 +50,31 @@ export async function analyzeBehavioralPatterns(
     // Detect preferred topics from conversation history
     const preferredTopics = detectPreferredTopics(conversationHistory);
 
-    // Estimate commitment and follow-through rates (default to moderate)
-    const commitmentRate = 0.65; // 65% of recommended actions
-    const followThroughRate = 0.55; // 55% of committed actions completed
+    // Fetch real commitment and follow-through rates from user stats
+    let commitmentRate = 0.65; // default fallback
+    let followThroughRate = 0.55; // default fallback
+
+    try {
+      const statsResponse = await fetch(
+        `/api/user/stats?userId=${encodeURIComponent(userId)}`,
+        {
+          method: 'GET',
+          headers: { 'Content-Type': 'application/json' },
+        }
+      );
+
+      if (statsResponse.ok) {
+        const stats = await statsResponse.json();
+        const total = stats.actionsTotal || 0;
+        const completed = stats.actionsCompleted || 0;
+        if (total > 0) {
+          followThroughRate = completed / total;
+          commitmentRate = followThroughRate; // use same source for now
+        }
+      }
+    } catch (err) {
+      console.warn('[behavioral-adaptation] Error fetching user stats:', err);
+    }
 
     // Determine risk tolerance based on financial decisions
     const riskTolerance = detectRiskTolerance(conversationHistory);

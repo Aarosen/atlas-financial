@@ -335,6 +335,27 @@ export async function updateMilestoneAcknowledged(milestoneId: string): Promise<
   }
 }
 
+export async function createDefaultMilestones(goalId: string, targetAmount: number): Promise<void> {
+  const milestones = [
+    { pct: 25, label: '25% there!' },
+    { pct: 50, label: 'Halfway there!' },
+    { pct: 75, label: '75% — almost done!' },
+    { pct: 100, label: 'Goal achieved!' },
+  ];
+
+  const rows = milestones.map(m => ({
+    goal_id: goalId,
+    milestone_percentage: m.pct,
+    milestone_label: m.label,
+    milestone_amount: Math.round((targetAmount * m.pct) / 100),
+  }));
+
+  const { error } = await supabase.from('goal_milestones').insert(rows);
+  if (error) {
+    console.error('Error creating milestones:', error);
+  }
+}
+
 // ============================================================================
 // BEHAVIOR PROFILE OPERATIONS
 // ============================================================================

@@ -62,48 +62,37 @@ export async function POST(request: NextRequest) {
       .single();
 
     if (!existingSession) {
-      // Create session if it doesn't exist
+      // Create session if it doesn't exist - schema-compliant INSERT
       await supabase
         .from('conversation_sessions')
         .insert({
           id: sessionId,
           user_id: userId,
-          context: context || {},
+          started_at: new Date().toISOString(),
+          turn_count: 0,
           created_at: new Date().toISOString(),
-          updated_at: new Date().toISOString(),
         });
     }
 
-    // Save each message
+    // Save each message with turn_index
     if (messages && Array.isArray(messages)) {
-      for (const message of messages) {
+      for (let i = 0; i < messages.length; i++) {
+        const message = messages[i];
         await supabase
           .from('conversation_messages')
           .upsert(
             {
-              id: message.id || `msg_${Date.now()}_${Math.random()}`,
+              id: message.id || `msg_${Date.now()}_${i}`,
               session_id: sessionId,
               user_id: userId,
               role: message.r === 'u' ? 'user' : 'assistant',
               content: message.t,
+              turn_index: i,
               created_at: message.createdAt || new Date().toISOString(),
-              updated_at: new Date().toISOString(),
             },
             { onConflict: 'id' }
           );
       }
-    }
-
-    // Save context if provided
-    if (context) {
-      await supabase
-        .from('conversation_sessions')
-        .update({
-          context: context,
-          updated_at: new Date().toISOString(),
-        })
-        .eq('id', sessionId)
-        .eq('user_id', userId);
     }
 
     return NextResponse.json(

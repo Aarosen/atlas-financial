@@ -62,9 +62,14 @@ export function useConversationMemory(userId: string, sessionId: string, accessT
       }
 
       try {
+        const headers: Record<string, string> = { 'Content-Type': 'application/json' };
+        if (accessToken) {
+          headers['Authorization'] = `Bearer ${accessToken}`;
+        }
+
         await fetch('/api/memory/save', {
           method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
+          headers,
           body: JSON.stringify({
             userId,
             sessionId,
@@ -76,7 +81,7 @@ export function useConversationMemory(userId: string, sessionId: string, accessT
         console.error('Error saving conversation memory:', error);
       }
     },
-    [userId, sessionId]
+    [userId, sessionId, accessToken]
   );
 
   // Clear conversation memory

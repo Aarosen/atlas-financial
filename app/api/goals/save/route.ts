@@ -1,5 +1,6 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createDefaultMilestones } from '@/lib/db/supabaseRepository';
 
 /**
  * POST /api/goals/save
@@ -121,6 +122,12 @@ export async function POST(request: NextRequest) {
 
       data = inserted;
       error = insertError;
+
+      // Create default milestones for new goal
+      if (!error && inserted && inserted.length > 0) {
+        const newGoal = inserted[0];
+        await createDefaultMilestones(newGoal.id, newGoal.target_amount);
+      }
     }
 
     if (error) {
