@@ -57,10 +57,8 @@ async function getOverdueCommitments(): Promise<OverdueCommitment[]> {
         user_id,
         action_text,
         check_in_due_at,
-        status,
-        users(email)
+        status
       `)
-      .eq('email_notifications', true)
       .in('status', ['committed', 'recommended'])
       .lt('check_in_due_at', new Date().toISOString().split('T')[0])
       .order('check_in_due_at', { ascending: true });
@@ -74,9 +72,24 @@ async function getOverdueCommitments(): Promise<OverdueCommitment[]> {
       return [];
     }
 
+    // Fetch user emails via auth admin API for each unique user_id
+    const userEmails = new Map<string, string>();
+    const uniqueUserIds = [...new Set(data.map((action: any) => action.user_id))];
+
+    for (const userId of uniqueUserIds) {
+      try {
+        const { data: { user }, error: userError } = await supabase.auth.admin.getUserById(userId);
+        if (!userError && user?.email) {
+          userEmails.set(userId, user.email);
+        }
+      } catch (err) {
+        console.warn(`Failed to fetch email for user ${userId}:`, err);
+      }
+    }
+
     // Transform data to OverdueCommitment format
     const overdue: OverdueCommitment[] = data
-      .filter((action: any) => action.users?.email)
+      .filter((action: any) => userEmails.has(action.user_id))
       .map((action: any) => {
         const dueDate = new Date(action.check_in_due_at);
         const today = new Date();
@@ -85,7 +98,7 @@ async function getOverdueCommitments(): Promise<OverdueCommitment[]> {
         return {
           id: action.id,
           userId: action.user_id,
-          userEmail: action.users.email,
+          userEmail: userEmails.get(action.user_id) || '',
           commitmentTitle: action.action_text,
           dueDate: action.check_in_due_at,
           daysOverdue,

@@ -9,6 +9,7 @@ export interface AuthSession {
   accessToken: string;
   refreshToken: string;
   expiresAt: number;
+  sessionId?: string;
 }
 
 export interface AuthState {

@@ -75,9 +75,8 @@ export async function POST(request: NextRequest) {
     const { error } = await supabase
       .from('user_actions')
       .update({
-        completed: completed,
-        completed_at: completed ? new Date().toISOString() : null,
         status: completed ? 'completed' : 'skipped',
+        completion_verified_at: completed ? new Date().toISOString() : null,
       })
       .eq('id', actionId)
       .eq('user_id', userId);

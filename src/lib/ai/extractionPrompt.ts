@@ -6,6 +6,8 @@ Schema:
   "monthly_fixed_expenses": number | null,
   "total_savings": number | null,
   "total_debt": number | null,
+  "high_interest_rate": number | null,
+  "low_interest_rate": number | null,
   "primary_goal": string | null,
   "income_type": "salary"|"hourly"|"variable"|"multiple"|"none" | null,
   "key_decisions": string[],
@@ -13,4 +15,5 @@ Schema:
   "follow_up_notes": string | null
 }
 Return {} if no financial facts were disclosed.
-Do not infer. Only extract explicitly stated facts.`;
+Do not infer. Only extract explicitly stated facts.
+For interest rates, extract APR percentages if mentioned (e.g., "24.99% APR" → 24.99).`;

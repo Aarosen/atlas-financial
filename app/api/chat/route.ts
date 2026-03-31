@@ -30,6 +30,7 @@ import { runCalculations, formatCalculationBlock } from '@/lib/calculations/spri
 import { cleanAtlasResponse } from '@/lib/ai/responsePostprocessor';
 import { validateFinancialSnapshot, buildValidationPrompt } from '@/lib/ai/financialValidation';
 import { compressConversationHistory, formatCompressedMemory } from '@/lib/ai/contextWindowExtension';
+import { sanitizeMemorySummary } from '@/lib/ai/memorySanitizer';
 import { classifyUserIntent } from '@/lib/ai/intentClassifier';
 import { buildSystemPrompt } from '@/lib/ai/systemPromptBuilder';
 import { 

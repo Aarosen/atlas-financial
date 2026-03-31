@@ -1,4 +1,5 @@
 import { NextRequest, NextResponse } from 'next/server';
+import { createClient } from '@supabase/supabase-js';
 import Anthropic from '@anthropic-ai/sdk';
 import { updateProfile, saveConversationSummary } from '@/lib/profile';
 import { EXTRACTION_PROMPT } from '@/lib/ai/extractionPrompt';
@@ -13,6 +14,38 @@ export async function POST(req: NextRequest) {
 
     if (!userId || !messages?.length) {
       return NextResponse.json({ ok: true });
+    }
+
+    // Verify JWT token for non-guest users
+    if (userId !== 'guest') {
+      const authHeader = req.headers.get('Authorization');
+      if (!authHeader?.startsWith('Bearer ')) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
+
+      const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
+      const supabaseServiceKey = process.env.SUPABASE_SERVICE_ROLE_KEY;
+
+      if (!supabaseUrl || !supabaseServiceKey) {
+        return NextResponse.json(
+          { error: 'Server configuration error' },
+          { status: 500 }
+        );
+      }
+
+      const supabase = createClient(supabaseUrl, supabaseServiceKey);
+      const token = authHeader.slice(7);
+      const { data: { user }, error: authError } = await supabase.auth.getUser(token);
+
+      if (authError || !user || user.id !== userId) {
+        return NextResponse.json(
+          { error: 'Unauthorized' },
+          { status: 401 }
+        );
+      }
     }
 
     const response = await anthropic.messages.create({

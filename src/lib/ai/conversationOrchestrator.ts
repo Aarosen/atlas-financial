@@ -35,6 +35,8 @@ export interface FinancialProfile {
   highInterestDebt?: number;
   lowInterestDebt?: number;
   monthlyDebtPayments?: number;
+  highInterestRate?: number; // APR for high-interest debt (e.g., credit cards)
+  lowInterestRate?: number; // APR for low-interest debt (e.g., student loans, mortgages)
   primaryGoal?: 'stability' | 'growth' | 'flexibility' | 'wealth_building';
   timeHorizonYears?: number;
   riskTolerance?: 'cautious' | 'balanced' | 'growth';
@@ -200,6 +202,8 @@ const FIELD_LABELS: Record<keyof FinancialProfile, string> = {
   highInterestDebt: 'high-interest debt balance',
   lowInterestDebt: 'low-interest debt balance',
   monthlyDebtPayments: 'monthly debt payments',
+  highInterestRate: 'high-interest debt APR',
+  lowInterestRate: 'low-interest debt APR',
   primaryGoal: 'primary financial goal',
   timeHorizonYears: 'time horizon',
   riskTolerance: 'risk tolerance',

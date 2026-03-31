@@ -14,8 +14,34 @@ export function useAuth() {
         if (urlParams.has('code')) {
           const callbackSession = await handleAuthCallback();
           if (callbackSession) {
+            // Check if previous session was a guest session
+            const previousSession = getStoredSession();
+            const wasGuest = previousSession?.userId === 'guest';
+            const guestSessionId = previousSession?.sessionId;
+
             setSession(callbackSession);
             storeSession(callbackSession);
+
+            // Trigger guest-to-auth migration if applicable
+            if (wasGuest && guestSessionId && callbackSession.accessToken) {
+              try {
+                await fetch('/api/auth/upgrade', {
+                  method: 'POST',
+                  headers: {
+                    'Content-Type': 'application/json',
+                    'Authorization': `Bearer ${callbackSession.accessToken}`,
+                  },
+                  body: JSON.stringify({
+                    guestSessionId,
+                    userId: callbackSession.userId,
+                  }),
+                });
+                console.log('[auth] Guest session migrated to authenticated user');
+              } catch (err) {
+                console.warn('[auth] Guest migration failed (non-fatal):', err);
+              }
+            }
+
             // Clean up URL
             window.history.replaceState({}, document.title, window.location.pathname);
           }

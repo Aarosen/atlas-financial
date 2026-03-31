@@ -215,7 +215,7 @@ function buildDebtsArray(profile: FinancialProfile): Debt[] {
     debts.push({
       name: 'High-interest debt',
       balance: highInterestDebt,
-      interestRate: 18.5, // Default assumption for credit cards
+      interestRate: profile.highInterestRate ?? 18.5, // Use actual rate if provided, default to 18.5% for credit cards
       minimumPayment: (highInterestDebt * 0.02) || 25, // 2% minimum
     });
   }
@@ -225,7 +225,7 @@ function buildDebtsArray(profile: FinancialProfile): Debt[] {
     debts.push({
       name: 'Low-interest debt',
       balance: lowInterestDebt,
-      interestRate: 5.5, // Default assumption for personal loans
+      interestRate: profile.lowInterestRate ?? 5.5, // Use actual rate if provided, default to 5.5% for personal loans
       minimumPayment: (lowInterestDebt * 0.01) || 25, // 1% minimum
     });
   }

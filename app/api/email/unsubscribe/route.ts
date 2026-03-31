@@ -1,19 +1,40 @@
 import { NextRequest, NextResponse } from 'next/server';
 import { createClient } from '@supabase/supabase-js';
+import { createHmac } from 'crypto';
 
 /**
  * Email unsubscribe endpoint
  * Allows users to opt out of email notifications via link in emails
  * Required by CAN-SPAM / CASL regulations
+ * SECURITY: Validates HMAC token to prevent unsubscribe sabotage attacks
  */
 export async function GET(request: NextRequest) {
   try {
     const url = new URL(request.url);
     const userId = url.searchParams.get('userId');
-    const token = url.searchParams.get('token'); // For HMAC verification in production
+    const token = url.searchParams.get('token');
 
-    if (!userId) {
+    if (!userId || !token) {
       return NextResponse.redirect(new URL('/conversation', request.url));
+    }
+
+    // Validate HMAC token
+    const unsubscribeSecret = process.env.UNSUBSCRIBE_SECRET;
+    if (!unsubscribeSecret) {
+      console.warn('UNSUBSCRIBE_SECRET not configured');
+      return NextResponse.redirect(new URL('/conversation', request.url));
+    }
+
+    const expectedToken = createHmac('sha256', unsubscribeSecret)
+      .update(userId)
+      .digest('hex');
+
+    if (token !== expectedToken) {
+      console.warn(`[email] Invalid unsubscribe token for userId ${userId}`);
+      return NextResponse.json(
+        { error: 'Invalid unsubscribe token' },
+        { status: 400 }
+      );
     }
 
     const supabaseUrl = process.env.NEXT_PUBLIC_SUPABASE_URL;
