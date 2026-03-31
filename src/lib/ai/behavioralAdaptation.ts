@@ -24,24 +24,14 @@ export async function analyzeBehavioralPatterns(
   conversationHistory: Array<{ role: string; content: string }>
 ): Promise<BehavioralPattern> {
   try {
-    // Fetch user's conversation history from database
-    const response = await fetch(
-      `/api/conversations/list?userId=${encodeURIComponent(userId)}`,
-      {
-        method: 'GET',
-        headers: { 'Content-Type': 'application/json' },
-      }
-    );
-
-    if (!response.ok) {
-      return getDefaultBehavioralPattern(userId);
-    }
-
-    const data = await response.json();
-    const sessions = data.sessions || [];
+    // Use the passed-in conversation history to determine engagement
+    // Note: This is 1 if there's a current conversation, 0 if starting fresh
+    // A proper multi-session count requires the conversations/list endpoint to be built
+    // For now, any active conversation with messages counts as engaged (totalConversations >= 1)
+    const totalConversations = conversationHistory.length > 0 ? 1 : 0;
 
     // Analyze patterns
-    const totalConversations = sessions.length;
+    // const totalConversations = sessions.length;
     const messageCount = conversationHistory.length;
     const averageResponseLength = messageCount > 0
       ? conversationHistory.reduce((sum, msg) => sum + (msg.content?.length || 0), 0) / messageCount
@@ -232,7 +222,7 @@ function getDefaultBehavioralPattern(userId: string): BehavioralPattern {
  * Build behavioral adaptation context for system prompt
  */
 export function buildBehavioralAdaptationContext(pattern: BehavioralPattern): string {
-  if (!pattern || pattern.totalConversations === 0) {
+  if (!pattern) {
     return '';
   }
 

@@ -1393,6 +1393,12 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         if (t.includes('proxy_error_') || t.includes('fetch') || t.includes('network') || t.includes('timeout')) return 'Connection issue — retry when you’re ready.';
         return raw;
       })();
+      
+      // Preserve message if it's a network failure
+      if (!navigator.onLine || (e?.message && (e.message.includes('fetch') || e.message.includes('network') || e.message.includes('Failed to fetch')))) {
+        preserveUnsentMessage(ut, sessionId || '');
+      }
+      
       setApiStatus(claude.status);
       dispatch({ type: 'SEND_FAILED', err: friendly });
     }
@@ -1409,6 +1415,13 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         voice.stopSpeak();
         const ut = String((overrideText ?? st.inp) || '').trim();
         if (!ut) return;
+
+        // Validate message length before sending
+        const validation = validateMessageLength(ut);
+        if (!validation.isValid) {
+          dispatch({ type: 'SEND_ASKED', text: validation.error || `Your message is too long. Please shorten it and try again.` });
+          return;
+        }
 
         // Clear localStorage BEFORE updating state so the restore effect sees empty storage
         try {
@@ -1458,6 +1471,19 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       }
     });
   }, [voice, voiceAutoSend, send, updateInput]);
+
+  // Restore and re-send preserved messages when reconnecting
+  useEffect(() => {
+    const handleOnline = () => {
+      const preserved = retrieveUnsentMessage(sessionId || '');
+      if (preserved) {
+        clearUnsentMessage(sessionId || '');
+        void send(preserved);
+      }
+    };
+    window.addEventListener('online', handleOnline);
+    return () => window.removeEventListener('online', handleOnline);
+  }, [sessionId, send]);
 
   const onKeyDown = useCallback((e: ReactKeyboardEvent<HTMLTextAreaElement>) => {
     if (e.key === 'Enter' && !e.shiftKey) {

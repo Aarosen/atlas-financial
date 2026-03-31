@@ -1013,6 +1013,20 @@ Return ONLY the rewritten text.`;
           try {
             const { analyzeBehavioralPatterns, buildBehavioralAdaptationContext } = await import('@/lib/ai/behavioralAdaptation');
             const pattern = await analyzeBehavioralPatterns(userId, conversationHistory);
+            
+            // Write pattern back to user_behavior_profiles (fire-and-forget)
+            if (userId && userId !== 'guest') {
+              const incomingAuth = req.headers.get('Authorization');
+              fetch(`${process.env.NEXT_PUBLIC_APP_URL || 'https://atlas-financial.vercel.app'}/api/profile/behavior`, {
+                method: 'POST',
+                headers: {
+                  'Content-Type': 'application/json',
+                  ...(incomingAuth ? { 'Authorization': incomingAuth } : {}),
+                },
+                body: JSON.stringify({ userId, pattern }),
+              }).catch(e => console.warn('[behavioral-profile] write-back failed:', e));
+            }
+            
             return buildBehavioralAdaptationContext(pattern);
           } catch (error) {
             console.error('Error analyzing behavioral patterns:', error);
