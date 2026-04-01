@@ -60,8 +60,8 @@ export interface RetirementCalculation {
   currentNetWorth: number;
   gap: number;
   recommendedMonthlyContribution: number;
-  yearsToRetirement: number;
-  targetRetirementYear: number;
+  yearsToRetirement: number | null; // REM-P: null when FIRE unreachable within 50 years
+  targetRetirementYear: number | null; // REM-P: null when FIRE unreachable within 50 years
   onTrackStatus: string;
 }
 
@@ -349,7 +349,8 @@ export function calculateFinancials(
   if (goal === 'retirement_planning') {
     if (profile.monthlyIncome && profile.essentialExpenses && profile.totalSavings !== undefined && profile.timeHorizonYears) {
       const discretionary = profile.monthlyIncome - profile.essentialExpenses;
-      const annualExpenses = profile.essentialExpenses * 12;
+      // REM-Q: Include discretionary expenses in FIRE number (full lifestyle FIRE, not lean FIRE)
+      const annualExpenses = (profile.essentialExpenses + (profile.discretionaryExpenses ?? 0)) * 12;
       const fireNumber = annualExpenses * 25; // 4% rule
       const currentNetWorth = (profile.totalSavings || 0) - ((profile.highInterestDebt || 0) + (profile.lowInterestDebt || 0));
       const gap = Math.max(0, fireNumber - currentNetWorth);
@@ -377,13 +378,14 @@ export function calculateFinancials(
         }
       }
       
+      // REM-P: Return null for yearsToRetirement when FIRE unreachable within 50 years
       result.retirement = {
         fireNumber,
         currentNetWorth,
         gap,
         recommendedMonthlyContribution: recommendedMonthly,
-        yearsToRetirement: Math.min(yearsToFire, horizonYearsResolved),
-        targetRetirementYear: new Date().getFullYear() + Math.min(yearsToFire, horizonYearsResolved),
+        yearsToRetirement: yearsToFire <= 50 ? yearsToFire : null,
+        targetRetirementYear: yearsToFire <= 50 ? new Date().getFullYear() + yearsToFire : null,
         onTrackStatus: onTrack ? 'on track' : 'needs acceleration',
       };
     }
@@ -488,13 +490,17 @@ CALCULATION RESULTS (use these exact numbers):
  * Format retirement calculation as a system prompt block
  */
 export function formatRetirementBlock(calc: RetirementCalculation): string {
+  // REM-P: Handle unreachable FIRE case (yearsToRetirement is null when FIRE unreachable within 50 years)
+  const timelineLines = calc.yearsToRetirement !== null
+    ? `- Years to retirement: ${calc.yearsToRetirement}\n- Target retirement year: ${calc.targetRetirementYear}`
+    : `- Years to retirement: not achievable within 50 years at current contribution rate\n- Target retirement year: N/A`;
+  
   return `
 CALCULATION RESULTS (use these exact numbers):
 - FIRE number (25x annual expenses): $${Math.round(calc.fireNumber)}
 - Current net worth: $${Math.round(calc.currentNetWorth)}
 - Gap to FIRE: $${Math.round(calc.gap)}
 - Recommended monthly contribution: $${Math.round(calc.recommendedMonthlyContribution)} (20% of discretionary)
-- Years to retirement: ${calc.yearsToRetirement}
-- Target retirement year: ${calc.targetRetirementYear}
+${timelineLines}
 - Status: ${calc.onTrackStatus.toUpperCase()}`;
 }
