@@ -279,9 +279,11 @@ export function classifyInterruption(userText: string): InterruptionType {
 
   if (/(what.*do.*(data|store|send)|privacy|private|stored|transmit)/i.test(t)) return 'meta';
   if (/\b(store|send)\b/i.test(t) && /\bwhat|why|how\b/i.test(t)) return 'meta';
-  // SAD-4: Detect goal pivots - explicit changes in financial focus
-  if (/^(actually|wait|let me|i think|on second thought).*\b(focus|prioritize|work on|tackle|address|pay off|build|save for|invest in|plan for)\b/i.test(t)) return 'goal_pivot';
-  if (/\b(instead|rather|but i think|but actually).*\b(focus|prioritize|work on|tackle|address|pay off|build|save for|invest in|plan for)\b/i.test(t)) return 'goal_pivot';
+  
+  // FIX-5: Expand goal pivot detection - detect explicit goal changes
+  // Patterns: "actually", "wait", "instead", "rather", "can we", "let's", "I changed my mind", "let's switch", "let's do"
+  if (/(actually|wait|let me|i think|on second thought|i changed my mind|let's switch|can we|let's do|let's focus).*\b(focus|prioritize|work on|tackle|address|pay off|build|save for|invest in|plan for|switch to|concentrate on)\b/i.test(t)) return 'goal_pivot';
+  if (/\b(instead|rather|but i think|but actually|but let's).*\b(focus|prioritize|work on|tackle|address|pay off|build|save for|invest in|plan for)\b/i.test(t)) return 'goal_pivot';
   if (/^(actually|correction|sorry|wait|i meant|update)/i.test(t) || /\bmy\s+(income|rent|expenses|savings|debt)\s+is\b/i.test(t)) return 'correction';
 
   if (t.includes('?')) {

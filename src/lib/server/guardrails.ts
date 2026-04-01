@@ -34,8 +34,9 @@ export function detectComplianceRisk(input: string): ComplianceRisk | null {
   if (/\b(buy|sell|short|long|invest\s+in|should\s+i\s+buy|should\s+i\s+sell|hold)\b.*\b(stock|crypto|coin|option|etf|fund)\b/i.test(t)) return 'investment_advice';
   // Catch ticker-specific advice: "sell AAPL", "buy TSLA", "should I buy MSFT", etc.
   if (/\b(buy|sell|hold|should\s+i\s+(?:buy|sell|hold))\s+[A-Z]{1,5}\b/i.test(t)) return 'investment_advice';
-  // Catch "should I (buy/sell/hold)" patterns only with specific product names (not generic personal finance)
-  if (/should\s+i\s+(buy|sell|hold)/i.test(t)) return 'investment_advice';
+  // FIX-6: Narrow "should I (buy/sell/hold)" pattern to require investment product context
+  // This allows "should I hold my savings in a high-yield account?" but blocks "should I buy TSLA?"
+  if (/should\s+i\s+(buy|sell|hold)\b.*\b(stock|crypto|coin|etf|fund|share|position|asset|security)\b/i.test(t)) return 'investment_advice';
   
   if (/\b(tax\s+return|audit|deduction|write[-\s]?off|legal\s+advice|lawsuit)\b/i.test(t)) return 'tax_legal';
   return null;

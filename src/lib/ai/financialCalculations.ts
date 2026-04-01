@@ -44,7 +44,7 @@ export interface RetirementCalculation {
   gap: number;
   recommendedMonthlyContribution: number;
   yearsToRetirement: number;
-  targetRetirementAge: number;
+  targetRetirementYear: number;
   onTrackStatus: string;
 }
 
@@ -257,7 +257,7 @@ export function calculateFinancials(
         gap,
         recommendedMonthlyContribution: recommendedMonthly,
         yearsToRetirement: Math.min(yearsToFire, profile.timeHorizonYears),
-        targetRetirementAge: new Date().getFullYear() + Math.min(yearsToFire, profile.timeHorizonYears),
+        targetRetirementYear: new Date().getFullYear() + Math.min(yearsToFire, profile.timeHorizonYears),
         onTrackStatus: yearsToFire <= profile.timeHorizonYears ? 'on track' : 'needs acceleration',
       };
     }
@@ -356,6 +356,6 @@ CALCULATION RESULTS (use these exact numbers):
 - Gap to FIRE: $${Math.round(calc.gap)}
 - Recommended monthly contribution: $${Math.round(calc.recommendedMonthlyContribution)} (20% of discretionary)
 - Years to retirement: ${calc.yearsToRetirement}
-- Target retirement age: ${calc.targetRetirementAge}
+- Target retirement year: ${calc.targetRetirementYear}
 - Status: ${calc.onTrackStatus.toUpperCase()}`;
 }

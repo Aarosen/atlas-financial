@@ -55,6 +55,7 @@ export interface SessionState {
   urgencyLevel: 'calm' | 'advisory' | 'protective';
   entryPoint?: EntryPoint;
   userIntent?: UserIntent;
+  unknown?: Record<string, boolean>;
 }
 
 // ─── Goal Detection ───────────────────────────────────────────────────────────
@@ -143,8 +144,9 @@ function detectGoalPivot(
 ): ConversationGoal | null {
   const t = lastUserMessage.toLowerCase();
   
-  // Explicit pivot patterns: "actually", "wait", "instead", "rather", "but actually"
-  const isPivoting = /^(actually|wait|let me|i think|on second thought|instead|rather|but i think|but actually)/i.test(t);
+  // FIX-5: Expand pivot patterns to include natural language variations
+  // Patterns: "actually", "wait", "instead", "rather", "I changed my mind", "let's switch", "can we", "let's do", "let's focus"
+  const isPivoting = /(actually|wait|let me|i think|on second thought|i changed my mind|let's switch|can we|let's do|let's focus|instead|rather|but i think|but actually|but let's)/i.test(t);
   
   if (!isPivoting) return null;
   
@@ -278,7 +280,8 @@ export function detectPhase(
   turnCount: number,
   missingFields: string[],
   profile: FinancialProfile,
-  goal: ConversationGoal
+  goal: ConversationGoal,
+  unknown?: Record<string, boolean>
 ): SessionPhase {
   if (turnCount === 0) return 'greeting';
   if (turnCount === 1) return 'discovery'; // Always discovery on turn 1 to ask one field at a time
@@ -287,6 +290,13 @@ export function detectPhase(
   // All required fields are known
   const hasCalculable =
     (profile.monthlyIncome ?? 0) > 0 && (profile.essentialExpenses ?? 0) > 0;
+
+  // FIX-3: Handle income-unknown state — when income is marked unknown but not missing
+  // User said "I don't know my income" — we can't calculate with 0, but we also won't re-ask
+  // Move to guidance phase with conservative estimates instead of staying in discovery limbo
+  if (!hasCalculable && unknown?.monthlyIncome && missingFields.length === 0) {
+    return 'guidance';
+  }
 
   if (!hasCalculable) return 'discovery';
   if (goal === 'general_guidance') return 'guidance';
@@ -516,7 +526,7 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   }
   
   const missingFields = getMissingFields(goal, financialProfile, answered);
-  const phase = detectPhase(turnCount, missingFields, financialProfile, goal);
+  const phase = detectPhase(turnCount, missingFields, financialProfile, goal, previousState?.unknown);
   const openLoops = detectOpenLoops(messages, previousState?.openLoops ?? []);
   const urgencyLevel = detectUrgency(financialProfile, messages);
 
@@ -552,7 +562,7 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   // Run deterministic calculations if we have enough data
   let calculationBlock: string | undefined;
   if (shouldCalculate) {
-    const calculations = calculateFinancials(financialProfile, goal);
+    const calculations = calculateFinancials(financialProfile, goal, financialProfile.proposedPayment);
     
     if (calculations.affordability) {
       calculationBlock = formatAffordabilityBlock(calculations.affordability);

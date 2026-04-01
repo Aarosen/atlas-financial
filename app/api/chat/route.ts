@@ -1117,7 +1117,7 @@ Return ONLY the rewritten text.`;
       let response = await callAnthropicStream({
         apiKey,
         model: usedModel,
-        maxTokens: 900,
+        maxTokens: maxTokens,
         system: enrichedSystemPrompt,
         messages: messagesToSend,
       });
@@ -1131,7 +1131,7 @@ Return ONLY the rewritten text.`;
             response = await callAnthropicStream({
               apiKey,
               model: usedModel,
-              maxTokens: 900,
+              maxTokens: maxTokens,
               system: enrichedSystemPrompt,
               messages: trimmedMessages,
             });
