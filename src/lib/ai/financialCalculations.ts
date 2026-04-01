@@ -330,3 +330,32 @@ CALCULATION RESULTS (use these exact numbers):
 
   return block;
 }
+
+/**
+ * Format investment calculation as a system prompt block
+ */
+export function formatInvestmentBlock(calc: InvestmentCalculation): string {
+  return `
+CALCULATION RESULTS (use these exact numbers):
+- Monthly discretionary income: $${Math.round(calc.monthlyDiscretionary)}
+- Emergency fund target: $${Math.round(calc.emergencyFundTarget)}
+- Emergency fund gap: $${Math.round(calc.emergencyFundGap)}
+- Recommended monthly investment: $${Math.round(calc.recommendedMonthlyInvestment)} (15% of discretionary)
+- Timeline to start investing: ${calc.timelineMonths} months (after emergency fund)
+- Recommended allocation: ${calc.allocationStrategy}`;
+}
+
+/**
+ * Format retirement calculation as a system prompt block
+ */
+export function formatRetirementBlock(calc: RetirementCalculation): string {
+  return `
+CALCULATION RESULTS (use these exact numbers):
+- FIRE number (25x annual expenses): $${Math.round(calc.fireNumber)}
+- Current net worth: $${Math.round(calc.currentNetWorth)}
+- Gap to FIRE: $${Math.round(calc.gap)}
+- Recommended monthly contribution: $${Math.round(calc.recommendedMonthlyContribution)} (20% of discretionary)
+- Years to retirement: ${calc.yearsToRetirement}
+- Target retirement age: ${calc.targetRetirementAge}
+- Status: ${calc.onTrackStatus.toUpperCase()}`;
+}

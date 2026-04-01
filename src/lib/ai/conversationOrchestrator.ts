@@ -9,7 +9,7 @@
  */
 
 import { detectObjections, generateObjectionHandlingInstruction, type Objection } from './objectionHandlingEngine';
-import { calculateFinancials, formatAffordabilityBlock, formatEmergencyFundBlock } from './financialCalculations';
+import { calculateFinancials, formatAffordabilityBlock, formatEmergencyFundBlock, formatInvestmentBlock, formatRetirementBlock } from './financialCalculations';
 import { formatDebtPayoffBlock } from './debtPayoffCalculations';
 import { classifyUserIntent, type UserIntent, type EntryPoint, type PrimaryGoal } from './intentClassifier';
 
@@ -132,6 +132,34 @@ function mapIntentToGoal(primaryGoal: PrimaryGoal): ConversationGoal {
     default:
       return 'general_guidance';
   }
+}
+
+/**
+ * Detect if user is pivoting to a different goal
+ */
+function detectGoalPivot(
+  lastUserMessage: string,
+  existingGoal: ConversationGoal
+): ConversationGoal | null {
+  const t = lastUserMessage.toLowerCase();
+  
+  // Explicit pivot patterns: "actually", "wait", "instead", "rather", "but actually"
+  const isPivoting = /^(actually|wait|let me|i think|on second thought|instead|rather|but i think|but actually)/i.test(t);
+  
+  if (!isPivoting) return null;
+  
+  // Try to detect new goal from pivot message
+  for (const goalPattern of GOAL_PATTERNS) {
+    for (const pattern of goalPattern.patterns) {
+      if (pattern.test(t)) {
+        if (goalPattern.goal !== existingGoal) {
+          return goalPattern.goal;
+        }
+      }
+    }
+  }
+  
+  return null;
 }
 
 export function detectGoal(
@@ -458,7 +486,19 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   const turnCount = messages.filter((m) => m.role === 'user').length;
   
   // Use semantic intent classifier on first message for superior accuracy
-  const goal = await detectGoalWithIntent(messages, previousState?.goal ?? 'unknown');
+  let goal = await detectGoalWithIntent(messages, previousState?.goal ?? 'unknown');
+  
+  // SAD-4: Detect goal pivots on subsequent turns
+  if (turnCount > 1 && previousState?.goal && previousState.goal !== 'unknown') {
+    const lastUserMessage = messages
+      .slice()
+      .reverse()
+      .find((m) => m.role === 'user')?.content || '';
+    const pivotedGoal = detectGoalPivot(lastUserMessage, previousState.goal);
+    if (pivotedGoal) {
+      goal = pivotedGoal;
+    }
+  }
   
   // Get entry point from intent classification on first message only
   let entryPoint: EntryPoint | undefined;
@@ -520,6 +560,10 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
       calculationBlock = formatEmergencyFundBlock(calculations.emergencyFund);
     } else if (calculations.debtPayoff) {
       calculationBlock = formatDebtPayoffBlock(calculations.debtPayoff);
+    } else if (calculations.investment) {
+      calculationBlock = formatInvestmentBlock(calculations.investment);
+    } else if (calculations.retirement) {
+      calculationBlock = formatRetirementBlock(calculations.retirement);
     }
   }
 
