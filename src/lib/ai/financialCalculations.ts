@@ -51,7 +51,7 @@ export interface InvestmentCalculation {
   emergencyFundTarget: number;
   emergencyFundGap: number;
   recommendedMonthlyInvestment: number;
-  timelineMonths: number;
+  timelineMonths: number | null; // REM-S: null when no discretionary income available
   allocationStrategy: string;
 }
 
@@ -334,12 +334,17 @@ export function calculateFinancials(
       const emergencyFundTarget = profile.essentialExpenses * EMERGENCY_FUND_TARGET_MONTHS; // REM-O: Use standardized constant
       const emergencyFundGap = Math.max(0, emergencyFundTarget - (profile.totalSavings || 0));
       
+      // REM-S: Guard against negative discretionary income (expenses > income)
+      const timelineMonths = emergencyFundGap > 0 && discretionary > 0 
+        ? Math.ceil(emergencyFundGap / (discretionary * 0.5)) 
+        : (emergencyFundGap > 0 ? null : 0);
+      
       result.investment = {
         monthlyDiscretionary: discretionary,
         emergencyFundTarget,
         emergencyFundGap,
         recommendedMonthlyInvestment: Math.max(0, discretionary * 0.15), // 15% of discretionary
-        timelineMonths: emergencyFundGap > 0 ? Math.ceil(emergencyFundGap / (discretionary * 0.5)) : 0,
+        timelineMonths,
         allocationStrategy: profile.riskTolerance === 'cautious' ? '60/40 stocks/bonds' : profile.riskTolerance === 'growth' ? '90/10 stocks/bonds' : '70/30 stocks/bonds',
       };
     }
@@ -476,13 +481,18 @@ CALCULATION RESULTS (use these exact numbers):
  * Format investment calculation as a system prompt block
  */
 export function formatInvestmentBlock(calc: InvestmentCalculation): string {
+  // REM-S: Handle null timelineMonths when no discretionary income available
+  const timelineText = calc.timelineMonths !== null
+    ? `${calc.timelineMonths} months (after emergency fund)`
+    : 'Cannot project — no discretionary income available for emergency fund contributions';
+  
   return `
 CALCULATION RESULTS (use these exact numbers):
 - Monthly discretionary income: $${Math.round(calc.monthlyDiscretionary)}
 - Emergency fund target: $${Math.round(calc.emergencyFundTarget)}
 - Emergency fund gap: $${Math.round(calc.emergencyFundGap)}
 - Recommended monthly investment: $${Math.round(calc.recommendedMonthlyInvestment)} (15% of discretionary)
-- Timeline to start investing: ${calc.timelineMonths} months (after emergency fund)
+- Timeline to start investing: ${timelineText}
 - Recommended allocation: ${calc.allocationStrategy}`;
 }
 

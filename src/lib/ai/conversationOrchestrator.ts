@@ -229,7 +229,7 @@ const REQUIRED_FIELDS: Record<ConversationGoal, Array<keyof FinancialProfile>> =
   debt_payoff: ['monthlyIncome', 'essentialExpenses', 'highInterestDebt'],
   budget_build: ['monthlyIncome', 'essentialExpenses', 'discretionaryExpenses'],
   investment_start: ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt'],
-  retirement_planning: ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'timeHorizonYears'],
+  retirement_planning: ['monthlyIncome', 'essentialExpenses', 'discretionaryExpenses', 'totalSavings', 'timeHorizonYears'], // REM-R: Added discretionaryExpenses so REM-Q full-lifestyle FIRE formula has required data
   general_guidance: ['monthlyIncome'],
   unknown: [],
 };
