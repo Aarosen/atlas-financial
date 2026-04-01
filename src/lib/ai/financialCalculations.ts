@@ -8,7 +8,24 @@
 import type { FinancialProfile } from './conversationOrchestrator';
 import { compareDebtStrategies, formatDebtPayoffBlock, type Debt, type DebtPayoffComparison } from './debtPayoffCalculations';
 
-const EMERGENCY_FUND_TARGET_MONTHS = 4;
+const EMERGENCY_FUND_TARGET_MONTHS = 6; // REM-O: Standardized to 6 months (industry standard)
+
+/**
+ * REM-N: Compound future value of lump sum + recurring contributions
+ * @param pv - Present value (existing savings)
+ * @param pmt - Monthly contribution amount
+ * @param annualRate - Annual growth rate as decimal (e.g., 0.07 for 7%)
+ * @param years - Number of years
+ * @returns Future value
+ */
+function compoundFutureValue(pv: number, pmt: number, annualRate: number, years: number): number {
+  if (annualRate === 0) return pv + pmt * 12 * years;
+  const r = annualRate / 12; // monthly rate
+  const n = years * 12;     // total months
+  const fvLump = pv * Math.pow(1 + r, n);
+  const fvContributions = pmt * ((Math.pow(1 + r, n) - 1) / r);
+  return fvLump + fvContributions;
+}
 
 export interface AffordabilityCalculation {
   discretionary: number;
@@ -314,7 +331,7 @@ export function calculateFinancials(
   if (goal === 'investment_start') {
     if (profile.monthlyIncome && profile.essentialExpenses && profile.totalSavings !== undefined) {
       const discretionary = profile.monthlyIncome - profile.essentialExpenses;
-      const emergencyFundTarget = profile.essentialExpenses * 6;
+      const emergencyFundTarget = profile.essentialExpenses * EMERGENCY_FUND_TARGET_MONTHS; // REM-O: Use standardized constant
       const emergencyFundGap = Math.max(0, emergencyFundTarget - (profile.totalSavings || 0));
       
       result.investment = {
@@ -337,16 +354,37 @@ export function calculateFinancials(
       const currentNetWorth = (profile.totalSavings || 0) - ((profile.highInterestDebt || 0) + (profile.lowInterestDebt || 0));
       const gap = Math.max(0, fireNumber - currentNetWorth);
       const recommendedMonthly = discretionary * 0.20; // 20% of discretionary
-      const yearsToFire = recommendedMonthly > 0 ? Math.ceil(gap / (recommendedMonthly * 12)) : 999;
+      
+      // REM-N: Use compound future value instead of linear math
+      const ASSUMED_ANNUAL_RETURN = 0.07; // 7% nominal growth — standard conservative planning assumption
+      const horizonYearsResolved = profile.timeHorizonYears || 25;
+      const projectedFV = compoundFutureValue(
+        currentNetWorth,
+        recommendedMonthly,
+        ASSUMED_ANNUAL_RETURN,
+        horizonYearsResolved
+      );
+      const onTrack = projectedFV >= fireNumber;
+      
+      // Compute actual years-to-FIRE by iterating compound growth
+      let yearsToFire = 999;
+      if (recommendedMonthly > 0 || currentNetWorth > 0) {
+        for (let y = 1; y <= 50; y++) {
+          if (compoundFutureValue(currentNetWorth, recommendedMonthly, ASSUMED_ANNUAL_RETURN, y) >= fireNumber) {
+            yearsToFire = y;
+            break;
+          }
+        }
+      }
       
       result.retirement = {
         fireNumber,
         currentNetWorth,
         gap,
         recommendedMonthlyContribution: recommendedMonthly,
-        yearsToRetirement: Math.min(yearsToFire, profile.timeHorizonYears),
-        targetRetirementYear: new Date().getFullYear() + Math.min(yearsToFire, profile.timeHorizonYears),
-        onTrackStatus: yearsToFire <= profile.timeHorizonYears ? 'on track' : 'needs acceleration',
+        yearsToRetirement: Math.min(yearsToFire, horizonYearsResolved),
+        targetRetirementYear: new Date().getFullYear() + Math.min(yearsToFire, horizonYearsResolved),
+        onTrackStatus: onTrack ? 'on track' : 'needs acceleration',
       };
     }
   }
