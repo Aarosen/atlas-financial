@@ -16,6 +16,7 @@ export type FinancialState = {
   secondaryGoal?: string;
   riskTolerance: 'cautious' | 'balanced' | 'growth';
   timeHorizonYears: number;
+  proposedPayment?: number;
 };
 
 // Multi-goal support

@@ -281,7 +281,8 @@ export function detectPhase(
   missingFields: string[],
   profile: FinancialProfile,
   goal: ConversationGoal,
-  unknown?: Record<string, boolean>
+  unknown?: Record<string, boolean>,
+  answered?: Record<string, boolean>
 ): SessionPhase {
   if (turnCount === 0) return 'greeting';
   if (turnCount === 1) return 'discovery'; // Always discovery on turn 1 to ask one field at a time
@@ -291,10 +292,12 @@ export function detectPhase(
   const hasCalculable =
     (profile.monthlyIncome ?? 0) > 0 && (profile.essentialExpenses ?? 0) > 0;
 
-  // FIX-3: Handle income-unknown state — when income is marked unknown but not missing
-  // User said "I don't know my income" — we can't calculate with 0, but we also won't re-ask
-  // Move to guidance phase with conservative estimates instead of staying in discovery limbo
-  if (!hasCalculable && unknown?.monthlyIncome && missingFields.length === 0) {
+  // REM-B: Handle income-unknown state — when user explicitly answered but income is 0
+  // User said "I don't know my income" → answered.monthlyIncome=true but profile.monthlyIncome=0
+  // We can't calculate with 0, but we won't re-ask. Move to guidance phase instead of discovery limbo.
+  // This allows Claude to ask for a range (via RULE 5A) with a coherent session state.
+  const incomeUnknown = answered?.monthlyIncome === true && (profile.monthlyIncome ?? 0) === 0;
+  if (!hasCalculable && incomeUnknown && missingFields.length === 0) {
     return 'guidance';
   }
 
@@ -526,7 +529,7 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
   }
   
   const missingFields = getMissingFields(goal, financialProfile, answered);
-  const phase = detectPhase(turnCount, missingFields, financialProfile, goal, previousState?.unknown);
+  const phase = detectPhase(turnCount, missingFields, financialProfile, goal, previousState?.unknown, answered);
   const openLoops = detectOpenLoops(messages, previousState?.openLoops ?? []);
   const urgencyLevel = detectUrgency(financialProfile, messages);
 

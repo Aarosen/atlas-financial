@@ -531,6 +531,7 @@ FIELDS TO EXTRACT (omit any you cannot confidently extract):
 - highInterestDebt: number (total balance of debts above ~7% APR: credit cards, personal loans)
 - lowInterestDebt: number (total balance of debts at or below ~7% APR: student loans, car loans, mortgage)
 - monthlyDebtPayments: number (total minimum monthly payments across all debt)
+- proposedPayment: number (monthly payment amount for a specific purchase being evaluated; extract ONLY when user is evaluating a specific purchase like 'I want to buy a house with a $2,500/month payment' or 'the car payment would be $450/month' or 'the apartment is $1,800/month'; omit if user is not evaluating a specific purchase)
 - primaryGoal: one of "stability" | "growth" | "flexibility" | "wealth_building"
   (stability/security → "stability", investing/returns → "growth",
    freedom/liquid → "flexibility", FIRE/retire early/wealth → "wealth_building")
@@ -835,6 +836,9 @@ Return ONLY the rewritten text.`;
       }
       if (extractedFields?.totalSavings !== undefined && extractedFields.totalSavings !== null) {
         updatedAnswered.totalSavings = true;
+      }
+      if (extractedFields?.proposedPayment !== undefined && extractedFields.proposedPayment !== null) {
+        updatedAnswered.proposedPayment = true;
       }
 
       // FINANCIAL VALIDATION: Validate extracted financial snapshot for implausible values
