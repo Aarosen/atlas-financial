@@ -6,6 +6,8 @@ interface RateLimitConfig {
 }
 
 const configs: Record<string, RateLimitConfig> = {
+  chat_guest: { maxRequests: 30, windowMs: 60000 },
+  chat_auth: { maxRequests: 100, windowMs: 60000 },
   chat: { maxRequests: 30, windowMs: 60000 },
   api: { maxRequests: 100, windowMs: 60000 },
   auth: { maxRequests: 5, windowMs: 60000 },

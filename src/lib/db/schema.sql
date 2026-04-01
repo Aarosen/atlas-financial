@@ -269,3 +269,23 @@ CREATE TABLE IF NOT EXISTS cron_logs (
 
 CREATE INDEX IF NOT EXISTS idx_cron_logs_ran_at ON cron_logs(ran_at);
 CREATE INDEX IF NOT EXISTS idx_cron_logs_job_name ON cron_logs(job_name);
+
+-- Stores eval failure samples for monitoring and analysis
+CREATE TABLE IF NOT EXISTS eval_failures (
+  id UUID PRIMARY KEY DEFAULT gen_random_uuid(),
+  session_id TEXT NOT NULL,
+  user_message TEXT NOT NULL,
+  atlas_response TEXT NOT NULL,
+  reason TEXT NOT NULL,
+  severity TEXT CHECK (severity IN ('critical', 'high', 'medium', 'low')),
+  tags TEXT[] DEFAULT '{}',
+  emotion TEXT,
+  topic TEXT,
+  timestamp TIMESTAMPTZ NOT NULL,
+  day_key TEXT NOT NULL,
+  created_at TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_eval_failures_day_key ON eval_failures(day_key);
+CREATE INDEX IF NOT EXISTS idx_eval_failures_severity ON eval_failures(severity);
+CREATE INDEX IF NOT EXISTS idx_eval_failures_created_at ON eval_failures(created_at);

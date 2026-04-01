@@ -36,7 +36,7 @@ export function AuthPromptCard({ onDismiss }: { onDismiss: () => void }) {
           </button>
         </div>
         <p style={{ margin: '0 0 16px 0', color: 'var(--ink2)', fontSize: 14, lineHeight: 1.6 }}>
-          Sign in to save your progress and get personalized follow-ups on your commitments.
+          Your financial profile is built. Sign in to save it across all your devices and not lose this progress.
         </p>
         <MagicLinkAuth
           onAuthSuccess={() => {

@@ -95,7 +95,7 @@ function streamStaticResponse(text: string, meta: { model: string; tier: string;
       'Content-Type': 'text/event-stream; charset=utf-8',
       'Cache-Control': 'no-cache, no-transform',
       Connection: 'keep-alive',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://atlas-financial.vercel.app',
     },
   });
 }
@@ -171,7 +171,7 @@ function jsonOk(data: unknown, init?: ResponseInit) {
     status: 200,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://atlas-financial.vercel.app',
     },
     ...init,
   });
@@ -182,7 +182,7 @@ function jsonError(status: number, message: string) {
     status,
     headers: {
       'Content-Type': 'application/json',
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://atlas-financial.vercel.app',
     },
   });
 }
@@ -316,7 +316,7 @@ export async function POST(req: Request) {
   const rateLimitIdentifier = isAuthenticated ? (userId as string) : ip;
   
   // Check distributed KV rate limit first (persists across cold starts)
-  const kvRateLimitResult = await applyRateLimit(req, rateLimitIdentifier);
+  const kvRateLimitResult = await applyRateLimit(req, rateLimitIdentifier, isAuthenticated);
   const rateLimitRemaining = kvRateLimitResult.remaining ?? 30;
   if (!kvRateLimitResult.allowed && kvRateLimitResult.response) {
     captureMessage('Rate limit exceeded (KV)', 'warning', { userId, ip });
@@ -609,7 +609,7 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
           ? 260
           : type === 'answer_explain' || type === 'answer_explain_stream'
             ? 700
-            : 900;
+            : 1200;
 
   const answerPrompt = `You are Atlas. Answer the user's question briefly and clearly.
 
@@ -911,7 +911,7 @@ Return ONLY the rewritten text.`;
                   'anthropic-version': '2023-06-01',
                 },
                 body: JSON.stringify({
-                  model: 'claude-3-haiku-20240307',
+                  model: 'claude-3-5-haiku-20241022',
                   max_tokens: 10,
                   system: 'You are a financial compliance classifier. Answer only: YES or NO. Is this message requesting specific investment advice (which securities to buy/sell), specific tax filing guidance, or specific legal advice?',
                   messages: [{ role: 'user', content: lastUserMsg }],
@@ -1077,7 +1077,7 @@ Return ONLY the rewritten text.`;
       const promptSections: string[] = [
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
         sessionStateBlock,           // ← Always included, never trimmed (position 1)
-        ...(priorContextBlock ? [priorContextBlock] : []), // ← PRIOR CONTEXT = cross-device memory from Supabase
+        ...(priorContextBlock ? [sanitizeMemorySummary(priorContextBlock)] : []), // ← PRIOR CONTEXT = cross-device memory from Supabase (sanitized)
         ...(companionContext ? [companionContext] : []), // ← COMPANION CONTEXT = injected after session state
         ...(multiGoalContext ? [multiGoalContext] : []), // ← MULTI-GOAL CONTEXT = injected after companion context
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← SECOND = always preserved before other sections get trimmed
@@ -1344,7 +1344,7 @@ Return ONLY the rewritten text.`;
           'Content-Type': 'text/event-stream; charset=utf-8',
           'Cache-Control': 'no-cache, no-transform',
           Connection: 'keep-alive',
-          'Access-Control-Allow-Origin': '*',
+          'Access-Control-Allow-Origin': process.env.NEXT_PUBLIC_APP_URL || 'https://atlas-financial.vercel.app',
           'X-RateLimit-Remaining': Math.max(0, rateLimitRemaining).toString(),
         },
       });

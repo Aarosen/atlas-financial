@@ -28,7 +28,7 @@ Return ONLY the JSON array, no other text.`;
 
   try {
     const response = await client.messages.create({
-      model: 'claude-3-haiku-20240307',
+      model: 'claude-3-5-haiku-20241022',
       max_tokens: 200,
       messages: [
         {

@@ -1327,8 +1327,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           updateSessionId(res.sessionId);
         }
         
-        // AUTHPROMPTCARD: Show auth prompt to guest users after 3 messages
-        if (userId === 'guest' && st.msgs.length >= 3 && !showAuthPrompt) {
+        // AUTHPROMPTCARD: Show auth prompt to guest users immediately after tier reveal
+        // This is the highest-value moment — user has received their full financial analysis
+        if (userId === 'guest' && st.baseline && !showAuthPrompt) {
           setShowAuthPrompt(true);
         }
 

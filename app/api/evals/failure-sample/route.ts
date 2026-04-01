@@ -1,7 +1,6 @@
 export const runtime = "nodejs";
 
-import fs from "fs";
-import path from "path";
+import { createClient } from "@supabase/supabase-js";
 
 interface FailureSample {
   sessionId: string;
@@ -31,12 +30,17 @@ function getDayKey(timestamp: string) {
   return new Date(timestamp).toISOString().slice(0, 10);
 }
 
-function getFilePath(dayKey: string) {
-  return path.join(process.cwd(), "src/evals/failure-samples", `failures-${dayKey}.json`);
-}
-
 function redact(text: string) {
   return text.replace(/\$?\d[\d,]*(?:\.\d+)?/g, "[REDACTED_NUMBER]");
+}
+
+function getSupabaseClient() {
+  const url = process.env.NEXT_PUBLIC_SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) {
+    throw new Error("Missing Supabase credentials");
+  }
+  return createClient(url, key);
 }
 
 export async function POST(req: Request) {
@@ -55,28 +59,56 @@ export async function POST(req: Request) {
   }
 
   if (!payload) return new Response(JSON.stringify({ error: "missing_payload" }), { status: 400 });
+  
   const dayKey = getDayKey(payload.timestamp);
-  const filePath = getFilePath(dayKey);
-
   const safePayload: FailureSample = {
     ...payload,
     userMessage: redact(payload.userMessage || ""),
     atlasResponse: redact(payload.atlasResponse || ""),
   };
 
-  let existing: FailureSample[] = [];
-  if (fs.existsSync(filePath)) {
-    const raw = fs.readFileSync(filePath, "utf-8");
-    existing = JSON.parse(raw) as FailureSample[];
+  try {
+    const supabase = getSupabaseClient();
+
+    // Check daily cap using Supabase count
+    const { count, error: countError } = await supabase
+      .from('eval_failures')
+      .select('id', { count: 'exact', head: true })
+      .eq('day_key', dayKey);
+
+    if (countError) {
+      console.error('[eval-failures] Count error:', countError);
+      return new Response(JSON.stringify({ error: 'count_failed' }), { status: 500 });
+    }
+
+    if ((count ?? 0) >= MAX_PER_DAY) {
+      return new Response(JSON.stringify({ ok: true, capped: true }), { status: 200 });
+    }
+
+    // Insert failure sample into Supabase
+    const { error: insertError } = await supabase
+      .from('eval_failures')
+      .insert({
+        session_id: safePayload.sessionId,
+        user_message: safePayload.userMessage,
+        atlas_response: safePayload.atlasResponse,
+        reason: safePayload.reason,
+        severity: safePayload.severity || 'medium',
+        tags: safePayload.tags || [],
+        emotion: safePayload.emotion,
+        topic: safePayload.topic,
+        timestamp: new Date(safePayload.timestamp).toISOString(),
+        day_key: dayKey,
+      });
+
+    if (insertError) {
+      console.error('[eval-failures] Insert error:', insertError);
+      return new Response(JSON.stringify({ error: 'insert_failed' }), { status: 500 });
+    }
+
+    return new Response(JSON.stringify({ ok: true }), { status: 200 });
+  } catch (error) {
+    console.error('[eval-failures] Unexpected error:', error);
+    return new Response(JSON.stringify({ error: 'internal_error' }), { status: 500 });
   }
-
-  if (existing.length >= MAX_PER_DAY) {
-    return new Response(JSON.stringify({ ok: true, capped: true }), { status: 200 });
-  }
-
-  existing.push(safePayload);
-  fs.mkdirSync(path.dirname(filePath), { recursive: true });
-  fs.writeFileSync(filePath, JSON.stringify(existing, null, 2));
-
-  return new Response(JSON.stringify({ ok: true }), { status: 200 });
 }

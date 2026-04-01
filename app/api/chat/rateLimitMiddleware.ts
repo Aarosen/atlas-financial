@@ -8,10 +8,12 @@ import { checkRateLimitKv, getRateLimitHeaders } from '@/lib/api/rateLimitKv';
  */
 export async function applyRateLimit(
   request: Request,
-  identifier: string
+  identifier: string,
+  isAuthenticated: boolean = false
 ): Promise<{ allowed: boolean; remaining?: number; response?: NextResponse }> {
   try {
-    const result = await checkRateLimitKv(identifier, 'chat');
+    const limitType = isAuthenticated ? 'chat_auth' : 'chat_guest';
+    const result = await checkRateLimitKv(identifier, limitType);
 
     if (!result.allowed) {
       const headers = getRateLimitHeaders(result);

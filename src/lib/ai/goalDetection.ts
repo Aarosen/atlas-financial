@@ -52,7 +52,7 @@ Return ONLY valid JSON array. Example: [{"type":"debt_payoff","title":"Pay off c
         'anthropic-version': '2023-06-01',
       },
       body: JSON.stringify({
-        model: 'claude-3-haiku-20240307',
+        model: 'claude-3-5-haiku-20241022',
         max_tokens: 500,
         messages: [{ role: 'user', content: extractionPrompt }],
       }),
