@@ -63,7 +63,7 @@ export function computeMissing(collected: FinancialState, answered: AtlasConvers
 export type ScriptTurn = {
   userText: string;
   extractedFields?: Partial<Record<keyof FinancialState, unknown>>;
-  kind?: 'meta' | 'followup_question' | 'correction' | 'answer_to_question';
+  kind?: 'meta' | 'followup_question' | 'correction' | 'answer_to_question' | 'goal_pivot';
   now?: number;
 };
 
@@ -258,6 +258,12 @@ export function nextQuestionForMissing(
       'What would feel like a win for you?',
       'What are your biggest financial goals?',
     ],
+    timeHorizonYears: [
+      'When are you hoping to retire or reach this goal?',
+      'How many years do you have until retirement?',
+      "What's your timeline for this?",
+      'How far out are you thinking?',
+    ],
   };
 
   const v = variants[k];
@@ -266,13 +272,16 @@ export function nextQuestionForMissing(
   return { key: k, text: v[idx] };
 }
 
-export type InterruptionType = 'answer_to_question' | 'followup_question' | 'correction' | 'meta';
+export type InterruptionType = 'answer_to_question' | 'followup_question' | 'correction' | 'meta' | 'goal_pivot';
 
 export function classifyInterruption(userText: string): InterruptionType {
   const t = userText.trim().toLowerCase();
 
   if (/(what.*do.*(data|store|send)|privacy|private|stored|transmit)/i.test(t)) return 'meta';
   if (/\b(store|send)\b/i.test(t) && /\bwhat|why|how\b/i.test(t)) return 'meta';
+  // SAD-4: Detect goal pivots - explicit changes in financial focus
+  if (/^(actually|wait|let me|i think|on second thought).*\b(focus|prioritize|work on|tackle|address|pay off|build|save for|invest in|plan for)\b/i.test(t)) return 'goal_pivot';
+  if (/\b(instead|rather|but i think|but actually).*\b(focus|prioritize|work on|tackle|address|pay off|build|save for|invest in|plan for)\b/i.test(t)) return 'goal_pivot';
   if (/^(actually|correction|sorry|wait|i meant|update)/i.test(t) || /\bmy\s+(income|rent|expenses|savings|debt)\s+is\b/i.test(t)) return 'correction';
 
   if (t.includes('?')) {
@@ -301,8 +310,11 @@ export function classifyInterruption(userText: string): InterruptionType {
   return 'answer_to_question';
 }
 
-export function metaResponse(userText: string): string {
+export function metaResponse(userText: string, isAuthenticated: boolean = false): string {
   if (/(data|privacy|store|stored|send|transmit)/i.test(userText)) {
+    if (isAuthenticated) {
+      return 'Your financial data is stored securely in our database. We save your conversation history, financial profile, and action items so you can pick up where you left off. You can request to delete your data anytime from your account settings.';
+    }
     return 'Your data stays private—I only send what you type for the current request to Claude AI, and your financial info stays in your browser locally where you can delete it anytime.';
   }
   return "I can answer that.";

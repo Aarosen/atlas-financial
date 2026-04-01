@@ -176,7 +176,7 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
           msgs[msgs.length - 1] = { ...last, t: `${cur.trim()}\n\nCanceled` };
         }
       }
-      return { ...state, streaming: false, busy: false, msgs };
+      return { ...state, streaming: false, busy: false, msgs, apiErr: 'Response was canceled. Tap retry to send again.' };
     }
 
     case 'STREAM_ERROR': {

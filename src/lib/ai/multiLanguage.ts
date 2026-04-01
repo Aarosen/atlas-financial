@@ -1,16 +1,18 @@
 export type SupportedLanguage = 'en' | 'es' | 'fr' | 'zh';
 
 export function detectLanguage(text: string): SupportedLanguage {
-  const t = String(text || '').toLowerCase();
-  if (/\b(hola|gracias|por favor|dinero|ahorro)\b/.test(t)) return 'es';
-  if (/\b(bonjour|merci|s'il vous plaît|argent|épargne)\b/.test(t)) return 'fr';
-  if (/\b(ni hao|xie xie|qian|chuxu)\b/.test(t)) return 'zh';
+  // SAD-2: Language detection is a stub that only recognizes 4-5 keywords per language
+  // Real translation requires a proper API (DeepL, Google Translate)
+  // For now, always return 'en' to avoid false positives
+  // TODO: Implement real translation API or remove multi-language support entirely
   return 'en';
 }
 
 export function translate(text: string, to: SupportedLanguage): string {
-  if (to === 'es') return `[ES] ${text}`;
-  if (to === 'fr') return `[FR] ${text}`;
-  if (to === 'zh') return `[ZH] ${text}`;
+  // SAD-2: translate() is a non-functional stub that only adds language prefixes
+  // This is not actual translation and provides a broken user experience
+  // Real translation requires a proper API (DeepL, Google Translate)
+  // For now, return text unchanged to avoid false promises
+  // TODO: Implement real translation API or remove multi-language support entirely
   return text;
 }

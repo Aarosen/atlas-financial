@@ -1026,9 +1026,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
         const missBefore = base.missing.length ? base.missing : missing(base.fin);
         const resumeQ = missBefore.length ? nextQuestionForMissing(missBefore[0], prevMsgs.length) : null;
+        const isAuthenticated = userId !== 'guest';
 
         if (kind === 'meta') {
-          const ans = metaResponse(ut);
+          const ans = metaResponse(ut, isAuthenticated);
           const out = resumeQ ? `${ans} ${resumeQ.text}` : ans;
           logReplay(
             createReplayEntry({

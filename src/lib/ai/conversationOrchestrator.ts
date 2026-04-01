@@ -184,7 +184,7 @@ export async function detectGoalWithIntent(
 // ─── Required Fields Per Goal ─────────────────────────────────────────────────
 
 const REQUIRED_FIELDS: Record<ConversationGoal, Array<keyof FinancialProfile>> = {
-  affordability_check: ['monthlyIncome', 'essentialExpenses'],
+  affordability_check: ['monthlyIncome', 'essentialExpenses', 'proposedPayment'],
   emergency_fund: ['monthlyIncome', 'essentialExpenses', 'totalSavings'],
   debt_payoff: ['monthlyIncome', 'essentialExpenses', 'highInterestDebt'],
   budget_build: ['monthlyIncome', 'essentialExpenses', 'discretionaryExpenses'],

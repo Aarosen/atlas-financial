@@ -29,10 +29,31 @@ export interface EmergencyFundCalculation {
   cannotAffordContributions: boolean;
 }
 
+export interface InvestmentCalculation {
+  monthlyDiscretionary: number;
+  emergencyFundTarget: number;
+  emergencyFundGap: number;
+  recommendedMonthlyInvestment: number;
+  timelineMonths: number;
+  allocationStrategy: string;
+}
+
+export interface RetirementCalculation {
+  fireNumber: number;
+  currentNetWorth: number;
+  gap: number;
+  recommendedMonthlyContribution: number;
+  yearsToRetirement: number;
+  targetRetirementAge: number;
+  onTrackStatus: string;
+}
+
 export interface FinancialCalculationsResult {
   affordability?: AffordabilityCalculation;
   emergencyFund?: EmergencyFundCalculation;
   debtPayoff?: DebtPayoffComparison;
+  investment?: InvestmentCalculation;
+  retirement?: RetirementCalculation;
 }
 
 /**
@@ -198,6 +219,47 @@ export function calculateFinancials(
       if (discretionary > 0) {
         result.debtPayoff = compareDebtStrategies(debts, discretionary);
       }
+    }
+  }
+
+  // SAD-5: Investment start - calculate allocation and monthly contribution
+  if (goal === 'investment_start') {
+    if (profile.monthlyIncome && profile.essentialExpenses && profile.totalSavings !== undefined) {
+      const discretionary = profile.monthlyIncome - profile.essentialExpenses;
+      const emergencyFundTarget = profile.essentialExpenses * 6;
+      const emergencyFundGap = Math.max(0, emergencyFundTarget - (profile.totalSavings || 0));
+      
+      result.investment = {
+        monthlyDiscretionary: discretionary,
+        emergencyFundTarget,
+        emergencyFundGap,
+        recommendedMonthlyInvestment: Math.max(0, discretionary * 0.15), // 15% of discretionary
+        timelineMonths: emergencyFundGap > 0 ? Math.ceil(emergencyFundGap / (discretionary * 0.5)) : 0,
+        allocationStrategy: profile.riskTolerance === 'cautious' ? '60/40 stocks/bonds' : profile.riskTolerance === 'growth' ? '90/10 stocks/bonds' : '70/30 stocks/bonds',
+      };
+    }
+  }
+
+  // SAD-5: Retirement planning - calculate FIRE number and years to retirement
+  if (goal === 'retirement_planning') {
+    if (profile.monthlyIncome && profile.essentialExpenses && profile.totalSavings !== undefined && profile.timeHorizonYears) {
+      const discretionary = profile.monthlyIncome - profile.essentialExpenses;
+      const annualExpenses = profile.essentialExpenses * 12;
+      const fireNumber = annualExpenses * 25; // 4% rule
+      const currentNetWorth = (profile.totalSavings || 0) - ((profile.highInterestDebt || 0) + (profile.lowInterestDebt || 0));
+      const gap = Math.max(0, fireNumber - currentNetWorth);
+      const recommendedMonthly = discretionary * 0.20; // 20% of discretionary
+      const yearsToFire = recommendedMonthly > 0 ? Math.ceil(gap / (recommendedMonthly * 12)) : 999;
+      
+      result.retirement = {
+        fireNumber,
+        currentNetWorth,
+        gap,
+        recommendedMonthlyContribution: recommendedMonthly,
+        yearsToRetirement: Math.min(yearsToFire, profile.timeHorizonYears),
+        targetRetirementAge: new Date().getFullYear() + Math.min(yearsToFire, profile.timeHorizonYears),
+        onTrackStatus: yearsToFire <= profile.timeHorizonYears ? 'on track' : 'needs acceleration',
+      };
     }
   }
 
