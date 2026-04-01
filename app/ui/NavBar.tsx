@@ -2,7 +2,7 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, X } from 'lucide-react';
+import { Menu, X, Moon, Sun } from 'lucide-react';
 import { ButtonLink } from '@/components/Buttons';
 import AtlasLogo from './AtlasLogo';
 
@@ -17,8 +17,48 @@ export default function NavBar() {
 
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
+  const [theme, setTheme] = useState<'light' | 'dark'>('light');
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+
+  // Initialize theme from localStorage
+  useEffect(() => {
+    try {
+      const saved = localStorage.getItem('atlas_theme');
+      if (saved === 'light' || saved === 'dark') {
+        setTheme(saved);
+      } else {
+        const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+        setTheme(prefersDark ? 'dark' : 'light');
+      }
+    } catch {
+      // ignore
+    }
+  }, []);
+
+  // TASK 1.3: Three-state theme toggle (light → dark → system)
+  const toggleTheme = () => {
+    const saved = localStorage.getItem('atlas_theme');
+    let next: 'light' | 'dark' | null;
+    
+    if (!saved) {
+      // Currently: system. Cycle to: force light
+      next = 'light';
+      localStorage.setItem('atlas_theme', 'light');
+    } else if (saved === 'light') {
+      // Currently: force light. Cycle to: force dark
+      next = 'dark';
+      localStorage.setItem('atlas_theme', 'dark');
+    } else {
+      // Currently: force dark. Cycle to: system (remove override)
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      next = prefersDark ? 'dark' : 'light';
+      localStorage.removeItem('atlas_theme');
+    }
+    
+    setTheme(next);
+    document.documentElement.setAttribute('data-theme', next);
+  };
 
   useEffect(() => {
     const checkMobile = () => {
@@ -102,6 +142,28 @@ export default function NavBar() {
                 {item.label}
               </button>
             ))}
+            {/* TASK 1.3: Theme toggle button in nav */}
+            <button
+              onClick={toggleTheme}
+              aria-label={theme === 'dark' ? 'Switch to light mode' : 'Switch to dark mode'}
+              style={{
+                background: 'transparent',
+                border: '1px solid var(--bdr)',
+                borderRadius: '50%',
+                width: 36,
+                height: 36,
+                display: 'flex',
+                alignItems: 'center',
+                justifyContent: 'center',
+                cursor: 'pointer',
+                color: 'var(--ink2)',
+                transition: 'background .2s',
+              }}
+              onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg2)')}
+              onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+            >
+              {theme === 'dark' ? <Sun size={18} /> : <Moon size={18} />}
+            </button>
             <ButtonLink href="/conversation" variant="primary" size="sm" style={{ padding: '10px 14px', borderRadius: 24, fontWeight: 900, fontSize: 13 }}>
               Start
             </ButtonLink>

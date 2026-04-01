@@ -43,12 +43,13 @@ export function LandingScreen({
               Start a conversation →
             </Button>
             <Button onClick={() => setShowAuth(true)} variant="secondary" size="md">
-              Sign in with email
-            </Button>
-            <Button onClick={onToggleTheme} variant="secondary" size="md">
-              {theme === 'dark' ? 'Light mode' : 'Dark mode'}
+              Log in
             </Button>
           </div>
+          
+          <p style={{ marginTop: 12, fontSize: 13, color: 'var(--ink3)' }}>
+            New to Atlas? Just start a conversation — no account needed.
+          </p>
 
           <div style={{ marginTop: 20, color: 'var(--ink3)', fontSize: 13, fontWeight: 600, display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
@@ -117,11 +118,6 @@ export function LandingScreen({
             >
               <X size={20} />
             </button>
-
-            <h2 style={{ margin: '0 0 24px 0', fontSize: 20, fontWeight: 600 }}>Sign in to Atlas</h2>
-            <p style={{ margin: '0 0 24px 0', color: 'var(--ink2)', fontSize: 14, lineHeight: 1.6 }}>
-              Create an account or sign in to save your progress and get personalized follow-ups.
-            </p>
 
             <MagicLinkAuth onAuthSuccess={() => setShowAuth(false)} />
           </div>
