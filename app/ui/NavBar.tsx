@@ -342,13 +342,16 @@ export default function NavBar() {
                     style={{ 
                       width: '100%',
                       textAlign: 'left',
-                      padding: '12px 16px',
+                      padding: '16px 16px',
                       borderRadius: 'var(--r-sm)',
                       color: 'var(--ink)',
                       fontWeight: 700,
                       fontSize: '14px',
                       transitionProperty: 'background-color, transform',
-                      animationDelay: `${index * 50}ms`
+                      animationDelay: `${index * 50}ms`,
+                      minHeight: '44px',
+                      display: 'flex',
+                      alignItems: 'center'
                     }}
                   >
                     {item.label}
