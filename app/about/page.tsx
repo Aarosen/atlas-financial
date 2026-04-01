@@ -65,12 +65,13 @@ export default function AboutPage() {
           <p className="text-lg text-slate-700 dark:text-slate-300 mb-4">
             Have questions or feedback? We'd love to hear from you.
           </p>
-          <button
-            onClick={() => { window.location.href = '/contact'; }}
-            className="px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+          <a
+            href="/contact"
+            className="inline-block px-6 py-3 bg-teal-600 hover:bg-teal-700 text-white font-semibold rounded-lg transition-all duration-200 hover:shadow-lg hover:-translate-y-0.5"
+            style={{ textDecoration: 'none' }}
           >
             Get in Touch
-          </button>
+          </a>
         </section>
       </div>
     </div>
