@@ -167,7 +167,10 @@ export async function maybeQueueFailureSample(origin: string, input: FailureSamp
   try {
     await fetch(`${origin}/api/evals/failure-sample`, {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
+      headers: {
+        "Content-Type": "application/json",
+        "x-atlas-eval-key": process.env.ATLAS_EVAL_KEY || "",
+      },
       body: JSON.stringify(payload),
     });
   } catch {
