@@ -29,7 +29,7 @@ test.describe('Authentication Flow', () => {
     await emailInput.fill('');
     await emailInput.press('Enter');
     await expect(page.locator('text=Please enter your email')).toBeVisible();
-  });}
+  });
 
   test('should persist session across page reloads', async ({ page }) => {
     await page.goto('/');
