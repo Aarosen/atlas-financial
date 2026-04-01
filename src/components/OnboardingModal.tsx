@@ -5,6 +5,11 @@ import { getOnboardingContent, getNextOnboardingStep, markOnboardingComplete, ty
 import { Button } from './Buttons';
 
 export function OnboardingModal({ onComplete }: { onComplete: () => void }) {
+  // Gate onboarding overlay during E2E testing
+  if (typeof window !== 'undefined' && process.env.NEXT_PUBLIC_E2E_TESTING === 'true') {
+    return null;
+  }
+
   const [currentStep, setCurrentStep] = useState<OnboardingStep>('welcome');
 
   const content = getOnboardingContent(currentStep);

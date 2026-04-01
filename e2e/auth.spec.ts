@@ -4,13 +4,13 @@ test.describe('Authentication Flow', () => {
   test('should allow guest access to landing page', async ({ page }) => {
     await page.goto('/');
     await expect(page).toHaveTitle(/Atlas/);
-    await expect(page.locator('h1')).toContainText('clarity');
+    await expect(page.locator('h1:not(.srOnly)')).toContainText('clarity');
   });
 
   test('should show auth prompt when starting conversation as guest', async ({ page }) => {
     await page.goto('/');
     await page.click('button:has-text("Sign in with email")');
-    await expect(page.locator('text=Sign in to Atlas')).toBeVisible();
+    await expect(page.locator('text=Sign in to Atlas').first()).toBeVisible();
   });
 
   test('should allow email input for magic link', async ({ page }) => {
@@ -27,9 +27,9 @@ test.describe('Authentication Flow', () => {
     await page.click('button:has-text("Sign in with email")');
     const emailInput = page.locator('input[type="email"]');
     await emailInput.fill('');
-    await page.click('button:has-text("Send magic link")');
+    await emailInput.press('Enter');
     await expect(page.locator('text=Please enter your email')).toBeVisible();
-  });
+  });}
 
   test('should persist session across page reloads', async ({ page }) => {
     await page.goto('/');

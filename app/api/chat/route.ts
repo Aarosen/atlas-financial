@@ -46,8 +46,8 @@ import { applyRateLimit } from './rateLimitMiddleware';
 import { checkRateLimitKv } from '@/lib/api/rateLimitKv';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
-const DEFAULT_MODEL = 'claude-3-sonnet-20240229';
-const FALLBACK_MODELS = ['claude-3-haiku-20240307', 'claude-3-opus-20240229'] as const;
+const DEFAULT_MODEL = 'claude-3-5-haiku-20241022';
+const FALLBACK_MODELS = ['claude-3-5-sonnet-20241022', 'claude-3-opus-20240229'] as const;
 
 const rateLimitMap = new Map<string, { count: number; resetAt: number }>();
 const RATE_LIMIT_GUEST = 20; // 20 requests per minute for guests
@@ -317,14 +317,11 @@ export async function POST(req: Request) {
   
   // Check distributed KV rate limit first (persists across cold starts)
   const kvRateLimitResult = await applyRateLimit(req, rateLimitIdentifier);
-  let rateLimitRemaining = 30; // default
+  const rateLimitRemaining = kvRateLimitResult.remaining ?? 30;
   if (!kvRateLimitResult.allowed && kvRateLimitResult.response) {
     captureMessage('Rate limit exceeded (KV)', 'warning', { userId, ip });
     return kvRateLimitResult.response;
   }
-  // Extract remaining count from rate limit check
-  const kvCheckResult = await checkRateLimitKv(rateLimitIdentifier, 'chat');
-  rateLimitRemaining = kvCheckResult.remaining;
   
   // Fall back to in-memory check as fast pre-check
   if (!checkRateLimit(rateLimitIdentifier, isAuthenticated)) {

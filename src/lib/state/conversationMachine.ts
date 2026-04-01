@@ -165,7 +165,10 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
     case 'STREAM_CANCELED': {
       const msgs = [...state.msgs];
       const last = msgs[msgs.length - 1];
-      if (last && last.r === 'a') {
+      // Remove pending "..." placeholder messages entirely
+      if (last && last.r === 'a' && last.t === '...') {
+        msgs.pop();
+      } else if (last && last.r === 'a') {
         const cur = String(last.t || '');
         if (cur.trim().length === 0) {
           msgs[msgs.length - 1] = { ...last, t: 'Canceled' };

@@ -9,7 +9,7 @@ import { checkRateLimitKv, getRateLimitHeaders } from '@/lib/api/rateLimitKv';
 export async function applyRateLimit(
   request: Request,
   identifier: string
-): Promise<{ allowed: boolean; response?: NextResponse }> {
+): Promise<{ allowed: boolean; remaining?: number; response?: NextResponse }> {
   try {
     const result = await checkRateLimitKv(identifier, 'chat');
 
@@ -22,6 +22,7 @@ export async function applyRateLimit(
       
       return {
         allowed: false,
+        remaining: result.remaining,
         response: NextResponse.json(
           {
             error: 'rate_limited',
@@ -36,11 +37,11 @@ export async function applyRateLimit(
       };
     }
 
-    return { allowed: true };
+    return { allowed: true, remaining: result.remaining };
   } catch (error) {
     console.error('[rate-limit] Error checking rate limit:', error);
     // Fail open - allow request if rate limiting fails
-    return { allowed: true };
+    return { allowed: true, remaining: 30 };
   }
 }
 
