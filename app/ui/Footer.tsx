@@ -51,24 +51,25 @@ export default function Footer() {
         <div className="grid grid-cols-1 md:grid-cols-2 gap-12 mb-16">
           {/* Brand Column */}
           <div>
-            <button
-              onClick={() => window.location.href = '/'}
+            <a
+              href="/"
               className="flex items-center gap-2 mb-6 hover:opacity-70 transition-opacity duration-200 focus:outline-2 focus:outline-offset-2 focus:outline-teal-600"
-              style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0 }}
+              style={{ textDecoration: 'none', display: 'inline-flex' }}
               aria-label="Atlas home"
             >
               <AtlasLogo size={28} />
               <span style={{ fontWeight: 700, fontSize: '20px', color: 'var(--ink)' }}>Atlas</span>
-            </button>
+            </a>
             <p style={{ fontSize: '14px', color: 'var(--ink2)', marginBottom: '32px', maxWidth: '400px', lineHeight: 1.6 }}>
               Your financial thinking partner — here to help you understand and decide.
             </p>
-            <button
-              onClick={() => window.location.href = '/conversation'}
+            <a
+              href="/conversation"
               className="btn btnPrimary btnSm"
+              style={{ display: 'inline-block', textDecoration: 'none' }}
             >
               Get Started
-            </button>
+            </a>
           </div>
 
           {/* Trust & Security Section */}
@@ -103,13 +104,13 @@ export default function Footer() {
               <ul style={{ display: 'flex', flexDirection: 'column', gap: '16px', listStyle: 'none', padding: 0, margin: 0 }}>
                 {section.items.map((item, idx) => (
                   <li key={`${section.title}-${item.label}-${idx}`}>
-                    <button
-                      onClick={() => window.location.href = item.href}
+                    <a
+                      href={item.href}
                       className="atlasClickCard"
-                      style={{ fontSize: '14px', color: 'var(--ink2)', fontWeight: 600, padding: 0 }}
+                      style={{ fontSize: '14px', color: 'var(--ink2)', fontWeight: 600, textDecoration: 'none' }}
                     >
                       {item.label}
-                    </button>
+                    </a>
                   </li>
                 ))}
               </ul>
@@ -133,30 +134,34 @@ export default function Footer() {
 
           {/* Social Links */}
           <div style={{ display: 'flex', alignItems: 'center', gap: '16px' }}>
-            <button
-              onClick={() => window.open('https://twitter.com', '_blank')}
+            <a
+              href="https://twitter.com"
+              target="_blank"
+              rel="noopener noreferrer"
               className="iconBtn"
-              style={{ color: 'var(--ink2)' }}
+              style={{ color: 'var(--ink2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               aria-label="Follow Atlas on Twitter"
             >
               <Twitter size={20} />
-            </button>
-            <button
-              onClick={() => window.open('https://linkedin.com', '_blank')}
+            </a>
+            <a
+              href="https://linkedin.com"
+              target="_blank"
+              rel="noopener noreferrer"
               className="iconBtn"
-              style={{ color: 'var(--ink2)' }}
+              style={{ color: 'var(--ink2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               aria-label="Follow Atlas on LinkedIn"
             >
               <Linkedin size={20} />
-            </button>
-            <button
-              onClick={() => window.location.href = 'mailto:support@atlas.com'}
+            </a>
+            <a
+              href="mailto:support@atlas.com"
               className="iconBtn"
-              style={{ color: 'var(--ink2)' }}
+              style={{ color: 'var(--ink2)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}
               aria-label="Email Atlas support"
             >
               <Mail size={20} />
-            </button>
+            </a>
           </div>
         </div>
       </div>
