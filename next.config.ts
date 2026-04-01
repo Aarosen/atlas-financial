@@ -15,7 +15,6 @@ const nextConfig: NextConfig = {
     imageSizes: [16, 32, 48, 64, 96, 128, 256, 384],
   },
   compress: true,
-  swcMinify: true,
   productionBrowserSourceMaps: false,
   // Security: Add HTTP security headers and CORS
   headers: async () => [

@@ -9,13 +9,13 @@ test.describe('Authentication Flow', () => {
 
   test('should show auth prompt when starting conversation as guest', async ({ page }) => {
     await page.goto('/');
-    await page.click('button:has-text("Sign in with email")');
+    await page.click('button:has-text("Log in")');
     await expect(page.locator('text=Sign in to Atlas').first()).toBeVisible();
   });
 
   test('should allow email input for magic link', async ({ page }) => {
     await page.goto('/');
-    await page.click('button:has-text("Sign in with email")');
+    await page.click('button:has-text("Log in")');
     const emailInput = page.locator('input[type="email"]');
     await expect(emailInput).toBeVisible();
     await emailInput.fill('test@example.com');
@@ -24,7 +24,7 @@ test.describe('Authentication Flow', () => {
 
   test('should show error for invalid email', async ({ page }) => {
     await page.goto('/');
-    await page.click('button:has-text("Sign in with email")');
+    await page.click('button:has-text("Log in")');
     const emailInput = page.locator('input[type="email"]');
     await emailInput.fill('');
     await emailInput.press('Enter');
