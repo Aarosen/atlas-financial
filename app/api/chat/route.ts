@@ -1080,12 +1080,12 @@ Return ONLY the rewritten text.`;
       const promptSections: string[] = [
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
         sessionStateBlock,           // ← Always included, never trimmed (position 1)
+        ...(calculationBlockSection ? [calculationBlockSection] : []), // ← REM-K: POSITION 2 = calculation block MUST NEVER BE TRIMMED (matches stated intent)
         ...(objectionBlock ? [objectionBlock] : []), // ← REM-G: OBJECTION HANDLING = psychological barrier detection and reframing
         ...(priorContextBlock ? [sanitizeMemorySummary(priorContextBlock)] : []), // ← PRIOR CONTEXT = cross-device memory from Supabase (sanitized)
         ...(companionContext ? [companionContext] : []), // ← COMPANION CONTEXT = injected after session state
         ...(behavioralContext ? [behavioralContext] : []), // ← REM-H: BEHAVIORAL ADAPTATION = adjust communication style based on user patterns
         ...(multiGoalContext ? [multiGoalContext] : []), // ← MULTI-GOAL CONTEXT = injected after companion context
-        ...(calculationBlockSection ? [calculationBlockSection] : []), // ← SECOND = always preserved before other sections get trimmed
         ...(compressedMemory ? [formatCompressedMemory(compressedMemory)] : []), // ← COMPRESSED MEMORY = preserve context beyond 10 messages
         ...(validationContext ? [validationContext] : []), // ← VALIDATION CONTEXT = flag implausible values
         memoryContext,
