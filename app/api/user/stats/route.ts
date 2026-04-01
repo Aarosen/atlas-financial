@@ -65,6 +65,19 @@ export async function GET(request: NextRequest) {
 
     const actionsCompleted = actions?.length || 0;
 
+    // Count all non-abandoned actions for follow-through rate calculation
+    const { data: allActions, error: allActionsError } = await supabase
+      .from('user_actions')
+      .select('id')
+      .eq('user_id', userId)
+      .in('status', ['recommended', 'committed', 'completed', 'partial', 'skipped']);
+
+    if (allActionsError) {
+      console.error('[user-stats] Error fetching all actions:', allActionsError);
+    }
+
+    const actionsTotal = allActions?.length || 0;
+
     // Calculate days since first message
     let daysSinceFirstMessage = 0;
     const { data: messages, error: messagesError } = await supabase
@@ -86,6 +99,7 @@ export async function GET(request: NextRequest) {
       {
         userId,
         actionsCompleted,
+        actionsTotal,
         daysSinceFirstMessage,
       },
       { status: 200 }

@@ -46,7 +46,7 @@ export async function analyzeBehavioralPatterns(
 
     try {
       const statsResponse = await fetch(
-        `/api/user/stats?userId=${encodeURIComponent(userId)}`,
+        `${process.env.NEXT_PUBLIC_APP_URL || 'https://atlas-financial.vercel.app'}/api/user/stats?userId=${encodeURIComponent(userId)}`,
         {
           method: 'GET',
           headers: { 'Content-Type': 'application/json' },
