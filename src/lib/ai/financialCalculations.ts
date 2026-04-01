@@ -48,12 +48,27 @@ export interface RetirementCalculation {
   onTrackStatus: string;
 }
 
+export interface BudgetCalculation {
+  monthlyIncome: number;
+  essentialExpenses: number;
+  discretionaryExpenses: number;
+  essentialRatio: number;
+  discretionaryRatio: number;
+  savingsRatio: number;
+  gap50Rule: number;
+  gap30Rule: number;
+  gap20Rule: number;
+  reallocateAmount: number;
+  priority: string;
+}
+
 export interface FinancialCalculationsResult {
   affordability?: AffordabilityCalculation;
   emergencyFund?: EmergencyFundCalculation;
   debtPayoff?: DebtPayoffComparison;
   investment?: InvestmentCalculation;
   retirement?: RetirementCalculation;
+  budget?: BudgetCalculation;
 }
 
 /**
@@ -184,6 +199,70 @@ function calculateEmergencyFund(
 }
 
 /**
+ * Calculate budget metrics using 50/30/20 rule
+ */
+function calculateBudget(
+  monthlyIncome: number | undefined,
+  essentialExpenses: number | undefined,
+  discretionaryExpenses: number | undefined
+): BudgetCalculation | undefined {
+  if (!monthlyIncome || monthlyIncome <= 0 || !essentialExpenses) {
+    return undefined;
+  }
+
+  const discretionary = discretionaryExpenses ?? 0;
+  const savings = Math.max(0, monthlyIncome - essentialExpenses - discretionary);
+
+  const essentialRatio = essentialExpenses / monthlyIncome;
+  const discretionaryRatio = discretionary / monthlyIncome;
+  const savingsRatio = savings / monthlyIncome;
+
+  // 50/30/20 targets
+  const target50 = monthlyIncome * 0.5;
+  const target30 = monthlyIncome * 0.3;
+  const target20 = monthlyIncome * 0.2;
+
+  // Gaps from targets (positive = over target)
+  const gap50Rule = essentialExpenses - target50;
+  const gap30Rule = discretionary - target30;
+  const gap20Rule = -savings + target20; // Negative savings means we're under target
+
+  // Determine priority reallocation
+  let reallocateAmount = 0;
+  let priority = '';
+
+  if (gap20Rule > 0) {
+    // Not saving enough
+    reallocateAmount = Math.min(gap20Rule, discretionary * 0.2); // Reallocate up to 20% of discretionary
+    priority = `Increase savings by $${Math.round(reallocateAmount)}/month (currently ${(savingsRatio * 100).toFixed(0)}%, target 20%)`;
+  } else if (gap30Rule > 0) {
+    // Spending too much on discretionary
+    reallocateAmount = Math.min(gap30Rule, discretionary * 0.3); // Reallocate up to 30% of discretionary
+    priority = `Reduce discretionary spending by $${Math.round(reallocateAmount)}/month (currently ${(discretionaryRatio * 100).toFixed(0)}%, target 30%)`;
+  } else if (gap50Rule > 0) {
+    // Essentials are too high
+    reallocateAmount = Math.min(gap50Rule, essentialExpenses * 0.1); // Reallocate up to 10% of essentials
+    priority = `Reduce essential expenses by $${Math.round(reallocateAmount)}/month (currently ${(essentialRatio * 100).toFixed(0)}%, target 50%)`;
+  } else {
+    priority = 'Budget is well-balanced against 50/30/20 targets';
+  }
+
+  return {
+    monthlyIncome: Math.round(monthlyIncome),
+    essentialExpenses: Math.round(essentialExpenses),
+    discretionaryExpenses: Math.round(discretionary),
+    essentialRatio,
+    discretionaryRatio,
+    savingsRatio,
+    gap50Rule: Math.round(gap50Rule),
+    gap30Rule: Math.round(gap30Rule),
+    gap20Rule: Math.round(gap20Rule),
+    reallocateAmount: Math.round(reallocateAmount),
+    priority,
+  };
+}
+
+/**
  * Main entry point: calculate all relevant metrics based on goal and profile
  */
 export function calculateFinancials(
@@ -208,6 +287,15 @@ export function calculateFinancials(
       profile.essentialExpenses,
       profile.totalSavings,
       profile.monthlyIncome
+    );
+  }
+
+  // Budget build
+  if (goal === 'budget_build') {
+    result.budget = calculateBudget(
+      profile.monthlyIncome,
+      profile.essentialExpenses,
+      profile.discretionaryExpenses
     );
   }
 
@@ -293,6 +381,19 @@ function buildDebtsArray(profile: FinancialProfile): Debt[] {
   }
 
   return debts;
+}
+
+/**
+ * Format budget calculation as a system prompt block
+ */
+export function formatBudgetBlock(calc: BudgetCalculation): string {
+  return `
+CALCULATION RESULTS (use these exact numbers):
+- Monthly income: $${calc.monthlyIncome}
+- Essential expenses: $${calc.essentialExpenses} (${(calc.essentialRatio * 100).toFixed(0)}% of income, target 50%)
+- Discretionary spending: $${calc.discretionaryExpenses} (${(calc.discretionaryRatio * 100).toFixed(0)}% of income, target 30%)
+- Monthly savings: $${Math.round(calc.monthlyIncome - calc.essentialExpenses - calc.discretionaryExpenses)} (${(calc.savingsRatio * 100).toFixed(0)}% of income, target 20%)
+- Priority action: ${calc.priority}`;
 }
 
 /**

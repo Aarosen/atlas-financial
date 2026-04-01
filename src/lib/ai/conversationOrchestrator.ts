@@ -9,7 +9,7 @@
  */
 
 import { detectObjections, generateObjectionHandlingInstruction, type Objection } from './objectionHandlingEngine';
-import { calculateFinancials, formatAffordabilityBlock, formatEmergencyFundBlock, formatInvestmentBlock, formatRetirementBlock } from './financialCalculations';
+import { calculateFinancials, formatAffordabilityBlock, formatBudgetBlock, formatEmergencyFundBlock, formatInvestmentBlock, formatRetirementBlock } from './financialCalculations';
 import { formatDebtPayoffBlock } from './debtPayoffCalculations';
 import { classifyUserIntent, type UserIntent, type EntryPoint, type PrimaryGoal } from './intentClassifier';
 
@@ -168,6 +168,16 @@ export function detectGoal(
   messages: Array<{ role: string; content: string }>,
   existingGoal: ConversationGoal = 'unknown'
 ): ConversationGoal {
+  // REM-E: Check for goal pivot FIRST, before early return on established goal
+  // This promotes pivot to first-class routing instead of fallback mechanism
+  const lastUserMessage = messages
+    .slice()
+    .reverse()
+    .find((m) => m.role === 'user')?.content || '';
+  
+  const pivotedGoal = detectGoalPivot(lastUserMessage, existingGoal);
+  if (pivotedGoal) return pivotedGoal;
+
   // Don't override an established goal unless conversation clearly shifts
   if (existingGoal !== 'unknown' && existingGoal !== 'general_guidance') return existingGoal;
 
@@ -569,6 +579,8 @@ export async function orchestrate(input: OrchestratorInput): Promise<Orchestrato
     
     if (calculations.affordability) {
       calculationBlock = formatAffordabilityBlock(calculations.affordability);
+    } else if (calculations.budget) {
+      calculationBlock = formatBudgetBlock(calculations.budget);
     } else if (calculations.emergencyFund) {
       calculationBlock = formatEmergencyFundBlock(calculations.emergencyFund);
     } else if (calculations.debtPayoff) {
