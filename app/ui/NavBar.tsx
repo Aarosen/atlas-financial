@@ -2,9 +2,10 @@
 
 import { useState, useEffect, useRef } from 'react';
 import { usePathname } from 'next/navigation';
-import { Menu, X, Moon, Sun } from 'lucide-react';
+import { Menu, X, Moon, Sun, Globe } from 'lucide-react';
 import { ButtonLink } from '@/components/Buttons';
 import AtlasLogo from './AtlasLogo';
+import type { SupportedLanguage } from '@/lib/i18n/translations';
 
 export default function NavBar() {
   const pathname = usePathname();
@@ -18,10 +19,13 @@ export default function NavBar() {
   const [isMenuOpen, setIsMenuOpen] = useState(false);
   const [isMobile, setIsMobile] = useState(false);
   const [theme, setTheme] = useState<'light' | 'dark'>('light');
+  const [language, setLanguage] = useState<SupportedLanguage>('en');
+  const [showLangMenu, setShowLangMenu] = useState(false);
   const hamburgerRef = useRef<HTMLButtonElement>(null);
   const menuRef = useRef<HTMLDivElement>(null);
+  const langMenuRef = useRef<HTMLDivElement>(null);
 
-  // Initialize theme from localStorage
+  // Initialize theme and language from localStorage
   useEffect(() => {
     try {
       const saved = localStorage.getItem('atlas_theme');
@@ -30,6 +34,15 @@ export default function NavBar() {
       } else {
         const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
         setTheme(prefersDark ? 'dark' : 'light');
+      }
+    } catch {
+      // ignore
+    }
+
+    try {
+      const savedLang = localStorage.getItem('atlas:language');
+      if (savedLang && ['en', 'es', 'fr', 'zh'].includes(savedLang)) {
+        setLanguage(savedLang as SupportedLanguage);
       }
     } catch {
       // ignore
@@ -142,6 +155,82 @@ export default function NavBar() {
                 {item.label}
               </button>
             ))}
+            {/* TASK 3.5: Language selector in nav */}
+            <div style={{ position: 'relative' }}>
+              <button
+                onClick={() => setShowLangMenu(!showLangMenu)}
+                aria-label="Change language"
+                style={{
+                  background: 'transparent',
+                  border: '1px solid var(--bdr)',
+                  borderRadius: '50%',
+                  width: 36,
+                  height: 36,
+                  display: 'flex',
+                  alignItems: 'center',
+                  justifyContent: 'center',
+                  cursor: 'pointer',
+                  color: 'var(--ink2)',
+                  transition: 'background .2s',
+                }}
+                onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg2)')}
+                onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
+              >
+                <Globe size={18} />
+              </button>
+              {showLangMenu && (
+                <div
+                  ref={langMenuRef}
+                  style={{
+                    position: 'absolute',
+                    top: '100%',
+                    right: 0,
+                    marginTop: 8,
+                    background: 'var(--card)',
+                    border: '1px solid var(--bdr)',
+                    borderRadius: 'var(--r-sm)',
+                    boxShadow: 'var(--sh2)',
+                    minWidth: 160,
+                    zIndex: 100,
+                  }}
+                >
+                  {(['en', 'es', 'fr', 'zh'] as const).map((lang) => (
+                    <button
+                      key={lang}
+                      onClick={() => {
+                        setLanguage(lang);
+                        try {
+                          localStorage.setItem('atlas:language', lang);
+                        } catch {
+                          // ignore
+                        }
+                        setShowLangMenu(false);
+                      }}
+                      style={{
+                        display: 'block',
+                        width: '100%',
+                        padding: '12px 16px',
+                        border: 'none',
+                        background: language === lang ? 'var(--bg2)' : 'transparent',
+                        color: 'var(--ink)',
+                        fontSize: 14,
+                        fontWeight: 600,
+                        cursor: 'pointer',
+                        textAlign: 'left',
+                        transition: 'background .2s',
+                      }}
+                      onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg2)')}
+                      onMouseLeave={(e) => (e.currentTarget.style.background = language === lang ? 'var(--bg2)' : 'transparent')}
+                    >
+                      {lang === 'en' && 'English'}
+                      {lang === 'es' && 'Español'}
+                      {lang === 'fr' && 'Français'}
+                      {lang === 'zh' && '中文'}
+                    </button>
+                  ))}
+                </div>
+              )}
+            </div>
             {/* TASK 1.3: Theme toggle button in nav */}
             <button
               onClick={toggleTheme}
