@@ -42,8 +42,9 @@ export async function applyRateLimit(
     return { allowed: true, remaining: result.remaining };
   } catch (error) {
     console.error('[rate-limit] Error checking rate limit:', error);
-    // Fail open - allow request if rate limiting fails
-    return { allowed: true, remaining: 30 };
+    // REM-I: Fail open - allow request if rate limiting fails, but report degraded mode
+    // remaining: 0 signals to caller that KV is unavailable and in-memory fallback is active
+    return { allowed: true, remaining: 0 };
   }
 }
 

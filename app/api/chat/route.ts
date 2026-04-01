@@ -497,7 +497,6 @@ export async function POST(req: Request) {
   const lastUserText = String((messages || []).slice(-1)[0]?.content || question || '').trim();
   const preferredLanguage = isSupportedLanguage(language) ? language : null;
   const detectedLang = (preferredLanguage || detectLanguage(lastUserText)) as SupportedLanguage;
-  const normalizedQuestion = normalizeSlang(lastUserText, detectedLang);
 
   const lastQuestionContext = lastQuestion ? `\nLAST QUESTION ASKED: "${lastQuestion}"\nUse this context to understand what the user is responding to.` : '';
   
@@ -1081,8 +1080,10 @@ Return ONLY the rewritten text.`;
       const promptSections: string[] = [
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
         sessionStateBlock,           // ← Always included, never trimmed (position 1)
+        ...(objectionBlock ? [objectionBlock] : []), // ← REM-G: OBJECTION HANDLING = psychological barrier detection and reframing
         ...(priorContextBlock ? [sanitizeMemorySummary(priorContextBlock)] : []), // ← PRIOR CONTEXT = cross-device memory from Supabase (sanitized)
         ...(companionContext ? [companionContext] : []), // ← COMPANION CONTEXT = injected after session state
+        ...(behavioralContext ? [behavioralContext] : []), // ← REM-H: BEHAVIORAL ADAPTATION = adjust communication style based on user patterns
         ...(multiGoalContext ? [multiGoalContext] : []), // ← MULTI-GOAL CONTEXT = injected after companion context
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← SECOND = always preserved before other sections get trimmed
         ...(compressedMemory ? [formatCompressedMemory(compressedMemory)] : []), // ← COMPRESSED MEMORY = preserve context beyond 10 messages
