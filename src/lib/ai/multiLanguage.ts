@@ -12,8 +12,8 @@ export function detectLanguage(text: string): SupportedLanguage {
     return 'es';
   }
   
-  // French indicators
-  if (/\b(bonjour|merci|argent|budget|épargner|dette|revenus|dépenses|paiement|carte|crédit|prêt)\b/.test(t)) {
+  // French indicators (removed 'budget' — it's English and causes false positives)
+  if (/\b(bonjour|merci|argent|épargner|dette|revenus|dépenses|paiement|carte|crédit|prêt)\b/.test(t)) {
     return 'fr';
   }
   
