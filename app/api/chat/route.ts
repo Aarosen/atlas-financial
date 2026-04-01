@@ -548,7 +548,7 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
 
   const missingFields = (missing || []).join(', ');
 
-  const memoryContext = memorySummary ? `\n\nUSER MEMORY SUMMARY:\n${String(memorySummary).trim()}` : '';
+  const memoryContext = memorySummary ? `\n\nUSER MEMORY SUMMARY:\n${sanitizeMemorySummary(String(memorySummary).trim())}` : '';
   const agentContext = lastUserText
     ? `\n\nPRIMARY AGENT: ${routeAgentForText(lastUserText).label}. Use this domain expertise unless another agent is required.`
     : '';
@@ -1056,7 +1056,7 @@ Return ONLY the rewritten text.`;
       // For crisis entries on first message, don't show disclaimer mid-conversation
       const isCrisisFirstMessage = crisisSignal && messages.length === 1;
       const disclaimerContext = `\n\nDISCLAIMER_NEEDED: ${isCrisisFirstMessage || hasDisclaimer(messages) ? 'no' : 'yes'}.`;
-      const memoryContext = memorySummary ? `\n\nUSER MEMORY SUMMARY:\n${String(memorySummary).trim()}` : '';
+      const memoryContext = memorySummary ? `\n\nUSER MEMORY SUMMARY:\n${sanitizeMemorySummary(String(memorySummary).trim())}` : '';
       const agentContext = lastUserMsg
         ? `\n\nPRIMARY AGENT: ${routeAgentForText(lastUserMsg).label}.`
         : '';
@@ -1082,7 +1082,7 @@ Return ONLY the rewritten text.`;
         sessionStateBlock,           // ← Always included, never trimmed (position 1)
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← REM-K: POSITION 2 = calculation block MUST NEVER BE TRIMMED (matches stated intent)
         ...(objectionBlock ? [objectionBlock] : []), // ← REM-G: OBJECTION HANDLING = psychological barrier detection and reframing
-        ...(priorContextBlock ? [sanitizeMemorySummary(priorContextBlock)] : []), // ← PRIOR CONTEXT = cross-device memory from Supabase (sanitized)
+        ...(priorContextBlock ? [priorContextBlock] : []), // ← REM-L: PRIOR CONTEXT = trusted server-generated data from Supabase (no sanitization needed)
         ...(companionContext ? [companionContext] : []), // ← COMPANION CONTEXT = injected after session state
         ...(behavioralContext ? [behavioralContext] : []), // ← REM-H: BEHAVIORAL ADAPTATION = adjust communication style based on user patterns
         ...(multiGoalContext ? [multiGoalContext] : []), // ← MULTI-GOAL CONTEXT = injected after companion context
@@ -1098,9 +1098,10 @@ Return ONLY the rewritten text.`;
         exampleContext,
       ];
       
-      // Trim sections but preserve session state, calculation block, and persona instructions
-      const coreBlocksLength = sessionStateBlock.length + calculationBlockSection.length;
-      const enrichedSystemPrompt = trimPromptSections(promptSections, Math.max(8000, coreBlocksLength + 4000));
+      // REM-M: Increase budget to 32,000 chars to ensure companion context features reach Claude
+      // Anthropic API has 200k-token context window; 32k chars (~8k tokens) for system prompt is reasonable
+      // This ensures behavioral adaptation, multi-goal context, and other companion features are never trimmed
+      const enrichedSystemPrompt = trimPromptSections(promptSections, 32000);
 
       // Step 4: Call Claude with enriched context
       // NOTE: trimmedMessages already computed at line 495 from compressConversationHistory
