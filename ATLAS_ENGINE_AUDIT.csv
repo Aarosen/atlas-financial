@@ -1,0 +1,106 @@
+File Path,Current Responsibility,Core Function,LOC,Dependencies,Delete?,Consolidation Target
+src/lib/ai/accountabilityEngine.ts,Track user commitments and follow-up,Monitoring,3569,conversationHistory,N,monitoringEngine
+src/lib/ai/actionExtractor.ts,Extract actionable items from responses,Data Extraction,4716,conversationHistory,N,dataExtractionEngine
+src/lib/ai/actionPipeline.ts,Pipeline for action processing,Data Extraction,8987,actionExtractor,Y,dataExtractionEngine
+src/lib/ai/actionSequencer.ts,Sequence actions in priority order,Question Sequencing,6278,actionExtractor,Y,questionSequencingEngine
+src/lib/ai/actionSuggestions.ts,Generate action suggestions,Question Sequencing,1823,conversationHistory,Y,questionSequencingEngine
+src/lib/ai/actionableNextStepsEngine.ts,Generate next steps for user,Question Sequencing,9276,conversationHistory,N,questionSequencingEngine
+src/lib/ai/actions.ts,Action utilities,Data Extraction,3788,conversationHistory,Y,dataExtractionEngine
+src/lib/ai/adaptiveConversationEngine.ts,Adapt conversation flow dynamically,Context Injection,15333,conversationHistory,N,contextInjectionEngine
+src/lib/ai/adaptiveImprovementMonitor.ts,Monitor and improve adaptively,Monitoring,12466,conversationHistory,N,monitoringEngine
+src/lib/ai/adaptiveQuestionEngine.ts,Generate adaptive questions,Question Sequencing,13369,conversationHistory,N,questionSequencingEngine
+src/lib/ai/advancedFeaturesEngine.ts,Advanced feature detection,Context Injection,4087,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/advancedPersonalizationEngine.ts,Advanced personalization logic,Communication Style,4017,conversationHistory,Y,communicationStyleEngine
+src/lib/ai/advancedTopics.ts,Handle advanced financial topics,Context Injection,784,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/agentRouter.ts,Route to appropriate agent,Financial Decision,1134,conversationHistory,Y,financialDecisionEngine
+src/lib/ai/assumptionConfirmationEngine.ts,Confirm financial assumptions,Validation,7009,conversationHistory,N,validationEngine
+src/lib/ai/atlasSystemPrompt.ts,Core system prompt,Context Injection,5998,conversationHistory,N,contextInjectionEngine
+src/lib/ai/audioLessons.ts,Audio lesson content,Context Injection,392,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/behavioralAdaptation.ts,Adapt to user behavior,Communication Style,8816,conversationHistory,N,communicationStyleEngine
+src/lib/ai/behavioralProfiler.ts,Profile user behavior,Data Extraction,7445,conversationHistory,N,dataExtractionEngine
+src/lib/ai/benchmark.ts,Benchmark financial metrics,Monitoring,1967,conversationHistory,Y,monitoringEngine
+src/lib/ai/budgets.ts,Budget utilities,Context Injection,587,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/buildSystemPrompt.ts,Build system prompt,Context Injection,2451,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/checkins.ts,Check-in utilities,Monitoring,449,conversationHistory,Y,monitoringEngine
+src/lib/ai/clarificationEngine.ts,Clarify ambiguous user input,Data Extraction,6387,conversationHistory,N,dataExtractionEngine
+src/lib/ai/companionIntegration.ts,Integrate companion features,Context Injection,13634,conversationHistory,N,contextInjectionEngine
+src/lib/ai/competitiveExcellenceEngine.ts,Competitive excellence tracking,Monitoring,4228,conversationHistory,Y,monitoringEngine
+src/lib/ai/comprehension.ts,Comprehension detection,Data Extraction,395,conversationHistory,Y,dataExtractionEngine
+src/lib/ai/comprehensiveLearningEngine.ts,Comprehensive learning system,Context Injection,9827,conversationHistory,N,contextInjectionEngine
+src/lib/ai/conceptMap.ts,Concept mapping utilities,Context Injection,834,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/contextAwarenessEngine.ts,Context awareness and extraction,Context Injection,10661,conversationHistory,N,contextInjectionEngine
+src/lib/ai/contextWindowExtension.ts,Extend context window,Context Injection,2865,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/conversationAdaptationLayer.ts,Adapt conversation processing,Context Injection,10663,conversationHistory,N,contextInjectionEngine
+src/lib/ai/conversationArcEngine.ts,Track conversation arc,Context Injection,12130,conversationHistory,N,contextInjectionEngine
+src/lib/ai/conversationGoalWiring.ts,Wire conversation goals,Financial Decision,4724,conversationHistory,Y,financialDecisionEngine
+src/lib/ai/conversationOrchestrator.ts,Orchestrate conversation flow,Financial Decision,25294,conversationHistory,N,financialDecisionEngine
+src/lib/ai/conversationalQuestionEngine.ts,Generate conversational questions,Question Sequencing,22606,conversationHistory,N,questionSequencingEngine
+src/lib/ai/crisisDetectionEngine.ts,Detect financial crises,Crisis Detection,17728,conversationHistory,N,crisisDetectionEngine
+src/lib/ai/culturalExamples.ts,Cultural example utilities,Communication Style,439,conversationHistory,Y,communicationStyleEngine
+src/lib/ai/culturalFinanceEngine.ts,Cultural finance context,Communication Style,10945,conversationHistory,N,communicationStyleEngine
+src/lib/ai/dashboardEngine.ts,Dashboard generation,Monitoring,7617,conversationHistory,Y,monitoringEngine
+src/lib/ai/debtPayoffCalculations.ts,Debt payoff math,Calculation,7383,conversationHistory,N,calculationEngine
+src/lib/ai/directAnswerEngine.ts,Direct answer generation,Response Template,14314,conversationHistory,N,responseTemplateEngine
+src/lib/ai/ecosystemEngine.ts,Ecosystem integration,Context Injection,3461,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/enhancedClaudePrompt.ts,Enhanced Claude prompt,Context Injection,9111,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/escalationEngine.ts,Escalate urgent issues,Crisis Detection,9529,conversationHistory,Y,crisisDetectionEngine
+src/lib/ai/evaluationFramework.ts,Evaluation framework,Monitoring,12679,conversationHistory,N,monitoringEngine
+src/lib/ai/evaluationRunner.ts,Run evaluations,Monitoring,6154,conversationHistory,Y,monitoringEngine
+src/lib/ai/explainStep.ts,Explain financial steps,Response Template,2272,conversationHistory,Y,responseTemplateEngine
+src/lib/ai/extractionPrompt.ts,Extraction prompt template,Context Injection,792,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/feedback.ts,Feedback utilities,Monitoring,684,conversationHistory,Y,monitoringEngine
+src/lib/ai/financialCalculations.ts,Financial calculation engine,Calculation,18408,conversationHistory,N,calculationEngine
+src/lib/ai/financialExtractor.ts,Extract financial data,Data Extraction,3423,conversationHistory,N,dataExtractionEngine
+src/lib/ai/financialKnowledgeBase.ts,Financial knowledge base,Context Injection,8944,conversationHistory,N,contextInjectionEngine
+src/lib/ai/financialToolkit.ts,Financial toolkit context,Context Injection,3567,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/financialValidation.ts,Validate financial data,Validation,3644,conversationHistory,N,validationEngine
+src/lib/ai/goalDetection.ts,Detect user goals,Financial Decision,5782,conversationHistory,Y,financialDecisionEngine
+src/lib/ai/goalManager.ts,Manage user goals,Financial Decision,5728,conversationHistory,Y,financialDecisionEngine
+src/lib/ai/improvedDataExtraction.ts,Improved data extraction,Data Extraction,8436,conversationHistory,N,dataExtractionEngine
+src/lib/ai/initialGreetingEngine.ts,Initial greeting generation,Response Template,16996,conversationHistory,N,responseTemplateEngine
+src/lib/ai/intelligentResponseEngine.ts,Intelligent response generation,Response Template,14415,conversationHistory,N,responseTemplateEngine
+src/lib/ai/intentClassifier.ts,Classify user intent,Financial Decision,7451,conversationHistory,N,financialDecisionEngine
+src/lib/ai/learningProgress.ts,Track learning progress,Monitoring,656,conversationHistory,Y,monitoringEngine
+src/lib/ai/learningRecommendations.ts,Learning recommendations,Context Injection,573,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/learningStreaks.ts,Learning streak tracking,Monitoring,908,conversationHistory,Y,monitoringEngine
+src/lib/ai/mastery.ts,Mastery tracking,Monitoring,309,conversationHistory,Y,monitoringEngine
+src/lib/ai/memoryActivation.ts,Activate user memory,Context Injection,5735,conversationHistory,N,contextInjectionEngine
+src/lib/ai/memorySanitizer.ts,Sanitize memory,Data Extraction,1532,conversationHistory,Y,dataExtractionEngine
+src/lib/ai/metricCardPrompt.ts,Metric card generation,Response Template,7849,conversationHistory,N,responseTemplateEngine
+src/lib/ai/modelRouting.ts,Route to appropriate model,Multi-Provider Routing,953,conversationHistory,Y,multiProviderRoutingEngine
+src/lib/ai/multiGoalCoordinator.ts,Coordinate multiple goals,Financial Decision,6746,conversationHistory,Y,financialDecisionEngine
+src/lib/ai/multiGoalPrompt.ts,Multi-goal prompt context,Context Injection,3863,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/multiLanguage.ts,Multi-language support,Communication Style,3075,conversationHistory,N,communicationStyleEngine
+src/lib/ai/needsDetectionEngine.ts,Detect user financial needs,Financial Decision,10945,conversationHistory,N,financialDecisionEngine
+src/lib/ai/nudges.ts,Nudge utilities,Monitoring,468,conversationHistory,Y,monitoringEngine
+src/lib/ai/objectionHandlingEngine.ts,Handle user objections,Response Template,13588,conversationHistory,N,responseTemplateEngine
+src/lib/ai/orchestrator.ts,Orchestrator utilities,Financial Decision,884,conversationHistory,Y,financialDecisionEngine
+src/lib/ai/personalization.ts,Personalization utilities,Communication Style,927,conversationHistory,Y,communicationStyleEngine
+src/lib/ai/personalizationEngine.ts,Personalization engine,Communication Style,10048,conversationHistory,N,communicationStyleEngine
+src/lib/ai/personalizationProfileEngine.ts,Personalization profile,Communication Style,6682,conversationHistory,N,communicationStyleEngine
+src/lib/ai/phase4-integration.ts,Phase 4 integration,Context Injection,20556,conversationHistory,N,contextInjectionEngine
+src/lib/ai/plainLanguage.ts,Plain language utilities,Communication Style,423,conversationHistory,Y,communicationStyleEngine
+src/lib/ai/playbooks.ts,Playbook responses,Response Template,1998,conversationHistory,Y,responseTemplateEngine
+src/lib/ai/predictiveModelingEngine.ts,Predictive modeling,Monitoring,3518,conversationHistory,Y,monitoringEngine
+src/lib/ai/predictiveRecommendationEngine.ts,Predictive recommendations,Context Injection,7754,conversationHistory,N,contextInjectionEngine
+src/lib/ai/proactiveAlertsEngine.ts,Proactive alerts,Crisis Detection,9371,conversationHistory,Y,crisisDetectionEngine
+src/lib/ai/proactiveOpportunityDetector.ts,Detect opportunities,Financial Decision,4732,conversationHistory,Y,financialDecisionEngine
+src/lib/ai/proactiveRecommendationsEngine.ts,Proactive recommendations,Context Injection,9481,conversationHistory,N,contextInjectionEngine
+src/lib/ai/promptTrim.ts,Trim prompt size,Context Injection,323,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/quality.ts,Quality utilities,Monitoring,2868,conversationHistory,Y,monitoringEngine
+src/lib/ai/questionSequencingEngine.ts,Sequence questions,Question Sequencing,11853,conversationHistory,N,questionSequencingEngine
+src/lib/ai/replay.ts,Replay utilities,Monitoring,2030,conversationHistory,Y,monitoringEngine
+src/lib/ai/responseEnhancementEngine.ts,Enhance responses,Response Template,7053,conversationHistory,N,responseTemplateEngine
+src/lib/ai/responsePostprocessor.ts,Post-process responses,Response Template,1087,conversationHistory,Y,responseTemplateEngine
+src/lib/ai/scenarioSimulator.ts,Scenario simulation,Monitoring,494,conversationHistory,Y,monitoringEngine
+src/lib/ai/slangMapper.ts,Map slang to standard terms,Communication Style,2145,conversationHistory,N,communicationStyleEngine
+src/lib/ai/spacedRepetition.ts,Spaced repetition,Monitoring,458,conversationHistory,Y,monitoringEngine
+src/lib/ai/strategyContextBuilder.ts,Build strategy context,Context Injection,3080,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/streaks.ts,Streak tracking,Monitoring,1335,conversationHistory,Y,monitoringEngine
+src/lib/ai/systemIntelligenceEngine.ts,System intelligence,Context Injection,3285,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/systemPromptBuilder.ts,Build system prompt,Context Injection,5600,conversationHistory,Y,contextInjectionEngine
+src/lib/ai/tonePersonalityEngine.ts,Tone and personality,Communication Style,10378,conversationHistory,N,communicationStyleEngine
+src/lib/ai/topicDetection.ts,Detect conversation topic,Financial Decision,1272,conversationHistory,Y,financialDecisionEngine
+src/lib/ai/trace.ts,Trace utilities,Monitoring,619,conversationHistory,Y,monitoringEngine
+src/lib/ai/userMemorySystem.ts,User memory system,Context Injection,5781,conversationHistory,N,contextInjectionEngine
+src/lib/ai/visualExplainer.ts,Visual explanation utilities,Response Template,329,conversationHistory,Y,responseTemplateEngine
