@@ -9,7 +9,7 @@ export async function GET() {
       status: 'ok',
       timestamp: new Date().toISOString(),
       configured,
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-6',
     });
   } catch (e) {
     return NextResponse.json({ status: 'error', error: String(e) }, { status: 500 });
@@ -25,7 +25,7 @@ export async function POST(req: NextRequest) {
     return NextResponse.json({
       ok: true,
       configured,
-      model: 'claude-3-5-sonnet-20241022',
+      model: 'claude-sonnet-4-6',
     });
   } catch (e) {
     return NextResponse.json({ ok: false, error: String(e) }, { status: 500 });
