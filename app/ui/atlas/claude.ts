@@ -105,6 +105,34 @@ export class Claude {
     }
   }
 
+  async statusCheck() {
+    try {
+      const r = await fetch('/api/status', {
+        method: 'GET',
+        headers: { 'Content-Type': 'application/json' },
+      });
+      if (!r.ok) {
+        this._lastErrorStatus = r.status;
+        this._setStatusFromHttpError(r.status);
+        throw new Error(`status_check_failed_${r.status}`);
+      }
+      const d = await r.json();
+      if (d.status === 'ok' && d.configured) {
+        this._hadSuccess = true;
+        this._apiStatus = 'online';
+        this._lastErrorStatus = null;
+      } else {
+        this._apiStatus = 'offline';
+      }
+    } catch (e: any) {
+      if (!this._hadSuccess) {
+        this._apiStatus = 'unknown';
+      } else if (this._lastErrorStatus === null) {
+        this._apiStatus = 'offline';
+      }
+    }
+  }
+
   get status() {
     return this._apiStatus;
   }
