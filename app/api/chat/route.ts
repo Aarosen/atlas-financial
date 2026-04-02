@@ -42,6 +42,7 @@ import {
 import { injectNudgeIfAppropriate } from '@/lib/notifications/nudgeInjection';
 import { loadUserContext } from '@/lib/db/userContext';
 import { initializeConversationSession } from '@/lib/db/supabaseIntegration';
+import { buildStrategyContextBlock } from '@/lib/ai/strategyContextBuilder';
 import { applyRateLimit } from './rateLimitMiddleware';
 import { checkRateLimitKv } from '@/lib/api/rateLimitKv';
 
@@ -288,7 +289,7 @@ export async function POST(req: Request) {
     return jsonError(400, 'Invalid JSON body');
   }
 
-  let { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion, answered, userId, sessionId } = body as {
+  let { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion, answered, userId, sessionId, baseline } = body as {
     type?: string;
     messages?: any[];
     missing?: string[];
@@ -302,6 +303,7 @@ export async function POST(req: Request) {
     answered?: Record<string, boolean>;
     userId?: string;
     sessionId?: string;
+    baseline?: any;
   };
 
   // Set user context for error monitoring
@@ -1062,10 +1064,14 @@ Return ONLY the rewritten text.`;
         ? `\n━━━ AUTHORITATIVE CALCULATION DATA ━━━\nYOU MUST USE ONLY THE NUMBERS BELOW. DO NOT ESTIMATE OR CALCULATE INDEPENDENTLY.\n${calculationBlock}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` 
         : '';
       
+      // Build strategy context block from baseline
+      const strategyContextBlock = buildStrategyContextBlock(baseline);
+      
       const promptSections: string[] = [
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
         sessionStateBlock,           // ← Always included, never trimmed (position 1)
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← REM-K: POSITION 2 = calculation block MUST NEVER BE TRIMMED (matches stated intent)
+        ...(strategyContextBlock ? [strategyContextBlock] : []), // ← STRATEGY CONTEXT = tier/lever/urgency/confidence/metrics
         ...(objectionBlock ? [objectionBlock] : []), // ← REM-G: OBJECTION HANDLING = psychological barrier detection and reframing
         ...(priorContextBlock ? [priorContextBlock] : []), // ← REM-L: PRIOR CONTEXT = trusted server-generated data from Supabase (no sanitization needed)
         ...(companionContext ? [companionContext] : []), // ← COMPANION CONTEXT = injected after session state

@@ -227,8 +227,9 @@ export class ClaudeClient {
     sessionState?: Record<string, any>;
     answered?: Record<string, boolean>;
     language?: SupportedLanguage;
+    baseline?: any | null;
   }): Promise<{ ok: boolean; canceled: boolean; sessionId?: string; rateLimitRemaining?: number }> {
-    const { msgs, missing, onDelta, onSessionState, onReplace, signal, memorySummary, fin, extractedFields, sessionState, answered, language } = args;
+    const { msgs, missing, onDelta, onSessionState, onReplace, signal, memorySummary, fin, extractedFields, sessionState, answered, language, baseline } = args;
     
     // Create a timeout abort controller (30 second timeout for chat streaming)
     const TIMEOUT_MS = 30_000;
@@ -253,6 +254,7 @@ export class ClaudeClient {
           sessionState: sessionState ?? {},
           answered: answered ?? {},
           language,
+          baseline: baseline ?? null,
           userId: this._userId,
           sessionId: this._sessionId,
         }),

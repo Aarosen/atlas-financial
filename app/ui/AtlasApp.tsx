@@ -1133,6 +1133,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               fin: finRef.current,
               sessionState: followupSessionState,
               answered: st.answered,
+              baseline: st.baseline,
               onDelta: (t) => { followupText += t; },
               onSessionState: handleSessionState,
               signal: followupCtrl.signal,
@@ -1300,6 +1301,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           extractedFields: ex.fields as any,
           sessionState: sessionStateWithGoals,
           answered: st.answered,
+          baseline: st.baseline,
         });
 
         if (streamIdRef.current !== myStreamId) {
