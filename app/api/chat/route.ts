@@ -824,7 +824,10 @@ Return ONLY the rewritten text.`;
     // For chat responses, use orchestrator to inject session state
     // This makes Claude aware of conversation goal, phase, missing fields, and urgency
     if (type === 'chat') {
-      const lastUserMsg = String((messages || []).slice(-1)[0]?.content || '').trim();
+      // PRIORITY 6: Sanitize user message input before LLM injection
+      // Prevent prompt injection attacks by removing instruction-override patterns
+      const rawUserMsg = String((messages || []).slice(-1)[0]?.content || '').trim();
+      const lastUserMsg = sanitizeMemorySummary(rawUserMsg).slice(0, 8000); // Cap at 8000 chars
       const conversationHistory = messages || [];
       const financialProfile = { ...(fin || {}), ...(extractedFields || {}) };
 
