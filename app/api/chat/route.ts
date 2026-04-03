@@ -24,6 +24,8 @@ import { atlasEvalMonitor } from '@/lib/monitoring/atlasEvalMonitor';
 import { maybeQueueFailureSample } from '@/lib/monitoring/failureSampler';
 import { captureException, captureMessage, addBreadcrumb, setUserContext } from '@/lib/monitoring/sentry';
 import { orchestrate } from '@/lib/ai/conversationOrchestrator';
+import { atlasEngineOrchestrator } from '@/lib/ai/engines';
+import { ProviderManager } from '@/lib/providers/providerManager';
 import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
 import { extractFinancialSnapshot } from '@/lib/ai/financialExtractor';
 import { runCalculations, formatCalculationBlock } from '@/lib/calculations/sprint1';
@@ -882,12 +884,23 @@ Return ONLY the rewritten text.`;
         });
       }
 
-      // Step 1: Crisis check first (safety gate)
-      const crisisSignal = detectCrisisSignals(lastUserMsg, conversationHistory, financialProfile as any);
-      if (crisisSignal) {
-        const crisisResponse = generateCrisisResponse(crisisSignal);
-        // Route crisis response through cleanAtlasResponse to remove any markdown formatting
-        const cleanedCrisisResponse = cleanAtlasResponse(crisisResponse);
+      // PRIORITY 1: Wire AtlasEngineOrchestrator into chat route
+      // This replaces old crisis detection, compliance check, and orchestrator calls
+      // with a single deterministic call to the new orchestrator
+      const engineResult = atlasEngineOrchestrator.orchestrate(
+        lastUserMsg,
+        (conversationHistory as any[]).map((msg: any) => ({
+          role: msg.role || 'user',
+          content: msg.content || '',
+          timestamp: msg.timestamp,
+        })),
+        sessionState?.goals || [],
+        isAuthenticated ? 'pro' : 'free'
+      );
+
+      // Crisis response: return immediately if crisis detected
+      if (engineResult.crisis.detected) {
+        const cleanedCrisisResponse = cleanAtlasResponse(engineResult.crisis.response);
         return jsonOk({
           text: cleanedCrisisResponse,
           source: 'atlas_crisis',
@@ -897,66 +910,38 @@ Return ONLY the rewritten text.`;
         });
       }
 
-      // Step 1.5: AI-powered compliance screening for investment/tax/legal advice
-      // Runs in parallel with other processing — only blocks if risk is detected
-      // Uses Haiku (fastest, cheapest model) with a strict 2-second timeout
-      const complianceCheck = detectComplianceRisk(lastUserMsg);
-      if (!complianceCheck) {
-        // For messages that pass keyword check, do a fast AI semantic check on first 3 turns
-        // After turn 3, topic is established and keyword check is sufficient
-        if (messages.length <= 3) {
-          const complianceTimeout = new Promise<null>((resolve) => setTimeout(() => resolve(null), 2000));
-          const aiCompliancePromise = (async () => {
-            try {
-              // Note: This is a placeholder - actual response checking would happen after response is generated
-              // For now, return null to skip AI compliance check (keyword check is sufficient)
-              return null;
-            } catch {
-              return null;
-            }
-          })();
-
-          const aiRisk = await Promise.race([aiCompliancePromise, complianceTimeout]);
-          if (aiRisk) {
-            const safe = complianceResponse(lastUserMsg, aiRisk as any);
-            return jsonOk({
-              text: safe,
-              source: 'compliance_guardrail',
-              model: 'policy',
-              tier,
-            });
-          }
-        }
+      // Compliance response: return immediately if compliance violation detected
+      if (engineResult.compliance.detected) {
+        const cleanedComplianceResponse = cleanAtlasResponse(engineResult.compliance.response || 'This request violates our compliance policy.');
+        return jsonOk({
+          text: cleanedComplianceResponse,
+          source: 'compliance_guardrail',
+          model: 'policy',
+          tier,
+        });
       }
 
-      // Step 2: Run the orchestrator with timeout protection
-      // This analyzes conversation state and builds a session context block
-      // Now uses semantic intent classifier on first message for superior accuracy
-      // CRITICAL FIX: Wrap in Promise.race with 5-second timeout to prevent hanging
-      const orchestrateTimeout = new Promise<any>((resolve) => {
-        setTimeout(() => {
-          console.warn('[atlas] Orchestrator timeout - using minimal session state');
-          resolve({
-            sessionStateBlock: '',
-            missingFields: [],
-            state: {},
-            objectionBlock: '',
-            calculationBlock: '',
-          });
-        }, 5000); // 5 second timeout for orchestrator
-      });
-
-      const orchestratePromise = orchestrate({
-        messages: conversationHistory,
-        financialProfile,
-        previousState: sessionState as any,
-        answered: updatedAnswered,
-      });
-
-      const { sessionStateBlock, missingFields: orchestratorMissingFields, state, objectionBlock, calculationBlock } = await Promise.race([
-        orchestratePromise,
-        orchestrateTimeout,
-      ]);
+      // Use deterministic decision from engines as the session state
+      const financialDecision = engineResult.decision;
+      const nextQuestion = engineResult.nextQuestion;
+      const extractedData = engineResult.extraction.data;
+      
+      // Map engine result to old orchestrator format for backward compatibility
+      const sessionStateBlock = engineResult.contextBlocks
+        .map(block => block.content)
+        .join('\n\n');
+      const missingFields = financialDecision.missingFields || [];
+      const state = { 
+        domain: financialDecision.domain, 
+        urgency: financialDecision.urgency,
+        urgencyLevel: financialDecision.urgency,
+        goal: financialDecision.domain,
+        phase: financialDecision.urgency === 'critical' ? 'crisis' : 'analysis',
+        missingFields: missingFields,
+        turnCount: messages.length,
+      };
+      const objectionBlock = '';
+      const calculationBlock = '';
 
       // COMPANION INTEGRATION: Build companion system prompt context (with timeout)
       // Injects accountability, progress, roadmap, behavioral, escalation, and multi-goal blocks
@@ -1041,7 +1026,7 @@ Return ONLY the rewritten text.`;
       const emotionTag = detectEmotion(messages);
       const emotionContext = `\n\nUSER EMOTION TAG: ${emotionTag}.`;
       // For crisis entries on first message, don't show disclaimer mid-conversation
-      const isCrisisFirstMessage = crisisSignal && messages.length === 1;
+      const isCrisisFirstMessage = engineResult.crisis.detected && messages.length === 1;
       const disclaimerContext = `\n\nDISCLAIMER_NEEDED: ${isCrisisFirstMessage || hasDisclaimer(messages) ? 'no' : 'yes'}.`;
       const memoryContext = memorySummary ? `\n\nUSER MEMORY SUMMARY:\n${sanitizeMemorySummary(String(memorySummary).trim())}` : '';
       const agentContext = lastUserMsg
