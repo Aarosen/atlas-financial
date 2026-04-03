@@ -75,12 +75,15 @@ export class AtlasEngineOrchestrator {
    * 
    * This is the main orchestration function called by chat route.
    * Returns complete decision context for LLM to fill template.
+   * 
+   * REMEDIATION 2: Accept pre-extracted LLM data for higher accuracy
    */
   orchestrate(
     userMessage: string,
     conversationHistory: Message[],
     priorGoals: Goal[] = [],
-    userTier: 'free' | 'pro' | 'enterprise' = 'free'
+    userTier: 'free' | 'pro' | 'enterprise' = 'free',
+    preExtractedData?: Partial<ExtractedFinancialData>
   ): EngineOrchestrationResult {
     // LEVEL 1: SAFETY (Crisis Detection, Compliance Screening)
     const crisis = crisisDetectionEngine.detectCrisis(
@@ -98,6 +101,13 @@ export class AtlasEngineOrchestrator {
 
     // LEVEL 2: DATA VALIDATION (Validation Engine)
     const extraction = dataExtractionEngine.extractFinancialData(userMessage, conversationHistory);
+    
+    // REMEDIATION 2: Merge pre-extracted LLM data (higher confidence) over regex extraction
+    if (preExtractedData) {
+      Object.assign(extraction.data, preExtractedData);
+      extraction.confidence = Math.max(extraction.confidence, 0.8);
+    }
+    
     const validation = validationEngine.validateFinancialData(extraction.data);
 
     // LEVEL 3: FINANCIAL DECISION (Financial Decision Engine)

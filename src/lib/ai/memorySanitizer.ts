@@ -3,24 +3,24 @@
  * Prevents prompt injection attacks via memorySummary
  */
 
+// REMEDIATION 3: Fix sanitization false positives
+// Block only specific injection phrases, not individual common words
+// "FORGET" in "FORGET ALL PREVIOUS INSTRUCTIONS" is injection
+// "FORGET" in "I want to forget about my debt" is legitimate financial language
 const INJECTION_PATTERNS = [
-  /\bIGNORE\b/gi,
-  /\bOVERRIDE\b/gi,
-  /\bYOU ARE NOW\b/gi,
-  /\bNEW INSTRUCTIONS\b/gi,
-  /\bFORGET\b/gi,
-  /\bDISREGARD\b/gi,
-  /\bFORGET ALL\b/gi,
-  /\bCLEAR ALL\b/gi,
-  /\bREPLACE SYSTEM\b/gi,
-  /\bSYSTEM PROMPT\b/gi,
-  /\bREWRITE YOUR\b/gi,
-  /\bYOU MUST NOW\b/gi,
-  /\bFROM NOW ON\b/gi,
-  /\bIMPORTANT:\s*IGNORE/gi,
-  /\bCRITICAL:\s*IGNORE/gi,
-  /\bRULE\s*\d+/gi,
-  /\b[A-Z]{3,}:\s*[A-Z]/gi, // Uppercase instruction patterns like "RULE: DO THIS"
+  /\bIGNORE\s+(?:ALL\s+)?(?:PREVIOUS\s+|PRIOR\s+)?(?:INSTRUCTIONS?|CONTEXT|RULES?)\b/gi,
+  /\bOVERRIDE\s+(?:ALL\s+)?(?:PREVIOUS\s+)?(?:INSTRUCTIONS?|RULES?|SYSTEM)\b/gi,
+  /\bYOU\s+ARE\s+NOW\b/gi,
+  /\bNEW\s+INSTRUCTIONS?\b/gi,
+  /\bFORGET\s+(?:ALL|EVERYTHING|PREVIOUS|YOUR\s+(?:INSTRUCTIONS?|RULES?|SYSTEM))\b/gi,
+  /\bDISREGARD\s+(?:ALL\s+)?(?:PREVIOUS\s+)?(?:INSTRUCTIONS?|CONTEXT|RULES?)\b/gi,
+  /\bCLEAR\s+(?:ALL\s+)?(?:PREVIOUS\s+)?(?:INSTRUCTIONS?|CONTEXT|RULES?)\b/gi,
+  /\bREPLACE\s+(?:YOUR\s+)?(?:SYSTEM|INSTRUCTIONS?|RULES?)\b/gi,
+  /\bSYSTEM\s+PROMPT\b/gi,
+  /\bREWRITE\s+YOUR\s+(?:INSTRUCTIONS?|RULES?|SYSTEM)\b/gi,
+  /\bYOU\s+MUST\s+NOW\b/gi,
+  /\bIMPORTANT:\s*IGNORE\s+(?:ALL\s+)?(?:PREVIOUS\s+)?(?:INSTRUCTIONS?|CONTEXT|RULES?)\b/gi,
+  /\bCRITICAL:\s*IGNORE\s+(?:ALL\s+)?(?:PREVIOUS\s+)?(?:INSTRUCTIONS?|CONTEXT|RULES?)\b/gi,
 ];
 
 const MAX_MEMORY_LENGTH = 500;

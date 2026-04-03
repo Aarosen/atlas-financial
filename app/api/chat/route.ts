@@ -243,38 +243,51 @@ async function callAnthropicStream(args: {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 25_000); // 25s server-side limit
   try {
-    // PRIORITY 2: Wire ProviderManager for multi-provider support
-    // Use ProviderManager to enable fallback to OpenAI/Gemini if Claude fails
-    const providerManager = new ProviderManager(
-      new Map([
-        ['claude', { apiKey: args.apiKey, model: args.model }],
-      ]),
-      {
-        primaryProvider: 'claude',
-        fallbackProviders: [],
-        enableCostOptimization: false,
+    // REMEDIATION 4: Implement real provider fallback
+    // Try Claude first, fall back to OpenAI if available
+    try {
+      return await fetch(ANTHROPIC_API, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          'x-api-key': args.apiKey,
+          Authorization: `Bearer ${args.apiKey}`,
+          'anthropic-version': '2023-06-01',
+        },
+        body: JSON.stringify({
+          model: args.model,
+          max_tokens: args.maxTokens,
+          system: args.system,
+          messages: args.messages,
+          stream: true,
+        }),
+        signal: controller.signal,
+      });
+    } catch (claudeError) {
+      // REMEDIATION 4: Fallback to OpenAI if Claude fails and API key is available
+      if (process.env.OPENAI_API_KEY) {
+        console.warn('[provider_fallback] Claude failed, attempting OpenAI fallback:', claudeError);
+        return await fetch('https://api.openai.com/v1/chat/completions', {
+          method: 'POST',
+          headers: {
+            'Content-Type': 'application/json',
+            'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          },
+          body: JSON.stringify({
+            model: 'gpt-4-turbo',
+            max_tokens: args.maxTokens,
+            messages: [
+              { role: 'system', content: args.system },
+              ...args.messages,
+            ],
+            stream: true,
+          }),
+          signal: controller.signal,
+        });
       }
-    );
-
-    // For now, continue using Claude directly (ProviderManager integration can be extended)
-    // This placeholder ensures the import is used and the infrastructure is in place
-    return await fetch(ANTHROPIC_API, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        'x-api-key': args.apiKey,
-        Authorization: `Bearer ${args.apiKey}`,
-        'anthropic-version': '2023-06-01',
-      },
-      body: JSON.stringify({
-        model: args.model,
-        max_tokens: args.maxTokens,
-        system: args.system,
-        messages: args.messages,
-        stream: true,
-      }),
-      signal: controller.signal,
-    });
+      // If no fallback available, rethrow Claude error
+      throw claudeError;
+    }
   } finally {
     clearTimeout(timeoutId);
   }
@@ -908,6 +921,7 @@ Return ONLY the rewritten text.`;
       // PRIORITY 1: Wire AtlasEngineOrchestrator into chat route
       // This replaces old crisis detection, compliance check, and orchestrator calls
       // with a single deterministic call to the new orchestrator
+      // REMEDIATION 2: Pass LLM-extracted financialProfile for higher accuracy
       const engineResult = atlasEngineOrchestrator.orchestrate(
         lastUserMsg,
         (conversationHistory as any[]).map((msg: any) => ({
@@ -916,7 +930,8 @@ Return ONLY the rewritten text.`;
           timestamp: msg.timestamp,
         })),
         sessionState?.goals || [],
-        isAuthenticated ? 'pro' : 'free'
+        isAuthenticated ? 'pro' : 'free',
+        financialProfile as any  // Pass LLM-verified data to engine
       );
 
       // Crisis response: return immediately if crisis detected
@@ -1116,10 +1131,20 @@ Return ONLY the rewritten text.`;
       // Build strategy context block from baseline
       const strategyContextBlock = buildStrategyContextBlock(baseline);
       
+      // REMEDIATION 4: Add ResponseTemplatingEngine instructions to standardize output
+      const responseTemplateInstructions = `
+RESPONSE TEMPLATE INSTRUCTIONS:
+- Structure: Lead with specific number or action, then explain impact, then ONE next step
+- Format: Prose only, no markdown, no bullet points, no numbered lists
+- Tone: Direct, warm, confident - like a mentor who knows your situation
+- Numbers: Use exact figures from CALCULATION DATA blocks above
+- Action: Every response ends with ONE specific, concrete next step the user can take today`;
+
       const promptSections: string[] = [
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
         sessionStateBlock,           // ← Always included, never trimmed (position 1)
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← REM-K: POSITION 2 = calculation block MUST NEVER BE TRIMMED (matches stated intent)
+        responseTemplateInstructions, // ← REMEDIATION 4: Response template instructions for standardized output
         ...(strategyContextBlock ? [strategyContextBlock] : []), // ← STRATEGY CONTEXT = tier/lever/urgency/confidence/metrics
         ...(objectionBlock ? [objectionBlock] : []), // ← REM-G: OBJECTION HANDLING = psychological barrier detection and reframing
         ...(priorContextBlock ? [priorContextBlock] : []), // ← REM-L: PRIOR CONTEXT = trusted server-generated data from Supabase (no sanitization needed)
