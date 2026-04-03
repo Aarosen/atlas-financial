@@ -26,6 +26,7 @@ import { captureException, captureMessage, addBreadcrumb, setUserContext } from 
 import { orchestrate } from '@/lib/ai/conversationOrchestrator';
 import { atlasEngineOrchestrator } from '@/lib/ai/engines';
 import { ProviderManager } from '@/lib/providers/providerManager';
+import { ResponseTemplatingEngine } from '@/lib/templating/responseTemplatingEngine';
 import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
 import { extractFinancialSnapshot } from '@/lib/ai/financialExtractor';
 import { runCalculations, formatCalculationBlock } from '@/lib/calculations/sprint1';
