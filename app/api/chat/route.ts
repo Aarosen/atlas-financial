@@ -30,6 +30,8 @@ import { ResponseTemplatingEngine } from '@/lib/templating/responseTemplatingEng
 import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
 import { extractFinancialSnapshot } from '@/lib/ai/financialExtractor';
 import { runCalculations, formatCalculationBlock } from '@/lib/calculations/sprint1';
+import { calculateFinancials, formatAffordabilityBlock, formatBudgetBlock, formatEmergencyFundBlock, formatInvestmentBlock, formatRetirementBlock } from '@/lib/ai/financialCalculations';
+import { formatDebtPayoffBlock } from '@/lib/ai/debtPayoffCalculations';
 import { cleanAtlasResponse } from '@/lib/ai/responsePostprocessor';
 import { validateFinancialSnapshot, buildValidationPrompt } from '@/lib/ai/financialValidation';
 import { compressConversationHistory, formatCompressedMemory } from '@/lib/ai/contextWindowExtension';
@@ -959,8 +961,51 @@ Return ONLY the rewritten text.`;
         missingFields: missingFields,
         turnCount: messages.length,
       };
-      const objectionBlock = '';
-      const calculationBlock = '';
+
+      // REMEDIATION 1: Restore deterministic calculations from LLM-verified financial profile
+      // Use the financialProfile assembled at line 848 (LLM-extracted, user-confirmed data)
+      // instead of regex extraction from the engine
+      let calculationBlock = '';
+      try {
+        if (financialProfile && (financialProfile.monthlyIncome || financialProfile.essentialExpenses || financialProfile.totalSavings)) {
+          const calculations = calculateFinancials(
+            financialProfile as any,
+            financialDecision.domain,
+            financialProfile.proposedPayment
+          );
+          
+          // Priority order: affordability → budget → emergency fund → debt payoff → investment → retirement
+          if (calculations.affordability) {
+            calculationBlock = formatAffordabilityBlock(calculations.affordability);
+          } else if (calculations.budget) {
+            calculationBlock = formatBudgetBlock(calculations.budget);
+          } else if (calculations.emergencyFund) {
+            calculationBlock = formatEmergencyFundBlock(calculations.emergencyFund);
+          } else if (calculations.debtPayoff) {
+            calculationBlock = formatDebtPayoffBlock(calculations.debtPayoff);
+          } else if (calculations.investment) {
+            calculationBlock = formatInvestmentBlock(calculations.investment);
+          } else if (calculations.retirement) {
+            calculationBlock = formatRetirementBlock(calculations.retirement);
+          }
+        }
+      } catch (error) {
+        console.warn('[calculations] Error generating calculation block:', error);
+        // Continue without calculation block if error occurs
+      }
+
+      // REMEDIATION 1: Restore objection handling from LLM-extracted data
+      let objectionBlock = '';
+      try {
+        const objections = detectObjections(lastUserMsg);
+        if (objections && objections.length > 0) {
+          const baseRecommendation = `Address the following objections: ${objections.map(o => o.category).join(', ')}`;
+          objectionBlock = buildObjectionAwareRecommendation(baseRecommendation, lastUserMsg);
+        }
+      } catch (error) {
+        console.warn('[objections] Error detecting objections:', error);
+        // Continue without objection block if error occurs
+      }
 
       // COMPANION INTEGRATION: Build companion system prompt context (with timeout)
       // Injects accountability, progress, roadmap, behavioral, escalation, and multi-goal blocks
