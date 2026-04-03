@@ -772,7 +772,10 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
                   if (!dl || dl === '[DONE]') continue;
                   try {
                     const j = JSON.parse(dl);
-                    const delta = j?.delta?.text;
+                    // AUDIT 4 FIX: Handle both Anthropic and OpenAI streaming formats
+                    // Anthropic: j?.delta?.text
+                    // OpenAI: j?.choices?.[0]?.delta?.content
+                    const delta = j?.delta?.text ?? j?.choices?.[0]?.delta?.content;
                     if (typeof delta === 'string' && delta) {
                       controller.enqueue(enc.encode(`data: ${JSON.stringify({ delta })}\n\n`));
                     }
@@ -1276,7 +1279,10 @@ Return ONLY the rewritten text.`;
                   if (!dl || dl === '[DONE]') continue;
                   try {
                     const j = JSON.parse(dl);
-                    const delta = j?.delta?.text;
+                    // AUDIT 4 FIX: Handle both Anthropic and OpenAI streaming formats
+                    // Anthropic: j?.delta?.text
+                    // OpenAI: j?.choices?.[0]?.delta?.content
+                    const delta = j?.delta?.text ?? j?.choices?.[0]?.delta?.content;
                     if (typeof delta === 'string' && delta) {
                       fullResponse += delta;
                       // Clean calculation result tags from each delta before sending to frontend

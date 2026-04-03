@@ -21,8 +21,8 @@ import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
 
 describe('D8: Professional Domain Accuracy - TAX', () => {
   
-  describe('2025 Tax Limits (IRS Verified)', () => {
-    // AUDIT 3 FIX: Test that ATLAS_SYSTEM_PROMPT contains core financial reasoning rules
+  describe('System Prompt: Core Behavioral Rules', () => {
+    // AUDIT 4 FIX: Test that ATLAS_SYSTEM_PROMPT contains core financial reasoning rules
     // These tests verify that Atlas has the foundational knowledge needed to give correct financial advice
     // If the system prompt is deleted or core rules are removed, these tests will fail
     

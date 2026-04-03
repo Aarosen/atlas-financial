@@ -1664,6 +1664,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             streamIdRef.current++;
             dispatch({ type: 'STREAM_CANCELED' });
           }}
+          isGuest={!user}
+          onResetConversation={() => dispatch({ type: 'NEW_CONVERSATION' })}
         />
         {rateLimitRemaining !== undefined && rateLimitRemaining <= 15 && (
           <div
