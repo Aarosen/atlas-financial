@@ -13,6 +13,7 @@
  */
 
 import { describe, it, expect } from 'vitest';
+import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
 
 // ─────────────────────────────────────────────────────────────────────────────
 // TAX DOMAIN TESTS
@@ -21,72 +22,48 @@ import { describe, it, expect } from 'vitest';
 describe('D8: Professional Domain Accuracy - TAX', () => {
   
   describe('2025 Tax Limits (IRS Verified)', () => {
-    // REMEDIATION 5: Fix D8 tests to test real Atlas behavior
-    // These tests verify that Atlas system prompt contains correct tax information
-    // that would be used to generate responses about tax limits
+    // AUDIT 3 FIX: Test that ATLAS_SYSTEM_PROMPT contains core financial reasoning rules
+    // These tests verify that Atlas has the foundational knowledge needed to give correct financial advice
+    // If the system prompt is deleted or core rules are removed, these tests will fail
     
-    it('should have correct 2025 standard deduction for single filer in knowledge base', () => {
-      // Test that the system has access to correct tax data
-      // This would be verified by checking if ATLAS_SYSTEM_PROMPT or context contains this
-      const correctStandardDeduction = 14600;
-      expect(correctStandardDeduction).toBe(14600);
-      expect(String(correctStandardDeduction)).toContain('14600');
+    it('system prompt should enforce RULE 1: Never explain concepts, always apply them', () => {
+      expect(ATLAS_SYSTEM_PROMPT).toMatch(/RULE 1.*NEVER EXPLAIN CONCEPTS/i);
     });
 
-    it('should have correct 2025 standard deduction for married filing jointly in knowledge base', () => {
-      const correctStandardDeduction = 29200;
-      expect(correctStandardDeduction).toBe(29200);
-      expect(String(correctStandardDeduction)).toContain('29200');
+    it('system prompt should enforce RULE 2: Use the math block, never invent numbers', () => {
+      expect(ATLAS_SYSTEM_PROMPT).toMatch(/RULE 2.*USE THE MATH BLOCK/i);
     });
 
-    it('should have correct 2025 standard deduction for head of household in knowledge base', () => {
-      const correctStandardDeduction = 21900;
-      expect(correctStandardDeduction).toBe(21900);
-      expect(String(correctStandardDeduction)).toContain('21900');
+    it('system prompt should enforce RULE 3: Every response ends with ONE specific next action', () => {
+      expect(ATLAS_SYSTEM_PROMPT).toMatch(/RULE 3.*ONE SPECIFIC NEXT ACTION/i);
     });
 
-    it('should have correct 2025 401(k) contribution limit in knowledge base', () => {
-      const correct401kLimit = 23500;
-      expect(correct401kLimit).toBe(23500);
-      expect(String(correct401kLimit)).toContain('23500');
+    it('system prompt should enforce RULE 4: Prose only, no formatting', () => {
+      expect(ATLAS_SYSTEM_PROMPT).toMatch(/RULE 4.*PROSE ONLY/i);
     });
 
-    it('should have correct 2025 401(k) catch-up contribution for 50+ in knowledge base', () => {
-      const correctCatchUp = 7500;
-      const correctTotal = 31000;
-      expect(correctCatchUp + 23500).toBe(correctTotal);
-      expect(String(correctCatchUp)).toContain('7500');
+    it('system prompt should enforce RULE 5: Never ask for information you already have', () => {
+      expect(ATLAS_SYSTEM_PROMPT).toMatch(/RULE 5.*NEVER ASK FOR INFORMATION/i);
     });
 
-    it('should have correct 2025 IRA contribution limit in knowledge base', () => {
-      const correctIRALimit = 7000;
-      expect(correctIRALimit).toBe(7000);
-      expect(String(correctIRALimit)).toContain('7000');
+    it('system prompt should enforce RULE 6: Be direct, have a point of view', () => {
+      expect(ATLAS_SYSTEM_PROMPT).toMatch(/RULE 6.*BE DIRECT/i);
     });
 
-    it('should have correct 2025 IRA catch-up contribution for 50+ in knowledge base', () => {
-      const correctCatchUp = 1000;
-      const correctTotal = 8000;
-      expect(correctCatchUp + 7000).toBe(correctTotal);
-      expect(String(correctCatchUp)).toContain('1000');
+    it('system prompt should enforce RULE 7: Follow through on prior commitments', () => {
+      expect(ATLAS_SYSTEM_PROMPT).toMatch(/RULE 7.*FOLLOW THROUGH/i);
     });
 
-    it('should have correct 2025 HSA individual limit in knowledge base', () => {
-      const correctHSAIndividual = 4300;
-      expect(correctHSAIndividual).toBe(4300);
-      expect(String(correctHSAIndividual)).toContain('4300');
+    it('system prompt should include voice calibration guidance', () => {
+      expect(ATLAS_SYSTEM_PROMPT).toMatch(/VOICE CALIBRATION/i);
     });
 
-    it('should have correct 2025 HSA family limit in knowledge base', () => {
-      const correctHSAFamily = 8550;
-      expect(correctHSAFamily).toBe(8550);
-      expect(String(correctHSAFamily)).toContain('8550');
+    it('system prompt should include shame response protocol', () => {
+      expect(ATLAS_SYSTEM_PROMPT).toMatch(/SHAME RESPONSE PROTOCOL/i);
     });
 
-    it('should have correct 2025 Social Security wage base in knowledge base', () => {
-      const correctWageBase = 168600;
-      expect(correctWageBase).toBe(168600);
-      expect(String(correctWageBase)).toContain('168600');
+    it('system prompt should include advisor referral guidance', () => {
+      expect(ATLAS_SYSTEM_PROMPT).toMatch(/ADVISOR REFERRALS/i);
     });
   });
 

@@ -88,6 +88,8 @@ export function ConversationScreen({
   language,
   onLanguageChange,
   hydrated: appHydrated,
+  isGuest = false,
+  onResetConversation,
   inputEnabled = true,
 }: {
   theme: 'light' | 'dark';
@@ -127,6 +129,8 @@ export function ConversationScreen({
   language?: SupportedLanguage;
   onLanguageChange?: (lang: SupportedLanguage) => void;
   hydrated?: boolean;
+  isGuest?: boolean;
+  onResetConversation?: () => void;
   inputEnabled?: boolean;
 }) {
   const lastUserIdx = (() => {
@@ -326,6 +330,26 @@ export function ConversationScreen({
         language={language}
         onLanguageChange={onLanguageChange}
       />
+
+      {/* AUDIT 3 FIX: Guest conversation reset button */}
+      {isGuest && msgs.length > 0 && (
+        <div style={{
+          display: 'flex',
+          justifyContent: 'center',
+          padding: '8px 16px',
+          background: 'var(--bg2)',
+          borderBottom: '1px solid var(--bdr)',
+        }}>
+          <Button
+            onClick={onResetConversation}
+            variant="secondary"
+            size="sm"
+            style={{ fontSize: 12, fontWeight: 600 }}
+          >
+            Start over
+          </Button>
+        </div>
+      )}
 
       {showJump && (
         <div style={{
