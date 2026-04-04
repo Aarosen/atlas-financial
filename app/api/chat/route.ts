@@ -209,7 +209,7 @@ async function callAnthropic(args: {
   const controller = new AbortController();
   const timeoutId = setTimeout(() => controller.abort(), 25_000); // 25s server-side limit
   try {
-    return await fetch(ANTHROPIC_API, {
+    const claudeResponse = await fetch(ANTHROPIC_API, {
       method: 'POST',
       headers: {
         'Content-Type': 'application/json',
@@ -225,6 +225,50 @@ async function callAnthropic(args: {
       }),
       signal: controller.signal,
     });
+
+    // AUDIT 5 FIX: Add OpenAI fallback for non-streaming calls (data extraction, direct answers)
+    // Claude rate limits (429), auth failures (401), and bad gateway (502) should fall back to OpenAI
+    if (!claudeResponse.ok && process.env.OPENAI_API_KEY) {
+      return await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4-turbo',
+          max_tokens: args.maxTokens,
+          messages: [
+            { role: 'system', content: args.system },
+            ...args.messages,
+          ],
+        }),
+        signal: controller.signal,
+      });
+    }
+
+    return claudeResponse;
+  } catch (claudeNetworkError) {
+    // Network-level exception: try OpenAI fallback
+    if (process.env.OPENAI_API_KEY) {
+      return await fetch('https://api.openai.com/v1/chat/completions', {
+        method: 'POST',
+        headers: {
+          'Authorization': `Bearer ${process.env.OPENAI_API_KEY}`,
+          'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+          model: 'gpt-4-turbo',
+          max_tokens: args.maxTokens,
+          messages: [
+            { role: 'system', content: args.system },
+            ...args.messages,
+          ],
+        }),
+        signal: controller.signal,
+      });
+    }
+    throw claudeNetworkError;
   } finally {
     clearTimeout(timeoutId);
   }
