@@ -26,6 +26,7 @@ import { captureException, captureMessage, addBreadcrumb, setUserContext } from 
 import { atlasEngineOrchestrator } from '@/lib/ai/engines';
 import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
 import { extractFinancialSnapshot } from '@/lib/ai/financialExtractor';
+import { shouldGateExtraction } from '@/lib/ai/extractionGate';
 import { runCalculations, formatCalculationBlock } from '@/lib/calculations/sprint1';
 import { calculateFinancials, formatAffordabilityBlock, formatBudgetBlock, formatEmergencyFundBlock, formatInvestmentBlock, formatRetirementBlock } from '@/lib/ai/financialCalculations';
 import { formatDebtPayoffBlock } from '@/lib/ai/debtPayoffCalculations';
@@ -597,6 +598,15 @@ export async function POST(req: Request) {
   }
 
   const lastUserText = String((messages || []).slice(-1)[0]?.content || question || '').trim();
+  
+  // REMEDIATION 3: Gate extraction to data-bearing messages only
+  // If extraction is requested but message contains no financial data, skip extraction and route to chat instead
+  if (type === 'extract' && shouldGateExtraction(lastUserText)) {
+    console.log('[extraction_gate] Skipping extraction — no financial data detected. Routing to chat instead.');
+    // Return empty extraction result — frontend will skip confirmation card and go straight to chat
+    return jsonOk({ fields: {}, source: 'extraction_gated', model: DEFAULT_MODEL, tier: 'light' });
+  }
+  
   const preferredLanguage = isSupportedLanguage(language) ? language : null;
   const detectedLang = (preferredLanguage || detectLanguage(lastUserText)) as SupportedLanguage;
 
