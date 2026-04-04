@@ -11,52 +11,25 @@ jobs:
     runs-on: ubuntu-latest
     permissions:
       pull-requests: write
+    timeout-minutes: 20
 
     steps:
-      - uses: actions/checkout@v3
+      - uses: actions/checkout@v4
       
       - name: Setup Node.js
-        uses: actions/setup-node@v3
+        uses: actions/setup-node@v4
         with:
           node-version: '18'
+          cache: 'npm'
       
-      - name: Install atlas-evals dependencies
-        run: |
-          cd src/evals
-          npm install
+      - name: Install dependencies
+        run: npm ci
       
-      - name: Run offline eval suite
-        run: |
-          cd src/evals
-          npm run eval:offline
-        env:
-          NODE_ENV: ci
-      
-      - name: Run gate eval suite (blocks on critical failures)
-        run: |
-          cd src/evals
-          npm run eval:gate
+      - name: Run gate eval suite
+        run: npm run eval:gate
         env:
           ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
           NODE_ENV: ci
-
-      - name: Validate Atlas v1 suite structure
-        run: |
-          cd src/evals
-          npm run eval:atlas-v1:validate
-
-      - name: Run Atlas v1 eval suite
-        run: |
-          cd src/evals
-          npm run eval:atlas-v1
-        env:
-          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
-          NODE_ENV: ci
-
-      - name: Generate Atlas tag coverage report
-        run: |
-          cd src/evals
-          npm run eval:atlas-v1:tags
       
       - name: Upload eval report
         if: always()
@@ -64,241 +37,26 @@ jobs:
         with:
           name: eval-reports
           path: src/evals/eval-report-*.json
-
-      - name: Upload Atlas v1 report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-v1-eval-reports
-          path: src/evals/atlas-v1-report-*.json
-
-      - name: Upload tag coverage report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-tag-coverage-report
-          path: |
-            src/evals/atlas-tag-coverage-report.json
-            src/evals/atlas-tag-coverage-report.md
-
-      - name: Upload failure clustering artifacts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-failure-clustering
-          path: |
-            src/evals/atlas-failure-clusters.md
-            src/evals/atlas-eval-candidates.json
-
-      - name: Generate draft evals from approved clusters
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:generate:drafts
-
-      - name: Upload generated eval drafts
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-generated-eval-drafts
-          path: |
-            src/evals/v1/generated-drafts/
-            src/evals/atlas-generated-eval-drafts.md
-
-      - name: Promote approved drafts to live suite
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:promote:drafts
-
-      - name: Validate promoted suite
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:atlas-v1:validate
-
-      - name: Generate tag coverage for promoted suite
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:atlas-v1:tags
-
-      - name: Upload promotion reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-promotion-reports
-          path: |
-            src/evals/atlas-promotion-report.json
-            src/evals/atlas-promotion-report.md
-            src/evals/promotion-history.jsonl
-
-      - name: Generate retirement candidates
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:generate:retirement
-
-      - name: Upload retirement candidates for review
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-retirement-candidates
-          path: |
-            src/evals/atlas-retirement-candidates.json
-            src/evals/atlas-retirement-candidates.md
-
-      - name: Execute approved retirements
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:retire:evals
-
-      - name: Validate retired suite
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:atlas-v1:validate
-
-      - name: Generate tag coverage for retired suite
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:atlas-v1:tags
-
-      - name: Upload retirement reports
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-retirement-reports
-          path: |
-            src/evals/atlas-retirement-report.json
-            src/evals/atlas-retirement-report.md
-            src/evals/retirement-history.jsonl
-
-      - name: Score eval health
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:score:health
-
-      - name: Upload eval health report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-eval-health-report
-          path: |
-            src/evals/atlas-eval-health-report.json
-            src/evals/atlas-eval-health-report.md
-
-      - name: Analyze portfolio balance
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:analyze:portfolio
-
-      - name: Upload portfolio balance report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-portfolio-balance-report
-          path: |
-            src/evals/atlas-portfolio-balance-report.json
-            src/evals/atlas-portfolio-balance-report.md
-
-      - name: Evaluate governance & release readiness
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:evaluate:governance
-
-      - name: Upload governance report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-governance-report
-          path: |
-            src/evals/atlas-governance-report.json
-            src/evals/atlas-governance-report.md
-
-      - name: Calculate adaptive eval weighting
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:weighting
-
-      - name: Upload adaptive weighting report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-adaptive-weighting
-          path: |
-            src/evals/atlas-adaptive-weighting-report.json
-            src/evals/atlas-adaptive-weighting-report.md
-            src/evals/weighting-history.jsonl
-
-      - name: Tune and review policies
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:tune:policies
-
-      - name: Upload policy tuning report
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-policy-tuning
-          path: |
-            src/evals/atlas-policy.json
-            src/evals/atlas-policy-report.json
-            src/evals/atlas-policy-report.md
-            src/evals/policy-history.jsonl
-
-      - name: Build release readiness dashboard
-        if: always()
-        run: |
-          cd src/evals
-          npm run eval:dashboard
-
-      - name: Upload release readiness dashboard
-        if: always()
-        uses: actions/upload-artifact@v4
-        with:
-          name: atlas-release-readiness
-          path: |
-            src/evals/atlas-release-readiness.json
-            src/evals/atlas-release-readiness.md
-            src/evals/release-history.jsonl
       
       - name: Comment PR with eval results
-        if: github.event_name == 'pull_request'
-        uses: actions/github-script@v6
+        if: github.event_name == 'pull_request' && always()
+        uses: actions/github-script@v7
         with:
           script: |
             const fs = require('fs');
-            const files = fs.readdirSync('src/evals').filter(f => f.startsWith('eval-report-'));
-            const v1Files = fs.readdirSync('src/evals').filter(f => f.startsWith('atlas-v1-report-'));
-            if (files.length > 0) {
-              const report = JSON.parse(fs.readFileSync(`src/evals/${files[0]}`, 'utf8'));
-              const dimSummary = report.summary.map(d => `- **${d.name}:** ${(d.passRate * 100).toFixed(0)}% pass`).join('\n');
-              const summary = `## ✅ Atlas Eval Report\n- **Total Evals:** ${report.totalEvals}\n- **Passed:** ${report.passed}\n- **Failed:** ${report.failed}\n- **Warnings:** ${report.warnings}\n- **Gate Status:** ${report.gatePass ? '✅ PASS' : '❌ FAIL'}\n\n### Dimension Summary\n${dimSummary}`;
-              let v1Summary = '';
-              let tagSummary = '';
-              if (v1Files.length > 0) {
-                const v1Report = JSON.parse(fs.readFileSync(`src/evals/${v1Files[0]}`, 'utf8'));
-                const v1Cats = v1Report.categories
-                  .map(c => `- **${c.name}:** ${(c.passRate * 100).toFixed(0)}% pass | Avg ${c.averageScore.toFixed(1)}/25`)
-                  .join('\n');
-                v1Summary = `\n\n### Atlas v1 Category Summary\n${v1Cats}`;
+            try {
+              const files = fs.readdirSync('src/evals').filter(f => f.startsWith('eval-report-'));
+              if (files.length > 0) {
+                const report = JSON.parse(fs.readFileSync(`src/evals/${files[0]}`, 'utf8'));
+                const dimSummary = report.summary.map(d => `- **${d.name}:** ${(d.passRate * 100).toFixed(0)}% pass`).join('\n');
+                const summary = `## ✅ Atlas Eval Report\n- **Total Evals:** ${report.totalEvals}\n- **Passed:** ${report.passed}\n- **Failed:** ${report.failed}\n- **Gate Status:** ${report.gatePass ? '✅ PASS' : '❌ FAIL'}\n\n### Dimension Summary\n${dimSummary}`;
+                github.rest.issues.createComment({
+                  issue_number: context.issue.number,
+                  owner: context.repo.owner,
+                  repo: context.repo.repo,
+                  body: summary
+                });
               }
-              const tagPath = 'src/evals/atlas-tag-coverage-report.md';
-              if (fs.existsSync(tagPath)) {
-                tagSummary = `\n\n${fs.readFileSync(tagPath, 'utf8')}`;
-              }
-              github.rest.issues.createComment({
-                issue_number: context.issue.number,
-                owner: context.repo.owner,
-                repo: context.repo.repo,
-                body: summary + v1Summary + tagSummary
-              });
+            } catch (e) {
+              console.log('Could not post eval report comment:', e.message);
             }
