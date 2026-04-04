@@ -885,13 +885,27 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
       }
 
       const data: any = await response.json();
-      text = data.content?.[0]?.text || '';
+      // REMEDIATION 4: Handle both Anthropic and OpenAI response formats
+      // Anthropic: data.content[0].text
+      // OpenAI: data.choices[0].message.content
+      text = data.content?.[0]?.text || data.choices?.[0]?.message?.content || '';
     }
 
     if (type === 'extract') {
       try {
         const clean = String(text).replace(/```json|```/g, '').trim();
         const fields = JSON.parse(clean);
+        
+        // REMEDIATION 5: Validate extraction output — reject impossible values
+        const income = Number(fields.monthlyIncome) || 0;
+        const essentials = Number(fields.essentialExpenses) || 0;
+        
+        // Reject if essentials > income (mathematically impossible)
+        if (essentials > income && income > 0) {
+          console.warn('[extraction_validation] Rejected: essentials > income', { income, essentials });
+          return jsonOk({ fields: {}, source: 'claude_validation_error', model: usedModel, tier });
+        }
+        
         return jsonOk({ fields, source: 'claude', model: usedModel, tier });
       } catch {
         return jsonOk({ fields: {}, source: 'claude_parse_error', model: usedModel, tier });

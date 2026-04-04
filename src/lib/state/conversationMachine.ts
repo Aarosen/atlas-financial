@@ -252,6 +252,14 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
         inp: '',
         streaming: false,
         busy: false,
+        fin: createDefaultFin(),
+        pendingFin: null,
+        pendingBlock: null,
+        selectedLever: null,
+        missing: [],
+        answered: {},
+        unknown: {},
+        baseline: null,
       };
 
     case 'RESET':

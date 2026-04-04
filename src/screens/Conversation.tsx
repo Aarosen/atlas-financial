@@ -13,6 +13,7 @@ import { humanizeFieldList } from '@/lib/ui/fieldLabels';
 import { MetricCardPayload } from '@/components/MetricCardPayload';
 import { extractMetricCardFromResponse } from '@/lib/ai/metricCardPrompt';
 import ReactMarkdown from 'react-markdown';
+import { generateRecommendationBody } from '@/lib/ui/recommendationBodyGenerator';
 
 function renderMessageText(text: string): ReactNode {
   // Use react-markdown to properly render markdown including bold, italic, lists, etc.
@@ -570,7 +571,7 @@ export function ConversationScreen({
                     </div>
                   )}
                   <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>
-                    From what you've shared about your {leverBasedOn.join(', ')}, here's what I think makes sense.
+                    {pendingFin ? generateRecommendationBody(recommendedLever, pendingFin) : 'Let me analyze your situation.'}
                   </div>
                   <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <Button onClick={onConfirmNextStep} variant="primary" size="sm" disabled={!onConfirmNextStep}>Yes, use this lever</Button>
