@@ -1270,6 +1270,54 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         if (!isExtractionGated) {
           dispatch({ type: 'SET_PENDING_FIN', fin: uf });
           dispatch({ type: 'SET_PENDING_BLOCK', block: 'confirm' });
+          return;
+        }
+        
+        // Extraction gated: user asked a question with no new financial data.
+        // Route to a conversational stream response rather than silencing the user.
+        streamAbortRef.current?.abort();
+        const ctrl = new AbortController();
+        streamAbortRef.current = ctrl;
+        const myStreamId = ++streamIdRef.current;
+        dispatch({ type: 'STREAM_START' });
+        
+        let streamed = '';
+        const chatMsgs = prevMsgs.slice(-10).map((m) => ({
+          role: m.r === 'u' ? ('user' as const) : ('assistant' as const),
+          content: m.t,
+        }));
+        
+        const res = await claude.answerStream({
+          msgs: chatMsgs,
+          question: ut,
+          onDelta: (t) => {
+            if (streamIdRef.current !== myStreamId) return;
+            if (ctrl.signal.aborted) return;
+            streamed += t;
+            dispatch({ type: 'STREAM_DELTA', delta: t });
+          },
+          signal: ctrl.signal,
+          memorySummary: st.memorySummary,
+          fin: finRef.current,
+        });
+        
+        if (streamIdRef.current !== myStreamId) {
+          return;
+        }
+        streamAbortRef.current = null;
+        if (!res.ok && res.canceled) {
+          dispatch({ type: 'STREAM_CANCELED' });
+          return;
+        }
+        
+        if (!res.ok) {
+          dispatch({ type: 'SEND_ASKED', text: "I'm having trouble connecting right now. Please try again in a moment." });
+        } else {
+          dispatch({ type: 'STREAM_DONE' });
+        }
+        
+        if (res.rateLimitRemaining !== undefined) {
+          setRateLimitRemaining(res.rateLimitRemaining);
         }
         return;
       }
