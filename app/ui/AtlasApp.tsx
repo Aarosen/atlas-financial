@@ -1262,8 +1262,15 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           );
           dispatch({ type: 'SEND_ASKED', text: actionFeedback });
         }
-        dispatch({ type: 'SET_PENDING_FIN', fin: uf });
-        dispatch({ type: 'SET_PENDING_BLOCK', block: 'confirm' });
+        
+        // PRIORITY 2: Gate extraction - don't show CONFIRM card if extraction was gated
+        // If source is 'extraction_gated' or fields is empty, skip confirmation flow
+        const isExtractionGated = ex.src === 'extraction_gated' || Object.keys((ex.fields as Record<string, unknown>) || {}).length === 0;
+        
+        if (!isExtractionGated) {
+          dispatch({ type: 'SET_PENDING_FIN', fin: uf });
+          dispatch({ type: 'SET_PENDING_BLOCK', block: 'confirm' });
+        }
         return;
       }
       if (action.type === 'ask') {

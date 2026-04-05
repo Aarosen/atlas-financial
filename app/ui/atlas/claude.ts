@@ -30,7 +30,7 @@ export class Claude {
       this._hadSuccess = true;
       this._apiStatus = 'online';
       this._lastErrorStatus = null;
-      return { fields: (d.fields || {}) as Record<string, unknown>, src: 'claude', apiOk: true as const };
+      return { fields: (d.fields || {}) as Record<string, unknown>, src: d.source || 'claude', apiOk: true as const };
     } catch (e: any) {
       if (!this._hadSuccess) {
         this._apiStatus = 'unknown';
