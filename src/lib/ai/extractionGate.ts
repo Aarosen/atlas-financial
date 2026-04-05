@@ -21,7 +21,7 @@ export function containsFinancialData(message: string): boolean {
     /\bincome\b/,                  // Income-related
     /\bsalary\b/,                  // Salary
     /\bexpense|spending|cost/,     // Expense-related
-    /\bdebt|loan|credit card/,     // Debt-related
+    /\bdebt|loan|credit card|cc\b/,     // Debt-related (including "cc")
     /\bsavings|saved/,             // Savings
     /\bmonth|annual|yearly/,       // Time period (often with amounts)
     /\bpay|payment|paying/,        // Payment-related
@@ -42,7 +42,9 @@ export function containsFinancialData(message: string): boolean {
   const startsWithQuestion = purelyQuestionPattern.test(lowerMsg.trim());
 
   // If it starts with a question word AND has no dollar amounts or specific numbers, it's likely a follow-up
-  if (startsWithQuestion && !/\$[\d,]+|\b\d+k\b|\b\d{3,}\b/.test(lowerMsg)) {
+  // EXCEPTION: If it mentions debt/credit/loan, it's financial data even if it starts with a question
+  const mentionsDebt = /\bdebt|loan|credit card|cc\b/.test(lowerMsg);
+  if (startsWithQuestion && !/\$[\d,]+|\b\d+k\b|\b\d{3,}\b/.test(lowerMsg) && !mentionsDebt) {
     return false;
   }
 
