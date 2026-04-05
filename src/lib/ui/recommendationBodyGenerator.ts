@@ -30,8 +30,8 @@ export function generateRecommendationBody(
   const emergencyFundGap = Math.max(0, emergencyFundTarget - fin.totalSavings);
   const monthsToEmergencyFund = emergencyFundGap > 0 ? Math.ceil(emergencyFundGap / Math.max(surplus, 100)) : 0;
 
-  // Scenario 1: Emergency Fund (stabilize_cashflow or build_emergency_fund)
-  if (lever === 'stabilize_cashflow' || lever === 'build_emergency_fund') {
+  // Scenario 1: Emergency Fund (stabilize_cashflow or build_emergency_buffer)
+  if (lever === 'stabilize_cashflow' || lever === 'build_emergency_buffer') {
     if (surplus > 0) {
       const monthlyTransfer = Math.max(100, Math.round(emergencyFundGap / Math.max(monthsToEmergencyFund, 1)));
       return `Your ${formatCurrency(surplus)} monthly surplus is the asset here. To hit a 3-month emergency fund (${formatCurrency(emergencyFundTarget)}), transfer ${formatCurrency(monthlyTransfer)}/month — you're there in ${monthsToEmergencyFund} months.`;
@@ -50,28 +50,28 @@ export function generateRecommendationBody(
     return `At ${formatCurrency(fin.highInterestDebt)} and ~23% APR, you're paying ~${formatCurrency(monthlyInterest)}/month just in interest. Put ${formatCurrency(monthlyPayment)}/month toward this — you're debt-free in ${monthsToPayoff} months and save ${formatCurrency(totalInterestPaid)} in interest.`;
   }
 
-  // Scenario 3: Low-Interest Debt (refinance or consolidate)
-  if (lever === 'refinance_low_interest_debt' && fin.lowInterestDebt && fin.lowInterestDebt > 0) {
-    const monthlyPayment = Math.round(fin.lowInterestDebt / 60); // 5-year payoff
-    return `${formatCurrency(fin.lowInterestDebt)} at low rates is manageable. Pay ${formatCurrency(monthlyPayment)}/month and you're done in 5 years. Focus on the high-interest debt first if you have it.`;
+  // Scenario 3: Increase Future Allocation (grow future savings)
+  if (lever === 'increase_future_allocation') {
+    const currentSavings = fin.totalSavings;
+    const targetMonths = 6;
+    const targetAmount = fin.essentialExpenses * targetMonths;
+    const needed = Math.max(0, targetAmount - currentSavings);
+    const monthsToTarget = surplus > 0 ? Math.ceil(needed / Math.max(surplus, 100)) : null;
+    
+    if (monthsToTarget === null || monthsToTarget === 0) {
+      return `You have ${formatCurrency(currentSavings)} saved — already at or above a ${targetMonths}-month cushion. The next move is putting your ${formatCurrency(surplus)}/month surplus into a vehicle that compounds — not a checking account.`;
+    }
+    return `You have ${formatCurrency(currentSavings)} saved. A full ${targetMonths}-month cushion is ${formatCurrency(targetAmount)}. Put ${formatCurrency(Math.max(100, Math.round(surplus * 0.5)))}/month toward savings and you're there in ${monthsToTarget} months.`;
   }
 
-  // Scenario 4: Build Savings
-  if (lever === 'build_savings_buffer') {
-    const savingsTarget = fin.essentialExpenses * 6; // 6-month target
-    const savingsGap = Math.max(0, savingsTarget - fin.totalSavings);
-    const monthlyToSavings = Math.max(100, Math.round(surplus * 0.3)); // 30% of surplus
-    const monthsToTarget = savingsGap > 0 ? Math.ceil(savingsGap / Math.max(monthlyToSavings, 100)) : 0;
-
-    return `You have ${formatCurrency(fin.totalSavings)} saved. A 6-month buffer is ${formatCurrency(savingsTarget)}. Put ${formatCurrency(monthlyToSavings)}/month toward savings — you hit the target in ${monthsToTarget} months.`;
-  }
-
-  // Scenario 5: Invest for Growth
-  if (lever === 'invest_for_growth') {
-    const investmentAmount = Math.max(100, Math.round(surplus * 0.5)); // 50% of surplus
-    const yearlyReturn = Math.round(investmentAmount * 12 * 0.07); // 7% annual return
-
-    return `With ${formatCurrency(surplus)}/month surplus and emergency fund covered, invest ${formatCurrency(investmentAmount)}/month. At 7% annual return, that's ${formatCurrency(yearlyReturn)}/year in growth.`;
+  // Scenario 4: Optimize Discretionary Spend
+  if (lever === 'optimize_discretionary_spend') {
+    const income = fin.monthlyIncome;
+    const essentials = fin.essentialExpenses;
+    const discretionaryAvailable = surplus;
+    const potentialRedirect = Math.round(discretionaryAvailable * 0.3); // 30% of surplus
+    
+    return `Your essentials are ${formatCurrency(essentials)}/month against ${formatCurrency(income)} income. That leaves ${formatCurrency(discretionaryAvailable)} for everything else. Even redirecting ${formatCurrency(potentialRedirect)} monthly (30% of your surplus) to savings or debt payoff changes the trajectory significantly.`;
   }
 
   // Default fallback
