@@ -10,6 +10,7 @@ export interface FinancialData {
   totalSavings: number;
   highInterestDebt: number | null;
   lowInterestDebt: number | null;
+  primaryGoal?: string;
 }
 
 function formatCurrency(amount: number): string {
@@ -19,6 +20,31 @@ function formatCurrency(amount: number): string {
     minimumFractionDigits: 0,
     maximumFractionDigits: 0,
   }).format(amount);
+}
+
+function buildGoalBridge(lever: string, goal?: string): string {
+  if (!goal) return '';
+  
+  const goalMap: Record<string, string> = {
+    'growth': 'You want to grow your savings',
+    'wealth_building': 'You want to build wealth',
+    'stability': 'You want stability',
+    'flexibility': 'You want flexibility',
+  };
+  
+  const goalText = goalMap[goal] || goal;
+  
+  // Map levers to bridge explanations
+  const bridges: Record<string, string> = {
+    'optimize_discretionary_spend': ` — and you will. First, we tighten your discretionary spending, because that's where the fuel comes from.`,
+    'stabilize_cashflow': ` — and the first step is getting to break-even each month.`,
+    'eliminate_high_interest_debt': ` — and the first step is eliminating the debt that's costing you the most.`,
+    'build_emergency_buffer': ` — and the first step is building a safety net so you can invest with confidence.`,
+    'increase_future_allocation': ` — and this lever gets you there.`,
+  };
+  
+  const bridge = bridges[lever] || '';
+  return goalText + bridge;
 }
 
 export function generateRecommendationBody(
@@ -32,22 +58,22 @@ export function generateRecommendationBody(
 
   // Scenario 1: Emergency Fund (stabilize_cashflow or build_emergency_buffer)
   if (lever === 'stabilize_cashflow' || lever === 'build_emergency_buffer') {
-    if (surplus > 0) {
-      const monthlyTransfer = Math.max(100, Math.round(emergencyFundGap / Math.max(monthsToEmergencyFund, 1)));
-      return `Your ${formatCurrency(surplus)} monthly surplus is the asset here. To hit a 3-month emergency fund (${formatCurrency(emergencyFundTarget)}), transfer ${formatCurrency(monthlyTransfer)}/month — you're there in ${monthsToEmergencyFund} months.`;
-    } else {
-      return `With ${formatCurrency(Math.abs(surplus))} monthly shortfall, the first move is to find ${formatCurrency(Math.abs(surplus))} in cuts or income. Once you're cash-flow positive, build the emergency fund.`;
-    }
+    const goalBridge = buildGoalBridge(lever, fin.primaryGoal);
+    const mainBody = surplus > 0
+      ? `Your ${formatCurrency(surplus)} monthly surplus is the asset here. To hit a 3-month emergency fund (${formatCurrency(emergencyFundTarget)}), transfer ${formatCurrency(Math.max(100, Math.round(emergencyFundGap / Math.max(monthsToEmergencyFund, 1))))}/month — you're there in ${monthsToEmergencyFund} months.`
+      : `With ${formatCurrency(Math.abs(surplus))} monthly shortfall, the first move is to find ${formatCurrency(Math.abs(surplus))} in cuts or income. Once you're cash-flow positive, build the emergency fund.`;
+    return goalBridge ? `${goalBridge}\n\n${mainBody}` : mainBody;
   }
 
   // Scenario 2: High-Interest Debt
   if (lever === 'eliminate_high_interest_debt' && fin.highInterestDebt && fin.highInterestDebt > 0) {
-    const monthlyInterest = Math.round((fin.highInterestDebt * 0.23) / 12); // Assume ~23% APR for high-interest
-    const monthlyPayment = Math.max(500, Math.round(surplus * 0.7)); // 70% of surplus toward debt
+    const monthlyInterest = Math.round((fin.highInterestDebt * 0.23) / 12);
+    const monthlyPayment = Math.max(500, Math.round(surplus * 0.7));
     const monthsToPayoff = Math.ceil(fin.highInterestDebt / Math.max(monthlyPayment, 100));
     const totalInterestPaid = Math.round(monthlyInterest * monthsToPayoff);
-
-    return `At ${formatCurrency(fin.highInterestDebt)} and ~23% APR, you're paying ~${formatCurrency(monthlyInterest)}/month just in interest. Put ${formatCurrency(monthlyPayment)}/month toward this — you're debt-free in ${monthsToPayoff} months and save ${formatCurrency(totalInterestPaid)} in interest.`;
+    const goalBridge = buildGoalBridge(lever, fin.primaryGoal);
+    const mainBody = `At ${formatCurrency(fin.highInterestDebt)} and ~23% APR, you're paying ~${formatCurrency(monthlyInterest)}/month just in interest. Put ${formatCurrency(monthlyPayment)}/month toward this — you're debt-free in ${monthsToPayoff} months and save ${formatCurrency(totalInterestPaid)} in interest.`;
+    return goalBridge ? `${goalBridge}\n\n${mainBody}` : mainBody;
   }
 
   // Scenario 3: Increase Future Allocation (grow future savings)
@@ -57,11 +83,12 @@ export function generateRecommendationBody(
     const targetAmount = fin.essentialExpenses * targetMonths;
     const needed = Math.max(0, targetAmount - currentSavings);
     const monthsToTarget = surplus > 0 ? Math.ceil(needed / Math.max(surplus, 100)) : null;
+    const goalBridge = buildGoalBridge(lever, fin.primaryGoal);
     
-    if (monthsToTarget === null || monthsToTarget === 0) {
-      return `You have ${formatCurrency(currentSavings)} saved — already at or above a ${targetMonths}-month cushion. The next move is putting your ${formatCurrency(surplus)}/month surplus into a vehicle that compounds — not a checking account.`;
-    }
-    return `You have ${formatCurrency(currentSavings)} saved. A full ${targetMonths}-month cushion is ${formatCurrency(targetAmount)}. Put ${formatCurrency(Math.max(100, Math.round(surplus * 0.5)))}/month toward savings and you're there in ${monthsToTarget} months.`;
+    const mainBody = monthsToTarget === null || monthsToTarget === 0
+      ? `You have ${formatCurrency(currentSavings)} saved — already at or above a ${targetMonths}-month cushion. The next move is putting your ${formatCurrency(surplus)}/month surplus into a vehicle that compounds — not a checking account.`
+      : `You have ${formatCurrency(currentSavings)} saved. A full ${targetMonths}-month cushion is ${formatCurrency(targetAmount)}. Put ${formatCurrency(Math.max(100, Math.round(surplus * 0.5)))}/month toward savings and you're there in ${monthsToTarget} months.`;
+    return goalBridge ? `${goalBridge}\n\n${mainBody}` : mainBody;
   }
 
   // Scenario 4: Optimize Discretionary Spend
@@ -69,9 +96,10 @@ export function generateRecommendationBody(
     const income = fin.monthlyIncome;
     const essentials = fin.essentialExpenses;
     const discretionaryAvailable = surplus;
-    const potentialRedirect = Math.round(discretionaryAvailable * 0.3); // 30% of surplus
-    
-    return `Your essentials are ${formatCurrency(essentials)}/month against ${formatCurrency(income)} income. That leaves ${formatCurrency(discretionaryAvailable)} for everything else. Even redirecting ${formatCurrency(potentialRedirect)} monthly (30% of your surplus) to savings or debt payoff changes the trajectory significantly.`;
+    const potentialRedirect = Math.round(discretionaryAvailable * 0.3);
+    const goalBridge = buildGoalBridge(lever, fin.primaryGoal);
+    const mainBody = `Your essentials are ${formatCurrency(essentials)}/month against ${formatCurrency(income)} income. That leaves ${formatCurrency(discretionaryAvailable)} for everything else. Even redirecting ${formatCurrency(potentialRedirect)} monthly (30% of your surplus) to savings or debt payoff changes the trajectory significantly.`;
+    return goalBridge ? `${goalBridge}\n\n${mainBody}` : mainBody;
   }
 
   // Default fallback
