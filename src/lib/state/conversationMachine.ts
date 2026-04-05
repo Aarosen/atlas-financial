@@ -257,9 +257,12 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
         pendingBlock: null,
         selectedLever: null,
         missing: [],
+        lastQuestionKey: undefined,
         answered: {},
         unknown: {},
         baseline: null,
+        memorySummary: null,
+        apiErr: null,
       };
 
     case 'RESET':
