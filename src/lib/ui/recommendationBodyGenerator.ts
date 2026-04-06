@@ -4,6 +4,22 @@
  * and calculated targets from the user's financial profile.
  */
 
+// AUDIT 12 FIX DEFECT-07: Shared debt payoff calculation utility
+// Ensures consistent payoff timelines across recommendation card and lever comparison
+export function calculateDebtPayoff(debt: number, monthlyPayment: number): { months: number } {
+  if (debt <= 0 || monthlyPayment <= 0) {
+    return { months: 0 };
+  }
+  const months = Math.ceil(debt / monthlyPayment);
+  return { months };
+}
+
+// AUDIT 12 FIX DEFECT-07: Shared monthly payment calculation
+// Uses 70% of surplus as the standard allocation for debt payoff
+export function calculateMonthlyDebtPayment(surplus: number): number {
+  return Math.max(500, Math.round(surplus * 0.7));
+}
+
 export interface FinancialData {
   monthlyIncome: number;
   essentialExpenses: number;
@@ -74,8 +90,10 @@ export function generateRecommendationBody(
     const aprPct = fin.highInterestDebtAPR ?? null;
     const apr = aprPct !== null ? aprPct / 100 : 0.23;
     const monthlyInterest = Math.round((fin.highInterestDebt * apr) / 12);
-    const monthlyPayment = Math.max(500, Math.round(surplus * 0.7));
-    const monthsToPayoff = Math.ceil(fin.highInterestDebt / Math.max(monthlyPayment, 100));
+    // AUDIT 12 FIX DEFECT-07: Use shared utility for consistent payoff calculation
+    const monthlyPayment = calculateMonthlyDebtPayment(surplus);
+    const payoffResult = calculateDebtPayoff(fin.highInterestDebt, monthlyPayment);
+    const monthsToPayoff = payoffResult.months;
     const totalInterestPaid = Math.round(monthlyInterest * monthsToPayoff);
     const goalBridge = buildGoalBridge(lever, fin.primaryGoal);
     const aprDisplay = aprPct !== null ? Math.round(aprPct) : 23;

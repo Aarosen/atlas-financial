@@ -4,6 +4,7 @@
  */
 
 import type { FinancialState } from '@/lib/state/types';
+import { calculateDebtPayoff, calculateMonthlyDebtPayment } from './recommendationBodyGenerator';
 
 export interface LeverComparisonData {
   lever: string;
@@ -32,9 +33,10 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
   const emergencyMonthly = surplus > 0 ? Math.min(surplus * 0.3, emergencyGap / 12) : 0;
   const emergencyMonths = emergencyMonthly > 0 ? Math.ceil(emergencyGap / emergencyMonthly) : 0;
 
-  // Debt payoff calculations (using extracted APR or 23% default)
-  const highDebtMonthly = highDebt > 0 ? Math.max(100, surplus * 0.5) : 0;
-  const highDebtMonths = highDebtMonthly > 0 ? Math.ceil(highDebt / highDebtMonthly) : 0;
+  // AUDIT 12 FIX DEFECT-07: Use shared utility for consistent debt payoff calculation
+  const highDebtMonthly = highDebt > 0 ? calculateMonthlyDebtPayment(surplus) : 0;
+  const highDebtPayoffResult = calculateDebtPayoff(highDebt, highDebtMonthly);
+  const highDebtMonths = highDebtPayoffResult.months;
   const highDebtMonthlyInterest = Math.round((highDebt * apr) / 12);
 
   // Discretionary optimization
