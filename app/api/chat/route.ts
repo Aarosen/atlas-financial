@@ -621,6 +621,7 @@ EXTRACTION RULES:
 - Never infer, estimate, or fabricate values not present in the text.
 - If a user says "about $4k" or "roughly $4,000" — extract 4000.
 - "I have no savings" → totalSavings: 0. "No debt" or "No other debt" → highInterestDebt: 0, lowInterestDebt: 0.
+- CRITICAL: For negative cashflow scenarios (expenses > income), extract BOTH income AND expenses even if user mentions deficit. Example: "I make $3,200 but spend $4,100" → monthlyIncome: 3200, essentialExpenses: 4100 (NOT as deficit).
 - DEBT NEGATIONS (user explicitly says NO to a debt type):
   * If last question asked about credit cards/high-interest debt and user says "No", "No I don't", "Nope", "None" → highInterestDebt: 0
   * If last question asked about student loans/car loans/other debt and user says "No", "No I don't", "Nope", "None" → lowInterestDebt: 0
