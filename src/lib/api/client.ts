@@ -107,8 +107,10 @@ export class ClaudeClient {
     memorySummary?: string | null;
     fin?: Partial<FinancialState> | null;
     language?: SupportedLanguage;
+    activeLever?: string;
+    activeTier?: string;
   }): Promise<{ ok: boolean; canceled: boolean; sessionId?: string; rateLimitRemaining?: number }> {
-    const { question, onDelta, signal, mode, memorySummary, fin } = args;
+    const { question, onDelta, signal, mode, memorySummary, fin, activeLever, activeTier } = args;
     const slow = String(question || '').toLowerCase().includes('slowstream');
     const type = mode === 'explain' ? 'answer_explain_stream' : 'answer_stream';
     
@@ -128,6 +130,8 @@ export class ClaudeClient {
           memorySummary, 
           fin: fin ?? null, 
           language: args.language,
+          activeLever: activeLever ?? null,
+          activeTier: activeTier ?? null,
           userId: this._userId,
           sessionId: this._sessionId,
         }),

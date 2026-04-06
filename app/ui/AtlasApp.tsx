@@ -1302,6 +1302,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           signal: ctrl.signal,
           memorySummary: st.memorySummary,
           fin: finRef.current,
+          // AUDIT 10 FIX P4-A: Inject active card state to prevent contradictory advice
+          // When user asks follow-up questions after seeing ATLAS RECOMMENDS card,
+          // the system prompt needs to know the active recommendation to stay coherent
+          activeLever: st.baseline?.lever,
+          activeTier: st.baseline?.tier,
         });
         
         if (streamIdRef.current !== myStreamId) {
