@@ -1263,6 +1263,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           dispatch({ type: 'SEND_ASKED', text: actionFeedback });
         }
         
+        // AUDIT 10 FIX P2-A: Allow negative cashflow scenarios through structured flow
+        // Negative cashflow (expenses > income) is a valid financial state that should trigger CONFIRM card
+        // The strategy engine handles it correctly with stabilize_cashflow lever
         // PRIORITY 2: Gate extraction - don't show CONFIRM card if extraction was gated
         // If source is 'extraction_gated' or fields is empty, skip confirmation flow
         const isExtractionGated = ex.src === 'extraction_gated' || Object.keys((ex.fields as Record<string, unknown>) || {}).length === 0;
