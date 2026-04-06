@@ -1,6 +1,7 @@
 export const runtime = 'edge';
 export const maxDuration = 60;
 
+import type { FinancialState, Strategy } from '@/lib/state/types';
 import { inferModelTier } from '@/lib/ai/modelRouting';
 import { routeAgentForText } from '@/lib/ai/agentRouter';
 import { getPlaybookResponse } from '@/lib/ai/playbooks';
@@ -723,7 +724,9 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
             ? 700
             : 1200;
 
-  const answerPrompt = `You are Atlas. Answer the user's question briefly and clearly.
+  // Build context-aware answer prompt that includes confirmed financial profile
+  const buildAnswerPrompt = (fin?: Partial<FinancialState> | null, baseline?: Strategy | null) => {
+    let prompt = `You are Atlas. Answer the user's question briefly and clearly.
 
 HARD OUTPUT CONSTRAINTS (must follow exactly):
 - Max 2 sentences total
@@ -732,6 +735,31 @@ HARD OUTPUT CONSTRAINTS (must follow exactly):
 - Plain text only
 
 If the user asks something outside scope, respond briefly and redirect to the onboarding question.`;
+
+    // If user has confirmed financial profile, inject it for context
+    if (fin && (fin.monthlyIncome || fin.essentialExpenses || fin.highInterestDebt !== undefined)) {
+      prompt += `\n\nUSER'S CONFIRMED FINANCIAL PROFILE:
+- Monthly income: $${fin.monthlyIncome || 0}
+- Essential expenses: $${fin.essentialExpenses || 0}
+- Savings: $${fin.totalSavings || 0}
+- High-interest debt: $${fin.highInterestDebt || 0}
+- Low-interest debt: $${fin.lowInterestDebt || 0}
+- Primary goal: ${fin.primaryGoal || 'not stated'}`;
+
+      if (baseline) {
+        prompt += `\n\nATLAS RECOMMENDATION:
+- Recommended lever: ${baseline.lever}
+- Urgency: ${baseline.urgency}
+- Monthly surplus: $${(fin.monthlyIncome || 0) - (fin.essentialExpenses || 0)}`;
+      }
+
+      prompt += `\n\nWhen answering the user's follow-up question, reference their specific financial situation and recommendation. Be direct and actionable.`;
+    }
+
+    return prompt;
+  };
+
+  const answerPrompt = buildAnswerPrompt();
 
   const explainerPrompt = `You are Atlas. Answer the user's question with a clear, human explanation.
 
@@ -773,7 +801,9 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
         : trimmedMessages;
 
     if (type === 'answer_stream' || type === 'answer_explain_stream') {
-      const sysStream = type === 'answer_stream' ? answerPrompt : explainerPrompt;
+      // AUDIT 9 FIX: Inject financial context into answer_stream for post-CONFIRM follow-ups
+      // When user asks "What should I do first?" after confirming numbers, include their profile
+      const sysStream = type === 'answer_stream' ? buildAnswerPrompt(fin, baseline) : explainerPrompt;
       const streamPayload = [{ role: 'user', content: `Question: ${String(question || '').trim()}` }];
       const streamMaxTokens = type === 'answer_explain_stream' ? 700 : 220;
       let response = await callAnthropicStream({ apiKey, model: usedModel, maxTokens: streamMaxTokens, system: sysStream, messages: streamPayload });
