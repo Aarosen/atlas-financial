@@ -287,8 +287,28 @@ export function ConversationScreen({
   const tierCopy: Record<Strategy['tier'], { name: string; desc: string }> = {
     Foundation: { name: 'Foundation', desc: 'We steady the ground first.' },
     Stabilizing: { name: 'Stabilizing', desc: 'We reduce pressure and build buffer.' },
-    Strategic: { name: 'Strategic', desc: 'We’re building momentum with intent.' },
+    Strategic: { name: 'Strategic', desc: 'We\'re building momentum with intent.' },
     GrowthReady: { name: 'Growth Ready', desc: 'We can lean into growth.' },
+  };
+  // AUDIT 11 FIX DEFECT-04: Map camelCase field names to human-readable labels
+  const fieldNameLabels: Record<string, string> = {
+    monthlyIncome: 'Monthly income',
+    essentialExpenses: 'Essential expenses',
+    totalSavings: 'Total savings',
+    highInterestDebt: 'High-interest debt',
+    lowInterestDebt: 'Low-interest debt',
+    monthlyDebtPayments: 'Monthly debt payments',
+    discretionaryExpenses: 'Discretionary expenses',
+    primaryGoal: 'Primary goal',
+    highInterestDebtAPR: 'High-interest APR',
+    lowInterestDebtAPR: 'Low-interest APR',
+    retirementSavings: 'Retirement savings',
+  };
+  const formatCurrencyValue = (v: any): string => {
+    if (typeof v === 'number') {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(v);
+    }
+    return String(v);
   };
   const recommendedLever = baseline?.lever || selectedLever || 'stabilize_cashflow';
   const leverLabel = leverLabels[recommendedLever] || recommendedLever;
@@ -309,7 +329,14 @@ export function ConversationScreen({
         baseline.lever === 'increase_future_allocation' ? 'You\'re in a strong position to increase your future allocation.' :
         'This recommendation is tailored to your financial situation.'
       ] : [];
-  const explainInputs = explainability?.inputsUsed ?? {};
+  // AUDIT 11 FIX DEFECT-04: Map field names and format values for display
+  const explainInputsRaw = explainability?.inputsUsed ?? {};
+  const explainInputs: Record<string, string> = Object.entries(explainInputsRaw).reduce((acc, [k, v]) => {
+    const label = fieldNameLabels[k] || k;
+    const value = formatCurrencyValue(v);
+    acc[label] = value;
+    return acc;
+  }, {} as Record<string, string>);
   const explainAssumptions = explainability?.assumptions ?? [];
   const tierInfo = baseline?.tier ? tierCopy[baseline.tier] : null;
   const showInlineNextStep = !!(onNextStep && nextStepHint && !pendingBlock);
