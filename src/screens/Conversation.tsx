@@ -296,9 +296,19 @@ export function ConversationScreen({
     ? humanizeFieldList(Object.keys(baseline.explainability.inputsUsed).filter(Boolean))
     : ['income', 'essentials', 'savings', 'debt'];
   const explainability = baseline?.explainability;
-  // AUDIT 9 FIX: Convert raw reason codes to human-readable explanations
+  // AUDIT 10 FIX: Convert raw reason codes to human-readable explanations
+  // If no reason codes, generate a default explanation based on the lever
   const rawReasonCodes = explainability?.reasonCodes ?? [];
-  const explainReasons = humanizeReasonCodes(rawReasonCodes);
+  const explainReasons = rawReasonCodes.length > 0 
+    ? humanizeReasonCodes(rawReasonCodes)
+    : baseline?.lever ? [
+        baseline.lever === 'stabilize_cashflow' ? 'You need to stabilize your monthly cashflow before other financial moves.' :
+        baseline.lever === 'eliminate_high_interest_debt' ? 'Eliminating high-interest debt is the highest guaranteed return you can achieve.' :
+        baseline.lever === 'build_emergency_buffer' ? 'Building a solid emergency fund is the foundation for financial security.' :
+        baseline.lever === 'optimize_discretionary_spend' ? 'Optimizing your discretionary spending unlocks resources for your goals.' :
+        baseline.lever === 'increase_future_allocation' ? 'You\'re in a strong position to increase your future allocation.' :
+        'This recommendation is tailored to your financial situation.'
+      ] : [];
   const explainInputs = explainability?.inputsUsed ?? {};
   const explainAssumptions = explainability?.assumptions ?? [];
   const tierInfo = baseline?.tier ? tierCopy[baseline.tier] : null;
