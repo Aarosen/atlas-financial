@@ -44,11 +44,19 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
   const futureMonthly = surplus > 0 ? surplus * 0.5 : 0;
   const futureMonths = futureMonthly > 0 ? 1 : 0; // Can start immediately
 
+  // AUDIT 12 FIX DEFECT-10: Make stabilize_cashflow description data-driven based on surplus ratio
+  const surplusRatio = income > 0 ? surplus / income : 0;
+  const cashflowDesc = surplus < 0
+    ? `You're spending ${Math.abs(surplus).toLocaleString()} more than you make each month. Closing this gap is the foundation of any financial plan.`
+    : surplusRatio < 0.10
+    ? `Your monthly surplus is tight — only $${surplus.toLocaleString()}/month after essentials. Protecting this buffer is priority one.`
+    : `You have a $${surplus.toLocaleString()}/month surplus after essentials. Maintaining this cushion protects all other goals.`;
+
   return [
     {
       lever: 'stabilize_cashflow',
       name: 'Stabilize Cashflow',
-      explanation: `You're running a ${surplus < 0 ? 'deficit' : 'tight surplus'} each month. Getting to positive cashflow is the foundation.`,
+      explanation: cashflowDesc,
       keyMetric: 'Monthly surplus',
       keyValue: `$${Math.abs(surplus).toLocaleString()}`,
       timelineMonths: 1,

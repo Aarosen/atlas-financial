@@ -750,6 +750,15 @@ HARD OUTPUT CONSTRAINTS (must follow exactly):
     if (fin && (fin.monthlyIncome || fin.essentialExpenses)) {
       const surplus = (fin.monthlyIncome || 0) - (fin.essentialExpenses || 0);
       prompt += `\n\nUSER PROFILE: Monthly income $${fin.monthlyIncome}, expenses $${fin.essentialExpenses}, surplus $${surplus}.`;
+      
+      // AUDIT 12 FIX DEFECT-09: Add cushion status to prevent recommending funded emergency fund
+      const monthlyEssentials = fin.essentialExpenses || 0;
+      const cushionTarget = monthlyEssentials * 3;
+      const totalSavings = fin.totalSavings || 0;
+      const cushionStatus = totalSavings >= cushionTarget
+        ? `EMERGENCY CUSHION: FUNDED (${totalSavings} savings vs. ${cushionTarget} target). Do NOT recommend building an emergency fund.`
+        : `EMERGENCY CUSHION: UNDERFUNDED (${totalSavings} savings vs. ${cushionTarget} needed).`;
+      prompt += `\n\n${cushionStatus}`;
     }
 
     // AUDIT 11 FIX DEFECT-06: Use activeLever/activeTier if provided, otherwise fall back to baseline
