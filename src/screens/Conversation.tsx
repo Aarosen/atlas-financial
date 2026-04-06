@@ -15,6 +15,7 @@ import { extractMetricCardFromResponse } from '@/lib/ai/metricCardPrompt';
 import ReactMarkdown from 'react-markdown';
 import { generateRecommendationBody } from '@/lib/ui/recommendationBodyGenerator';
 import { humanizeReasonCodes } from '@/lib/ui/reasonCodeLabels';
+import { generateLeverComparison } from '@/lib/ui/leverComparison';
 
 function renderMessageText(text: string): ReactNode {
   // Use react-markdown to properly render markdown including bold, italic, lists, etc.
@@ -150,6 +151,7 @@ export function ConversationScreen({
   const [isDesktop, setIsDesktop] = useState(false);
   const [editAffForMsgIdx, setEditAffForMsgIdx] = useState<number | null>(null);
   const [showExplain, setShowExplain] = useState(false);
+  const [showLeverComparison, setShowLeverComparison] = useState(false);
   const [inputHydrated, setInputHydrated] = useState(false);
   const inpRef = useRef(inp);
   const handleInputBlur = (e: React.FocusEvent<HTMLTextAreaElement>) => {
@@ -578,13 +580,40 @@ export function ConversationScreen({
                   </div>
                   <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
                     <Button onClick={onConfirmNextStep} variant="primary" size="sm" disabled={!onConfirmNextStep}>Yes, use this lever</Button>
-                    <Button onClick={onEditFin} variant="secondary" size="sm" disabled={!onEditFin}>Discuss other options</Button>
+                    <Button onClick={() => setShowLeverComparison((v) => !v)} variant="secondary" size="sm" disabled={!pendingFin}>
+                      {showLeverComparison ? 'Hide options' : 'Discuss other options'}
+                    </Button>
                     {explainability && (
                       <Button onClick={() => setShowExplain((v) => !v)} variant="secondary" size="sm">
                         {showExplain ? 'Hide why' : 'Why this?'}
                       </Button>
                     )}
                   </div>
+                  {showLeverComparison && pendingFin && (
+                    <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
+                      <div style={{ fontWeight: 900, fontSize: 12, letterSpacing: '0.08em', color: 'var(--ink2)' }}>ALL LEVERS — YOUR OPTIONS</div>
+                      {generateLeverComparison(pendingFin).map((comp) => (
+                        <div key={comp.lever} style={{ padding: 12, borderRadius: 12, border: '1px solid var(--bdr)', background: comp.lever === recommendedLever ? 'var(--bg2)' : 'var(--bg)', opacity: comp.lever === recommendedLever ? 1 : 0.8 }}>
+                          <div style={{ fontWeight: 900, fontSize: 13, color: 'var(--ink2)' }}>
+                            {comp.name}
+                            {comp.lever === recommendedLever && <span style={{ marginLeft: 8, fontSize: 11, fontWeight: 600, color: 'var(--ink3)' }}>← RECOMMENDED</span>}
+                          </div>
+                          <div style={{ marginTop: 6, color: 'var(--ink2)', fontSize: 13, lineHeight: 1.5 }}>{comp.explanation}</div>
+                          <div style={{ marginTop: 8, display: 'grid', gap: 4 }}>
+                            <div style={{ display: 'flex', justifyContent: 'space-between', gap: 12 }}>
+                              <div style={{ color: 'var(--ink3)', fontSize: 12, fontWeight: 600 }}>{comp.keyMetric}</div>
+                              <div style={{ fontWeight: 900, color: 'var(--ink2)' }}>{comp.keyValue}</div>
+                            </div>
+                          </div>
+                          {comp.lever !== recommendedLever && (
+                            <Button onClick={() => { onEditFin?.(); }} variant="secondary" size="sm" style={{ marginTop: 8, width: '100%' }}>
+                              Use this lever instead
+                            </Button>
+                          )}
+                        </div>
+                      ))}
+                    </div>
+                  )}
                   {showExplain && explainability && (
                     <div style={{ marginTop: 12, display: 'grid', gap: 10 }}>
                       <div>
