@@ -641,6 +641,7 @@ FIELDS TO EXTRACT (omit any you cannot confidently extract):
 - essentialExpenses: number (monthly non-negotiable expenses: rent, utilities, groceries, insurance, minimum debt payments)
 - discretionaryExpenses: number (monthly lifestyle spending: dining, subscriptions, entertainment, clothing)
 - totalSavings: number (total accessible savings and cash holdings)
+- retirementSavings: number (401k, IRA, Roth IRA, pension, or other retirement account balances; extract from phrases like "I have $50k in my 401k" or "$200k in retirement accounts"; omit if not stated)
 - highInterestDebt: number (total balance of debts above ~7% APR: credit cards, personal loans)
 - lowInterestDebt: number (total balance of debts at or below ~7% APR: student loans, car loans, mortgage)
 - highInterestDebtAPR: number (APR/interest rate of high-interest debt; extract from phrases like "23% APR", "18% interest", "my credit card rate is 21%"; omit if not stated)
