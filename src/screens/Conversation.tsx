@@ -305,8 +305,10 @@ export function ConversationScreen({
     retirementSavings: 'Retirement savings',
   };
   const formatCurrencyValue = (v: any): string => {
-    if (typeof v === 'number') {
-      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(v);
+    // AUDIT 12 FIX DEFECT-08: Handle both number and numeric-string values
+    const num = typeof v === 'number' ? v : parseFloat(String(v));
+    if (!isNaN(num)) {
+      return new Intl.NumberFormat('en-US', { style: 'currency', currency: 'USD', minimumFractionDigits: 0 }).format(num);
     }
     return String(v);
   };
