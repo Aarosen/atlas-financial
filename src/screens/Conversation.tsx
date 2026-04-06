@@ -14,6 +14,7 @@ import { MetricCardPayload } from '@/components/MetricCardPayload';
 import { extractMetricCardFromResponse } from '@/lib/ai/metricCardPrompt';
 import ReactMarkdown from 'react-markdown';
 import { generateRecommendationBody } from '@/lib/ui/recommendationBodyGenerator';
+import { humanizeReasonCodes } from '@/lib/ui/reasonCodeLabels';
 
 function renderMessageText(text: string): ReactNode {
   // Use react-markdown to properly render markdown including bold, italic, lists, etc.
@@ -293,7 +294,9 @@ export function ConversationScreen({
     ? humanizeFieldList(Object.keys(baseline.explainability.inputsUsed).filter(Boolean))
     : ['income', 'essentials', 'savings', 'debt'];
   const explainability = baseline?.explainability;
-  const explainReasons = explainability?.reasonCodes ?? [];
+  // AUDIT 9 FIX: Convert raw reason codes to human-readable explanations
+  const rawReasonCodes = explainability?.reasonCodes ?? [];
+  const explainReasons = humanizeReasonCodes(rawReasonCodes);
   const explainInputs = explainability?.inputsUsed ?? {};
   const explainAssumptions = explainability?.assumptions ?? [];
   const tierInfo = baseline?.tier ? tierCopy[baseline.tier] : null;
