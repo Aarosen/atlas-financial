@@ -22,15 +22,20 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
   const lowDebt = fin.lowInterestDebt || 0;
   const surplus = income - expenses;
 
+  // AUDIT 11 FIX DEFECT-01 & DEFECT-05: Use extracted APR if available, convert from percentage to decimal
+  const aprPct = fin.highInterestDebtAPR ?? null;
+  const apr = aprPct !== null ? aprPct / 100 : 0.23;
+
   // Emergency fund calculations
   const emergencyTarget3mo = expenses * 3;
   const emergencyGap = Math.max(0, emergencyTarget3mo - savings);
   const emergencyMonthly = surplus > 0 ? Math.min(surplus * 0.3, emergencyGap / 12) : 0;
   const emergencyMonths = emergencyMonthly > 0 ? Math.ceil(emergencyGap / emergencyMonthly) : 0;
 
-  // Debt payoff calculations (assuming 23% APR for high-interest)
+  // Debt payoff calculations (using extracted APR or 23% default)
   const highDebtMonthly = highDebt > 0 ? Math.max(100, surplus * 0.5) : 0;
   const highDebtMonths = highDebtMonthly > 0 ? Math.ceil(highDebt / highDebtMonthly) : 0;
+  const highDebtMonthlyInterest = Math.round((highDebt * apr) / 12);
 
   // Discretionary optimization
   const discretionaryEstimate = Math.max(0, surplus * 0.3);
@@ -51,7 +56,7 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
     {
       lever: 'eliminate_high_interest_debt',
       name: 'Eliminate High-Interest Debt',
-      explanation: `You have $${highDebt.toLocaleString()} in high-interest debt costing ~$${Math.round(highDebt * 0.23 / 12).toLocaleString()}/month in interest. Paying this down first is the highest guaranteed return.`,
+      explanation: `You have $${highDebt.toLocaleString()} in high-interest debt costing ~$${highDebtMonthlyInterest.toLocaleString()}/month in interest. Paying this down first is the highest guaranteed return.`,
       keyMetric: 'Payoff timeline',
       keyValue: `${highDebtMonths} months at $${Math.round(highDebtMonthly).toLocaleString()}/month`,
       timelineMonths: highDebtMonths,

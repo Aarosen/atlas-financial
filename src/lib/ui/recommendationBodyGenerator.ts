@@ -70,13 +70,15 @@ export function generateRecommendationBody(
 
   // Scenario 2: High-Interest Debt
   if (lever === 'eliminate_high_interest_debt' && fin.highInterestDebt && fin.highInterestDebt > 0) {
-    const apr = fin.highInterestDebtAPR ?? 0.23;
+    // AUDIT 11 FIX DEFECT-01: APR is extracted as integer percentage (19 = 19%), convert to decimal
+    const aprPct = fin.highInterestDebtAPR ?? null;
+    const apr = aprPct !== null ? aprPct / 100 : 0.23;
     const monthlyInterest = Math.round((fin.highInterestDebt * apr) / 12);
     const monthlyPayment = Math.max(500, Math.round(surplus * 0.7));
     const monthsToPayoff = Math.ceil(fin.highInterestDebt / Math.max(monthlyPayment, 100));
     const totalInterestPaid = Math.round(monthlyInterest * monthsToPayoff);
     const goalBridge = buildGoalBridge(lever, fin.primaryGoal);
-    const aprDisplay = Math.round(apr * 100);
+    const aprDisplay = aprPct !== null ? Math.round(aprPct) : 23;
     const mainBody = `At ${formatCurrency(fin.highInterestDebt)} and ~${aprDisplay}% APR, you're paying ~${formatCurrency(monthlyInterest)}/month just in interest. Put ${formatCurrency(monthlyPayment)}/month toward this — you're debt-free in ${monthsToPayoff} months and save ${formatCurrency(totalInterestPaid)} in interest.`;
     return goalBridge ? `${goalBridge}\n\n${mainBody}` : mainBody;
   }
