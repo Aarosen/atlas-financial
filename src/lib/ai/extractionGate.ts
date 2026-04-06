@@ -20,7 +20,7 @@ export function containsFinancialData(message: string): boolean {
     /\b\d+k\b/,                    // Thousands: 5k, 50k
     /\bincome\b/,                  // Income-related
     /\bsalary\b/,                  // Salary
-    /\bexpense|spending|cost/,     // Expense-related
+    /\bexpense|spending|cost|spend/,     // Expense-related (added "spend")
     /\bdebt|loan|credit card|cc\b/,     // Debt-related (including "cc")
     /\bsavings|saved/,             // Savings
     /\bmonth|annual|yearly/,       // Time period (often with amounts)
@@ -29,6 +29,7 @@ export function containsFinancialData(message: string): boolean {
     /\bfood|groceries|utilities/,  // Common expenses
     /\binvest|retirement|401k/,    // Investment-related
     /\bapr|interest|rate/,         // Financial terms
+    /\bgoal|goals/,                // Goal-related (financial goals)
   ];
 
   // Check if message matches any financial pattern
