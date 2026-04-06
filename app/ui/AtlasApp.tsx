@@ -1175,8 +1175,14 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       // Get the last assistant message (the question that was asked)
       const lastAssistantMsg = prevMsgs.slice().reverse().find((m) => m.r === 'a')?.t || '';
       
+      // AUDIT 12 FIX DEFECT-02: Diagnostic log to track kind determination and extraction flow
+      console.log('[atlas] kind:', kind, 'missBefore:', missBefore.length, 'userText:', ut.substring(0, 80));
+      
       const ex = await claude.extract(ut, base.fin, { language, lastQuestion: lastAssistantMsg });
       setApiStatus(claude.status);
+      
+      // AUDIT 12 FIX DEFECT-02: Log extraction result
+      console.log('[atlas] extraction result - src:', ex.src, 'fields:', Object.keys(ex.fields || {}).length);
 
       const st1 = applyUserTurn(
         {

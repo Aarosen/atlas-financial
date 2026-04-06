@@ -605,9 +605,16 @@ export async function POST(req: Request) {
   // REMEDIATION 3: Gate extraction to data-bearing messages only
   // If extraction is requested but message contains no financial data, skip extraction and route to chat instead
   if (type === 'extract' && shouldGateExtraction(lastUserText)) {
+    // AUDIT 12 FIX DEFECT-02: Diagnostic log to identify negative cashflow routing failure
+    console.log('[extraction_gate] shouldGate: true, text:', lastUserText.substring(0, 100));
     console.log('[extraction_gate] Skipping extraction — no financial data detected. Routing to chat instead.');
     // Return empty extraction result — frontend will skip confirmation card and go straight to chat
     return jsonOk({ fields: {}, source: 'extraction_gated', model: DEFAULT_MODEL, tier: 'light' });
+  }
+  
+  // AUDIT 12 FIX DEFECT-02: Log when extraction proceeds (to confirm gate is not blocking valid messages)
+  if (type === 'extract') {
+    console.log('[extraction_gate] shouldGate: false, proceeding with extraction. text:', lastUserText.substring(0, 100));
   }
   
   const preferredLanguage = isSupportedLanguage(language) ? language : null;
