@@ -391,7 +391,7 @@ export async function POST(req: Request) {
     return jsonError(400, 'Invalid JSON body');
   }
 
-  let { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion, answered, userId, sessionId, baseline } = body as {
+  let { type, messages, missing, question, memorySummary, language, fin, extractedFields, sessionState, lastQuestion, answered, userId, sessionId, baseline, activeLever, activeTier } = body as {
     type?: string;
     messages?: any[];
     missing?: string[];
@@ -406,6 +406,8 @@ export async function POST(req: Request) {
     userId?: string;
     sessionId?: string;
     baseline?: any;
+    activeLever?: string;
+    activeTier?: string;
   };
 
   // Set user context for error monitoring
@@ -729,32 +731,31 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
             : 1200;
 
   // Build context-aware answer prompt that includes confirmed financial profile
-  const buildAnswerPrompt = (fin?: Partial<FinancialState> | null, baseline?: Strategy | null) => {
+  const buildAnswerPrompt = (fin?: Partial<FinancialState> | null, baseline?: Strategy | null, activeLever?: string | null, activeTier?: string | null) => {
     let prompt = `You are Atlas. Answer the user's question briefly and clearly.
 
 HARD OUTPUT CONSTRAINTS (must follow exactly):
-- Max 2 sentences total
-- Max 1 question mark total
-- No lists, no bullets, no numbering
-- Plain text only
+- Max 2 sentences
+- No markdown, no formatting
+- Direct answer only
+- Never ask for more information`;
 
-If the user asks something outside scope, respond briefly and redirect to the onboarding question.`;
+    if (fin && (fin.monthlyIncome || fin.essentialExpenses)) {
+      const surplus = (fin.monthlyIncome || 0) - (fin.essentialExpenses || 0);
+      prompt += `\n\nUSER PROFILE: Monthly income $${fin.monthlyIncome}, expenses $${fin.essentialExpenses}, surplus $${surplus}.`;
+    }
 
-    // If user has confirmed financial profile, inject it for context
-    if (fin && (fin.monthlyIncome || fin.essentialExpenses || fin.highInterestDebt !== undefined)) {
-      prompt += `\n\nUSER'S CONFIRMED FINANCIAL PROFILE:
-- Monthly income: $${fin.monthlyIncome || 0}
-- Essential expenses: $${fin.essentialExpenses || 0}
-- Savings: $${fin.totalSavings || 0}
-- High-interest debt: $${fin.highInterestDebt || 0}
-- Low-interest debt: $${fin.lowInterestDebt || 0}
-- Primary goal: ${fin.primaryGoal || 'not stated'}`;
+    // AUDIT 11 FIX DEFECT-06: Use activeLever/activeTier if provided, otherwise fall back to baseline
+    const leverToUse = activeLever || baseline?.lever;
+    if (leverToUse) {
+      prompt += `\n\nACTIVE RECOMMENDATION: ${leverToUse.replace(/_/g, ' ')}. Your response must reinforce this recommendation and not suggest contradictory strategies.`;
 
-      if (baseline) {
+      if (baseline && fin) {
+        const surplus = (fin.monthlyIncome || 0) - (fin.essentialExpenses || 0);
         prompt += `\n\nATLAS RECOMMENDATION:
 - Recommended lever: ${baseline.lever}
 - Urgency: ${baseline.urgency}
-- Monthly surplus: $${(fin.monthlyIncome || 0) - (fin.essentialExpenses || 0)}`;
+- Monthly surplus: $${surplus}`;
       }
 
       prompt += `\n\nWhen answering the user's follow-up question, reference their specific financial situation and recommendation. Be direct and actionable.`;
@@ -807,7 +808,8 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
     if (type === 'answer_stream' || type === 'answer_explain_stream') {
       // AUDIT 9 FIX: Inject financial context into answer_stream for post-CONFIRM follow-ups
       // When user asks "What should I do first?" after confirming numbers, include their profile
-      const sysStream = type === 'answer_stream' ? buildAnswerPrompt(fin, baseline) : explainerPrompt;
+      // AUDIT 11 FIX DEFECT-06: Include activeLever/activeTier to reinforce active recommendation
+      const sysStream = type === 'answer_stream' ? buildAnswerPrompt(fin, baseline, activeLever, activeTier) : explainerPrompt;
       const streamPayload = [{ role: 'user', content: `Question: ${String(question || '').trim()}` }];
       const streamMaxTokens = type === 'answer_explain_stream' ? 700 : 220;
       let response = await callAnthropicStream({ apiKey, model: usedModel, maxTokens: streamMaxTokens, system: sysStream, messages: streamPayload });
