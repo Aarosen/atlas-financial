@@ -22,6 +22,14 @@ export function detectAction(text: string): ActionEvent | null {
   const t = String(text || '').toLowerCase();
   if (!t) return null;
 
+  // CRITICAL: Do not detect actions during financial data extraction
+  // If message contains "make", "spend", "have", "saved", "owe" in a data-listing context, skip action detection
+  // These are financial profile statements, not action commitments
+  const isFinancialDataListing = /^(i\s+)?(make|earn|bring\s+home|spend|have|saved|owe|income|expenses|savings|debt)[\s\$\d,]/.test(t);
+  if (isFinancialDataListing && !/(cut|reduce|cancel|set\s+up|transfer|open|paid|payment)/.test(t)) {
+    return null;
+  }
+
   const amountMatch = t.match(/\$?\s*(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?/i);
   const amount = amountMatch
     ? Number.parseFloat(amountMatch[1].replace(/,/g, '')) * (amountMatch[2] ? 1000 : 1)
@@ -36,7 +44,9 @@ export function detectAction(text: string): ActionEvent | null {
   if (/opened\s*(a\s*)?(savings|checking|account)|open\s*account/.test(t)) {
     return { type: 'opened_account', createdAt: Date.now() };
   }
-  if (/cut\s*spend|reduced\s*spend|cancel(ed)?\s*(subscription|subscriptions)|saved\s*\$/.test(t)) {
+  // FIXED: Removed `saved\s*\$` pattern which was matching financial data statements
+  // Only match explicit spending cuts: "cut spending", "reduced spending", "cancel subscription"
+  if (/cut\s+spend|reduced\s+spend|reduce\s+spend|cancel(ed)?\s+(subscription|subscriptions)/.test(t)) {
     return { type: 'budget_cut', amountUsd: amount, frequency: detectFrequency(t), createdAt: Date.now() };
   }
 
