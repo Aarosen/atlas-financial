@@ -169,6 +169,19 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
     for (const [k0, v0] of Object.entries(turn.extractedFields)) {
       const k = k0 as keyof FinancialState;
       if (!(k in collected)) continue;
+      
+      // AUDIT 9 FIX: Handle explicit negation patterns for debt fields
+      // If extraction returned null but user explicitly negated the field, treat as 0
+      if ((v0 === undefined || v0 === null) && (k === 'highInterestDebt' || k === 'lowInterestDebt')) {
+        const negationPatterns = /\b(no\s+other|no\s+additional|no\s+more|just\s+the\s+one|debt\s*free|only\s+debt|except\s+for|none\s+other|no\s+loans|no\s+cards)\b/i;
+        if (negationPatterns.test(userText)) {
+          (collected as any)[k] = 0;
+          answered[k] = true;
+          if (unknown[k]) delete unknown[k];
+          continue;
+        }
+      }
+      
       if (v0 === undefined || v0 === null) continue;
       (collected as any)[k] = v0;
 
