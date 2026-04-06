@@ -11,6 +11,9 @@ export type FinancialState = {
   totalSavings: number;
   highInterestDebt: number | null;
   lowInterestDebt: number | null;
+  highInterestDebtAPR: number | null;
+  lowInterestDebtAPR: number | null;
+  retirementSavings: number | null;
   monthlyDebtPayments: number;
   primaryGoal: 'stability' | 'growth' | 'flexibility' | 'wealth_building';
   secondaryGoal?: string;

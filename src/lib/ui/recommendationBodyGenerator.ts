@@ -10,6 +10,9 @@ export interface FinancialData {
   totalSavings: number;
   highInterestDebt: number | null;
   lowInterestDebt: number | null;
+  highInterestDebtAPR?: number | null;
+  lowInterestDebtAPR?: number | null;
+  retirementSavings?: number | null;
   primaryGoal?: string;
 }
 
@@ -67,12 +70,14 @@ export function generateRecommendationBody(
 
   // Scenario 2: High-Interest Debt
   if (lever === 'eliminate_high_interest_debt' && fin.highInterestDebt && fin.highInterestDebt > 0) {
-    const monthlyInterest = Math.round((fin.highInterestDebt * 0.23) / 12);
+    const apr = fin.highInterestDebtAPR ?? 0.23;
+    const monthlyInterest = Math.round((fin.highInterestDebt * apr) / 12);
     const monthlyPayment = Math.max(500, Math.round(surplus * 0.7));
     const monthsToPayoff = Math.ceil(fin.highInterestDebt / Math.max(monthlyPayment, 100));
     const totalInterestPaid = Math.round(monthlyInterest * monthsToPayoff);
     const goalBridge = buildGoalBridge(lever, fin.primaryGoal);
-    const mainBody = `At ${formatCurrency(fin.highInterestDebt)} and ~23% APR, you're paying ~${formatCurrency(monthlyInterest)}/month just in interest. Put ${formatCurrency(monthlyPayment)}/month toward this — you're debt-free in ${monthsToPayoff} months and save ${formatCurrency(totalInterestPaid)} in interest.`;
+    const aprDisplay = Math.round(apr * 100);
+    const mainBody = `At ${formatCurrency(fin.highInterestDebt)} and ~${aprDisplay}% APR, you're paying ~${formatCurrency(monthlyInterest)}/month just in interest. Put ${formatCurrency(monthlyPayment)}/month toward this — you're debt-free in ${monthsToPayoff} months and save ${formatCurrency(totalInterestPaid)} in interest.`;
     return goalBridge ? `${goalBridge}\n\n${mainBody}` : mainBody;
   }
 
