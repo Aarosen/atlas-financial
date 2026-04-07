@@ -247,6 +247,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const lastKeydownHandledRef = useRef<number | null>(null);
   const lastGreetingLanguageRef = useRef<SupportedLanguage | null>(null);
   const sessionStateRef = useRef<Record<string, any>>({});
+  // AUDIT 14 FIX GAP-02: Guard against multiple extraction calls for same message
+  const lastExtractedMessageRef = useRef<string | null>(null);
+  const extractionInProgressRef = useRef(false);
   const sendInProgressRef = useRef(false);
   const [st, dispatch] = useReducer(
     conversationReducer,
@@ -1189,8 +1192,22 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       // AUDIT 12 FIX DEFECT-02: Diagnostic log to track kind determination and extraction flow
       console.log('[atlas] kind:', kind, 'missBefore:', missBefore.length, 'userText:', ut.substring(0, 80));
       
+      // AUDIT 14 FIX GAP-02: Guard against multiple extraction calls for same message during hydration
+      // If extraction is already in progress for this message, skip it
+      if (extractionInProgressRef.current && lastExtractedMessageRef.current === ut) {
+        console.log('[atlas] extraction already in progress for this message, skipping');
+        return;
+      }
+      
+      // Mark extraction as in progress
+      extractionInProgressRef.current = true;
+      lastExtractedMessageRef.current = ut;
+      
       const ex = await claude.extract(ut, base.fin, { language, lastQuestion: lastAssistantMsg });
       setApiStatus(claude.status);
+      
+      // Mark extraction as complete
+      extractionInProgressRef.current = false;
       
       // AUDIT 12 FIX DEFECT-02: Log extraction result
       console.log('[atlas] extraction result - src:', ex.src, 'fields:', Object.keys(ex.fields || {}).length);
