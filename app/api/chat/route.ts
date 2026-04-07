@@ -761,9 +761,10 @@ HARD OUTPUT CONSTRAINTS (must follow exactly):
       const monthlyEssentials = fin.essentialExpenses || 0;
       const cushionTarget = monthlyEssentials * 3;
       const totalSavings = fin.totalSavings || 0;
+      // AUDIT 13 FIX DEFECT-09-FORMATTING: Format cushion status values with currency
       const cushionStatus = totalSavings >= cushionTarget
-        ? `EMERGENCY CUSHION: FUNDED (${totalSavings} savings vs. ${cushionTarget} target). Do NOT recommend building an emergency fund.`
-        : `EMERGENCY CUSHION: UNDERFUNDED (${totalSavings} savings vs. ${cushionTarget} needed).`;
+        ? `EMERGENCY CUSHION: FUNDED ($${totalSavings.toLocaleString()} savings vs. $${cushionTarget.toLocaleString()} target). Do NOT recommend building an emergency fund.`
+        : `EMERGENCY CUSHION: UNDERFUNDED ($${totalSavings.toLocaleString()} savings vs. $${cushionTarget.toLocaleString()} needed).`;
       prompt += `\n\n${cushionStatus}`;
     }
 
