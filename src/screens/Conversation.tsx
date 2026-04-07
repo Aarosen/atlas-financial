@@ -102,7 +102,7 @@ export function ConversationScreen({
   msgs: ChatMessage[];
   busy: boolean;
   pendingBlock?: 'confirm' | 'lever' | 'next' | null;
-  pendingFin?: { monthlyIncome: number; essentialExpenses: number; totalSavings: number; highInterestDebt: number | null; lowInterestDebt: number | null } | null;
+  pendingFin?: { monthlyIncome: number; essentialExpenses: number; totalSavings: number; highInterestDebt: number | null; lowInterestDebt: number | null; retirementSavings?: number | null } | null;
   selectedLever?: string | null;
   baseline?: Strategy | null;
   onConfirmFin?: () => void;
@@ -588,6 +588,7 @@ export function ConversationScreen({
                       { label: 'Savings', value: `$${pendingFin.totalSavings.toLocaleString()}` },
                       { label: 'High-interest debt', value: pendingFin.highInterestDebt === null ? 'Unknown' : `$${pendingFin.highInterestDebt.toLocaleString()}` },
                       { label: 'Low-interest debt', value: pendingFin.lowInterestDebt === null ? 'Unknown' : `$${pendingFin.lowInterestDebt.toLocaleString()}` },
+                      ...(pendingFin.retirementSavings !== null && pendingFin.retirementSavings !== undefined ? [{ label: 'Retirement savings', value: `$${pendingFin.retirementSavings.toLocaleString()}` }] : []),
                     ].map((row) => (
                       <div key={row.label} style={{ display: 'flex', justifyContent: 'space-between', gap: 12, flexWrap: 'wrap', padding: '8px 10px', borderRadius: 12, border: '1px solid var(--bdr)', background: 'var(--bg2)' }}>
                         <div style={{ color: 'var(--ink2)', fontWeight: 800 }}>{row.label}</div>

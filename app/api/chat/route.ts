@@ -766,6 +766,11 @@ HARD OUTPUT CONSTRAINTS (must follow exactly):
         ? `EMERGENCY CUSHION: FUNDED ($${totalSavings.toLocaleString()} savings vs. $${cushionTarget.toLocaleString()} target). Do NOT recommend building an emergency fund.`
         : `EMERGENCY CUSHION: UNDERFUNDED ($${totalSavings.toLocaleString()} savings vs. $${cushionTarget.toLocaleString()} needed).`;
       prompt += `\n\n${cushionStatus}`;
+      
+      // AUDIT 13 FIX DEFECT-RETIREMENT: Add retirement context to system prompt
+      if (fin.retirementSavings !== null && fin.retirementSavings !== undefined) {
+        prompt += `\n\nRETIREMENT SAVINGS: User has $${fin.retirementSavings.toLocaleString()} in retirement accounts. When discussing financial goals, reference their retirement balance and provide retirement-specific guidance.`;
+      }
     }
 
     // AUDIT 11 FIX DEFECT-06: Use activeLever/activeTier if provided, otherwise fall back to baseline
