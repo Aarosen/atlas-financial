@@ -977,15 +977,9 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
         console.log('[extract] parsed:', JSON.stringify(fields));
         console.log('[extract] fieldCount:', Object.keys(fields || {}).length);
         
-        // REMEDIATION 5: Validate extraction output — reject impossible values
-        const income = Number(fields.monthlyIncome) || 0;
-        const essentials = Number(fields.essentialExpenses) || 0;
-        
-        // Reject if essentials > income (mathematically impossible)
-        if (essentials > income && income > 0) {
-          console.warn('[extraction_validation] Rejected: essentials > income', { income, essentials });
-          return jsonOk({ fields: {}, source: 'claude_validation_error', model: usedModel, tier });
-        }
+        // AUDIT 13 FIX DEFECT-02: Allow negative cashflow (expenses > income is valid financial state)
+        // Negative cashflow is a real scenario that needs extraction and display
+        // The extraction prompt explicitly requires extracting both income and expenses for negative cashflow
         
         return jsonOk({ fields, source: 'claude', model: usedModel, tier });
       } catch (parseErr) {
