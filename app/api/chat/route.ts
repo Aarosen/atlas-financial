@@ -726,6 +726,12 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
         ],
         4200
       );
+  
+  // AUDIT 13 FIX DEFECT-02: Add extraction-level logging to identify failure point
+  if (type === 'extract') {
+    console.log('[extract] mode:', type, 'lastQuestion:', lastQuestion?.substring(0, 50));
+    console.log('[extract] userText:', lastUserText.substring(0, 100));
+  }
   const maxTokens =
     type === 'extract'
       ? 500
@@ -955,8 +961,15 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
 
     if (type === 'extract') {
       try {
+        // AUDIT 13 FIX DEFECT-02: Log raw LLM response
+        console.log('[extract] rawResponse:', text.substring(0, 300));
+        
         const clean = String(text).replace(/```json|```/g, '').trim();
         const fields = JSON.parse(clean);
+        
+        // AUDIT 13 FIX DEFECT-02: Log parsed fields
+        console.log('[extract] parsed:', JSON.stringify(fields));
+        console.log('[extract] fieldCount:', Object.keys(fields || {}).length);
         
         // REMEDIATION 5: Validate extraction output — reject impossible values
         const income = Number(fields.monthlyIncome) || 0;
@@ -969,7 +982,9 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
         }
         
         return jsonOk({ fields, source: 'claude', model: usedModel, tier });
-      } catch {
+      } catch (parseErr) {
+        console.error('[extract] parseError:', String(parseErr).substring(0, 200));
+        console.log('[extract] failedText:', text.substring(0, 300));
         return jsonOk({ fields: {}, source: 'claude_parse_error', model: usedModel, tier });
       }
     }
