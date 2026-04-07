@@ -16,6 +16,7 @@ export function buildStrategyContextBlock(baseline: Strategy | null | undefined)
     build_emergency_buffer: 'PRIMARY LEVER: Build emergency buffer - Create financial safety net (3-6 months expenses)',
     increase_future_allocation: 'PRIMARY LEVER: Increase future allocation - Grow retirement/investment savings toward 15% of income',
     optimize_discretionary_spend: 'PRIMARY LEVER: Optimize discretionary spend - Fine-tune lifestyle spending for efficiency',
+    maximize_retirement_contributions: 'PRIMARY LEVER: Maximize retirement contributions - Increase tax-advantaged retirement savings toward 15% of income',
   };
 
   const urgencyDescriptions: Record<string, string> = {

@@ -283,6 +283,7 @@ export function ConversationScreen({
     build_emergency_buffer: 'Build emergency cushion',
     increase_future_allocation: 'Grow future savings',
     optimize_discretionary_spend: 'Optimize discretionary spend',
+    maximize_retirement_contributions: 'Maximize retirement contributions',
   };
   const tierCopy: Record<Strategy['tier'], { name: string; desc: string }> = {
     Foundation: { name: 'Foundation', desc: 'We steady the ground first.' },

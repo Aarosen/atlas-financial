@@ -784,6 +784,12 @@ HARD OUTPUT CONSTRAINTS (must follow exactly):
 - Recommended lever: ${baseline.lever}
 - Urgency: ${baseline.urgency}
 - Monthly surplus: $${surplus}`;
+        
+        // AUDIT 14 FIX GAP-01 Part C: Add debt-first priority when active lever is debt elimination
+        if (leverToUse === 'eliminate_high_interest_debt' && fin.highInterestDebt && fin.highInterestDebt > 0) {
+          const aprPct = fin.highInterestDebtAPR ?? 23;
+          prompt += `\n\nDEBT-FIRST PRIORITY: The user has $${fin.highInterestDebt.toLocaleString()} in high-interest debt at ~${aprPct}% APR. When asked about other financial priorities (retirement contributions, savings, investing), always reference this debt-first priority. A guaranteed ${aprPct}% return from debt payoff exceeds most investment returns. Recommend paying off this debt first, then redirecting that payment amount toward retirement contributions or other goals.`;
+        }
       }
 
       prompt += `\n\nWhen answering the user's follow-up question, reference their specific financial situation and recommendation. Be direct and actionable.`;

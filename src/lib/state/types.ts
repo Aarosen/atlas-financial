@@ -46,7 +46,8 @@ export type Lever =
   | 'eliminate_high_interest_debt'
   | 'build_emergency_buffer'
   | 'increase_future_allocation'
-  | 'optimize_discretionary_spend';
+  | 'optimize_discretionary_spend'
+  | 'maximize_retirement_contributions';
 
 export type TraceStep = {
   key: string;

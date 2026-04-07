@@ -80,6 +80,11 @@ export class StrategyEngine {
         prompt: 'Which discretionary category (food, shopping, subscriptions) feels easiest to reduce by a small amount?',
         suggestedAmount: Math.max(25, Math.round(Math.max(0, disc) * 0.1)),
       },
+      maximize_retirement_contributions: {
+        title: 'Maximize retirement contributions',
+        prompt: 'How much extra can you contribute to your 401k or IRA each month toward the 15% target?',
+        suggestedAmount: Math.max(25, Math.round(Math.max(0, inc * 0.15 - futAmt))),
+      },
     };
 
     const decisionTrace: TraceStep[] = [

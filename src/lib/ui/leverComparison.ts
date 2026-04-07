@@ -46,6 +46,14 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
   const futureMonthly = surplus > 0 ? surplus * 0.5 : 0;
   const futureMonths = futureMonthly > 0 ? 1 : 0; // Can start immediately
 
+  // AUDIT 14 FIX GAP-01: Retirement contributions calculation
+  const retirementSavings = fin.retirementSavings || 0;
+  const recommendedRetirementRate = 0.15; // 15% of gross income
+  const recommendedRetirementMonthly = Math.round(income * recommendedRetirementRate);
+  const retirementDesc = retirementSavings > 0
+    ? `You have $${retirementSavings.toLocaleString()} in retirement accounts. With $${surplus.toLocaleString()}/month available, consider maximizing tax-advantaged contributions (401k, IRA) first, then taxable brokerage.`
+    : `You don't have retirement savings yet. With $${surplus.toLocaleString()}/month available, starting a 401k or IRA is a powerful long-term move.`;
+
   // AUDIT 12 FIX DEFECT-10: Make stabilize_cashflow description data-driven based on surplus ratio
   const surplusRatio = income > 0 ? surplus / income : 0;
   const cashflowDesc = surplus < 0
@@ -54,7 +62,7 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
     ? `Your monthly surplus is tight — only $${surplus.toLocaleString()}/month after essentials. Protecting this buffer is priority one.`
     : `You have a $${surplus.toLocaleString()}/month surplus after essentials. Maintaining this cushion protects all other goals.`;
 
-  return [
+  const levers: LeverComparisonData[] = [
     {
       lever: 'stabilize_cashflow',
       name: 'Stabilize Cashflow',
@@ -90,12 +98,24 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
     {
       lever: 'increase_future_allocation',
       name: 'Grow Future Savings',
-      explanation: `With positive cashflow and foundation in place, you can allocate $${Math.round(futureMonthly).toLocaleString()}/month to investments and long-term growth.`,
+      explanation: retirementSavings > 0
+        ? `You have $${retirementSavings.toLocaleString()} in retirement accounts — a good start. With $${Math.round(futureMonthly).toLocaleString()}/month available for long-term growth, consider maximizing tax-advantaged contributions (401k, IRA) first, then taxable brokerage.`
+        : `With positive cashflow and foundation in place, you can allocate $${Math.round(futureMonthly).toLocaleString()}/month to investments and long-term growth.`,
       keyMetric: 'Monthly allocation',
       keyValue: `$${Math.round(futureMonthly).toLocaleString()}`,
       timelineMonths: futureMonths,
     },
+    ...(retirementSavings !== null && retirementSavings !== undefined ? [{
+      lever: 'maximize_retirement_contributions',
+      name: 'Maximize Retirement Contributions',
+      explanation: retirementDesc,
+      keyMetric: 'Recommended monthly',
+      keyValue: `$${recommendedRetirementMonthly.toLocaleString()} (15% of income)`,
+      timelineMonths: 1,
+    }] : []),
   ];
+  
+  return levers;
 }
 
 /**

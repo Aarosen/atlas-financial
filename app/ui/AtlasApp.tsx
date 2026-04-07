@@ -404,6 +404,17 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         };
       }
       if (baseline.lever === 'eliminate_high_interest_debt') {
+        // AUDIT 14 FIX GAP-03: If credit card data already provided, suggest autopay setup instead of listing cards
+        const hasDebtData = fin.highInterestDebt && fin.highInterestDebt > 0;
+        const hasAPRData = fin.highInterestDebtAPR !== null && fin.highInterestDebtAPR !== undefined;
+        if (hasDebtData && hasAPRData) {
+          const monthlyPayment = Math.max(500, Math.round((fin.monthlyIncome - fin.essentialExpenses) * 0.7));
+          return {
+            direction: 'Reduce compounding interest.',
+            action: `Set up an auto-transfer of $${monthlyPayment.toLocaleString()} to your credit card every month. Most banks allow this via their payment portal or bill pay.`,
+            time: 'Today.',
+          };
+        }
         return {
           direction: 'Reduce compounding interest.',
           action: 'List your credit cards (name + balance + APR, rough is fine).',
