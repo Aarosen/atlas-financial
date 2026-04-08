@@ -813,13 +813,15 @@ ${surplusLine}`;
         }
         
         // AUDIT 16 FIX GAP-16-DEBT-SEQUENCE: Add debt sequencing logic when multiple debt types present
-        const hasMultipleDebts = (fin.highInterestDebt || 0) > 0 && (fin.lowInterestDebt || 0) > 0;
+        const hiDebtAmount = fin.highInterestDebt || 0;
+        const loDebtAmount = fin.lowInterestDebt || 0;
+        const hasMultipleDebts = hiDebtAmount > 0 && loDebtAmount > 0;
         if (hasMultipleDebts) {
           const hiApr = fin.highInterestDebtAPR ?? 23;
           const loApr = fin.lowInterestDebtAPR ?? 5;
           const sequencingGuidance = hiApr > loApr
-            ? `DEBT SEQUENCING: User has both high-interest ($${fin.highInterestDebt.toLocaleString()} at ${hiApr}%) and low-interest ($${fin.lowInterestDebt.toLocaleString()} at ${loApr}%) debt. Use the avalanche method: pay high-interest debt first (${hiApr}% guaranteed return), then low-interest debt (${loApr}%). This minimizes total interest paid.`
-            : `DEBT SEQUENCING: User has both high-interest ($${fin.highInterestDebt.toLocaleString()} at ${hiApr}%) and low-interest ($${fin.lowInterestDebt.toLocaleString()} at ${loApr}%) debt. Interest rates are close — either avalanche (highest rate first) or snowball (smallest balance first) works. Recommend avalanche for mathematical optimality: pay ${hiApr}% debt first.`;
+            ? `DEBT SEQUENCING: User has both high-interest ($${hiDebtAmount.toLocaleString()} at ${hiApr}%) and low-interest ($${loDebtAmount.toLocaleString()} at ${loApr}%) debt. Use the avalanche method: pay high-interest debt first (${hiApr}% guaranteed return), then low-interest debt (${loApr}%). This minimizes total interest paid.`
+            : `DEBT SEQUENCING: User has both high-interest ($${hiDebtAmount.toLocaleString()} at ${hiApr}%) and low-interest ($${loDebtAmount.toLocaleString()} at ${loApr}%) debt. Interest rates are close — either avalanche (highest rate first) or snowball (smallest balance first) works. Recommend avalanche for mathematical optimality: pay ${hiApr}% debt first.`;
           prompt += `\n\n${sequencingGuidance}`;
         }
       }
