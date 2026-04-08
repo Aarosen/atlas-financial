@@ -1491,9 +1491,21 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         const t = raw.toLowerCase();
         if (t.includes('api not configured') || t.includes('anthropic_api_key')) return 'AI is not configured yet.';
         if (t.includes('too many requests') || t.includes('429')) return 'AI is rate-limited right now. Try again in a moment.';
-        if (t.includes('proxy_error_') || t.includes('fetch') || t.includes('network') || t.includes('timeout')) return 'Connection issue — retry when you’re ready.';
+        if (t.includes('proxy_error_') || t.includes('fetch') || t.includes('network') || t.includes('timeout')) return 'Connection issue - retry when you\'re ready.';
         return raw;
       })();
+      
+      // AUDIT 15 FIX UX-15-ERROR-RECOVERY: If extraction succeeded but answer generation failed,
+      // show context-aware error instead of generic goal questionnaire
+      const hasExtractedData = base.fin && (base.fin.monthlyIncome > 0 || base.fin.essentialExpenses > 0);
+      if (hasExtractedData) {
+        // User provided financial data but answer generation failed
+        // Show error with retry button, not goal questionnaire
+        const errorMsg = `I couldn't process that right now, but your numbers are saved. Tap retry to try again.`;
+        dispatch({ type: 'SEND_ASKED', text: errorMsg });
+        setApiStatus(claude.status);
+        return;
+      }
       
       // Preserve message if it's a network failure
       if (!navigator.onLine || (e?.message && (e.message.includes('fetch') || e.message.includes('network') || e.message.includes('Failed to fetch')))) {
