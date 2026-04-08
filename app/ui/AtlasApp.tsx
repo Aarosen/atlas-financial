@@ -46,6 +46,7 @@ import { useConversationMemory } from '@/lib/memory/useConversationMemory';
 import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { validateMessageLength } from '@/lib/api/messageLengthValidator';
 import { preserveUnsentMessage, retrieveUnsentMessage, clearUnsentMessage } from '@/lib/api/offlineHandler';
+import { useProgressTracking, generateProgressGreeting } from '@/lib/progress/useProgressTracking';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -100,6 +101,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number | undefined>(undefined);
   const token = authSession?.accessToken || '';
   const { memory, loadMemory, saveMemory, isLoaded } = useConversationMemory(userId || 'guest', sessionId || '', token);
+  const { progress, isLoaded: progressLoaded, saveProgress, clearProgress } = useProgressTracking();
   const voice = useMemo(
     () =>
       createVoice({
@@ -282,12 +284,15 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   // First-session onboarding: inject opening message if conversation is empty
   useEffect(() => {
-    if (st.msgs.length === 0 && mounted && st.scr === 'conversation' && isLoaded) {
-      // Check if user has prior conversations (returning user)
-      const isReturningUser = memory && Object.keys(memory).length > 0;
+    if (st.msgs.length === 0 && mounted && st.scr === 'conversation' && isLoaded && progressLoaded) {
+      // AUDIT 17 FIX P2: Check progress tracking for returning users
+      const progressGreeting = progress ? generateProgressGreeting(progress, language) : null;
       
       let openingMessage: string;
-      if (isReturningUser) {
+      if (progressGreeting) {
+        // Returning user with progress tracking: show progress-aware greeting
+        openingMessage = progressGreeting;
+      } else if (memory && Object.keys(memory).length > 0) {
         // Returning user: personalized greeting
         const primaryGoal = (memory as any)?.primaryGoal || st.fin?.primaryGoal || 'your financial goals';
         openingMessage = `Welcome back! Ready to continue working on ${primaryGoal}? What's on your mind today?`;
@@ -298,7 +303,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       
       dispatch({ type: 'SEND_ASKED', text: openingMessage });
     }
-  }, [st.msgs.length, mounted, st.scr, memory, st.fin?.primaryGoal, isLoaded]);
+  }, [st.msgs.length, mounted, st.scr, memory, st.fin?.primaryGoal, isLoaded, progressLoaded, progress, language]);
 
   // Auto-save conversation messages every 5 messages
   useEffect(() => {
