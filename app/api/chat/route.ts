@@ -763,6 +763,18 @@ HARD OUTPUT CONSTRAINTS (must follow exactly):
       const surplusDisplay = surplus < 0 ? `deficit of $${Math.abs(surplus)}` : `surplus $${safeSurplus}`;
       prompt += `\n\nUSER PROFILE: Monthly income $${fin.monthlyIncome}, expenses $${fin.essentialExpenses}, ${surplusDisplay}.`;
       
+      // AUDIT 16 FIX GAP-16-PARTIAL-INFO: Progressive disclosure for partial information
+      const hasIncome = (fin.monthlyIncome || 0) > 0;
+      const hasExpenses = (fin.essentialExpenses || 0) > 0;
+      const hasSavings = (fin.totalSavings || 0) > 0;
+      const hasDebt = (fin.highInterestDebt || 0) > 0 || (fin.lowInterestDebt || 0) > 0;
+      
+      if (hasIncome && !hasExpenses) {
+        prompt += `\n\nPARTIAL INFO PROTOCOL: User provided income but NOT expenses. Do NOT ask them to track spending for 2 weeks. Instead: (1) Ask ONE focused question: "What's your biggest monthly expense — rent/mortgage, and roughly how much?" (2) Build the picture incrementally through 3-4 conversational exchanges. (3) Provide initial rough analysis based on available data while gathering the rest. (4) Make it clear you can help immediately, not after homework.`;
+      } else if (hasIncome && hasExpenses && !hasSavings && !hasDebt) {
+        prompt += `\n\nPARTIAL INFO PROTOCOL: User provided income and expenses but NOT savings or debt. Ask: "Do you have any savings or emergency fund?" and "Any debt — credit cards, student loans, car loans?" Build the picture conversationally, not via homework assignment.`;
+      }
+      
       // AUDIT 12 FIX DEFECT-09: Add cushion status to prevent recommending funded emergency fund
       const monthlyEssentials = fin.essentialExpenses || 0;
       const cushionTarget = monthlyEssentials * 3;
