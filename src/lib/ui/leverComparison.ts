@@ -36,7 +36,8 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
   const emergencyTarget3mo = expenses * 3;
   const emergencyGap = Math.max(0, emergencyTarget3mo - savings);
   const emergencyMonthly = safeSurplus > 0 ? Math.min(safeSurplus * 0.3, emergencyGap / 12) : 0;
-  const emergencyMonths = emergencyMonthly > 0 ? Math.ceil(emergencyGap / emergencyMonthly) : 0;
+  // AUDIT 17 FIX GAP-17-CUSHION-CALC: Fix months calculation to use gap, not target
+  const emergencyMonths = emergencyGap === 0 ? 0 : (emergencyMonthly > 0 ? Math.ceil(emergencyGap / emergencyMonthly) : 0);
 
   // AUDIT 12 FIX DEFECT-07: Use shared utility for consistent debt payoff calculation
   // AUDIT 15 FIX: Use safeSurplus to prevent negative payment calculations

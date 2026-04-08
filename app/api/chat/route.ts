@@ -654,6 +654,9 @@ FIELDS TO EXTRACT (omit any you cannot confidently extract):
 - discretionaryExpenses: number (monthly lifestyle spending: dining, subscriptions, entertainment, clothing)
 - totalSavings: number (total accessible savings and cash holdings)
 - retirementSavings: number (401k, IRA, Roth IRA, pension, or other retirement account balances; extract from phrases like "I have $50k in my 401k" or "$200k in retirement accounts"; omit if not stated)
+- employerMatchPercent: number (AUDIT 17 FIX: If user mentions employer 401k match, extract as percentage. Example: "employer matches up to 4%" → 4. Omit if not stated.)
+- currentlyContributing: boolean (AUDIT 17 FIX: If user states whether they're currently contributing to 401k/retirement plan. Omit if not stated.)
+- incomeGrowthSignal: boolean (AUDIT 17 FIX: Set to true if user mentions side income, freelancing, promotion, part-time work, or skills. Omit if not present.)
 - highInterestDebt: number (total balance of debts above ~7% APR: credit cards, personal loans)
 - lowInterestDebt: number (total balance of debts at or below ~7% APR: student loans, car loans, mortgage)
 - highInterestDebtAPR: number (APR/interest rate of high-interest debt; extract from phrases like "23% APR", "18% interest", "my credit card rate is 21%"; omit if not stated)
@@ -746,31 +749,64 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
             ? 700
             : 1200;
 
+  // AUDIT 17 FIX P0: Triage Mode - detect financial crisis level
+  type TriageLevel = 'crisis' | 'stabilize' | 'growth' | 'optimize';
+  
+  const getTriageLevel = (fin: Partial<FinancialState>): TriageLevel => {
+    const income = fin.monthlyIncome || 0;
+    const expenses = fin.essentialExpenses || 0;
+    const surplus = income - expenses;
+    const surplusRatio = income > 0 ? surplus / income : 0;
+    const savings = fin.totalSavings || 0;
+    const hiDebt = fin.highInterestDebt || 0;
+    const emergencyTarget = expenses * 3;
+    
+    // Crisis: negative cashflow, no buffer with debt, or extreme thin margin
+    if (surplus < 0) return 'crisis';
+    if (surplusRatio < 0.05 || (savings < expenses && hiDebt > 0)) return 'crisis';
+    
+    // Stabilize: thin margin or underfunded emergency fund
+    if (surplusRatio < 0.15 || savings < emergencyTarget) return 'stabilize';
+    
+    // Growth: has debt to pay down
+    if (hiDebt > 0) return 'growth';
+    
+    // Optimize: healthy position, focus on optimization
+    return 'optimize';
+  };
+
   // Build context-aware answer prompt that includes confirmed financial profile
   const buildAnswerPrompt = (fin?: Partial<FinancialState> | null, baseline?: Strategy | null, activeLever?: string | null, activeTier?: string | null) => {
+    const triageLevel = fin ? getTriageLevel(fin) : 'optimize';
+    
     let prompt = `You are Atlas. Answer the user's question briefly and clearly.
 
 HARD OUTPUT CONSTRAINTS (must follow exactly):
 - Max 2 sentences
 - No markdown, no formatting
 - Direct answer only
-- Never ask for more information`;
+- Never ask for more information
+
+AUDIT 17 FIX P0 - TRIAGE MODE:
+If triageLevel is 'crisis': Open with "You're in financial triage right now. Here's the one move that stabilizes everything:" followed by exactly one action. Do not present a lever menu. Do not discuss optimization.
+If triageLevel is 'stabilize': Open with "You're close to stable — one move gets you there:" before presenting the primary recommendation.
+If triageLevel is 'growth' or 'optimize': Use standard response format.`;
 
     if (fin && (fin.monthlyIncome || fin.essentialExpenses)) {
       const surplus = (fin.monthlyIncome || 0) - (fin.essentialExpenses || 0);
       // AUDIT 16 FIX DEFECT-15-NEG-CASHFLOW-502: Guard against negative surplus in string interpolation
       const safeSurplus = Math.max(-999999, Math.min(999999, surplus)); // Clamp to prevent extreme values
       const surplusDisplay = surplus < 0 ? `deficit of $${Math.abs(surplus)}` : `surplus $${safeSurplus}`;
-      prompt += `\n\nUSER PROFILE: Monthly income $${fin.monthlyIncome}, expenses $${fin.essentialExpenses}, ${surplusDisplay}.`;
+      prompt += `\n\nUSER PROFILE: Monthly income $${fin.monthlyIncome}, expenses $${fin.essentialExpenses}, ${surplusDisplay}, triage level: ${triageLevel}.`;
       
-      // AUDIT 16 FIX GAP-16-PARTIAL-INFO: Progressive disclosure for partial information
+      // AUDIT 17 FIX P1: Strengthen PARTIAL INFO PROTOCOL to catch "don't know where it goes" pattern
       const hasIncome = (fin.monthlyIncome || 0) > 0;
       const hasExpenses = (fin.essentialExpenses || 0) > 0;
       const hasSavings = (fin.totalSavings || 0) > 0;
       const hasDebt = (fin.highInterestDebt || 0) > 0 || (fin.lowInterestDebt || 0) > 0;
       
       if (hasIncome && !hasExpenses) {
-        prompt += `\n\nPARTIAL INFO PROTOCOL: User provided income but NOT expenses. Do NOT ask them to track spending for 2 weeks. Instead: (1) Ask ONE focused question: "What's your biggest monthly expense — rent/mortgage, and roughly how much?" (2) Build the picture incrementally through 3-4 conversational exchanges. (3) Provide initial rough analysis based on available data while gathering the rest. (4) Make it clear you can help immediately, not after homework.`;
+        prompt += `\n\nPARTIAL INFO PROTOCOL (AUDIT 17 ENHANCED): User provided income but NOT expenses. CRITICAL: Your ONLY output is ONE focused question. Do NOT produce budget templates, do NOT assign tracking homework, do NOT explain why tracking matters, do NOT ask about goals. Ask ONLY: "Roughly what do you spend on essentials — rent, food, transportation, utilities — each month? A ballpark is fine." Nothing else.`;
       } else if (hasIncome && hasExpenses && !hasSavings && !hasDebt) {
         prompt += `\n\nPARTIAL INFO PROTOCOL: User provided income and expenses but NOT savings or debt. Ask: "Do you have any savings or emergency fund?" and "Any debt — credit cards, student loans, car loans?" Build the picture conversationally, not via homework assignment.`;
       }
@@ -789,6 +825,26 @@ HARD OUTPUT CONSTRAINTS (must follow exactly):
       if (fin.retirementSavings !== null && fin.retirementSavings !== undefined) {
         prompt += `\n\nRETIREMENT SAVINGS: User has $${fin.retirementSavings.toLocaleString()} in retirement accounts. When discussing financial goals, reference their retirement balance and provide retirement-specific guidance.`;
       }
+      
+      // AUDIT 17 FIX P1: Employer match detection and priority
+      const employerMatchPercent = (fin as any).employerMatchPercent || null;
+      const currentlyContributing = (fin as any).currentlyContributing || null;
+      if (employerMatchPercent && employerMatchPercent > 0) {
+        const freeMoneyForfeited = Math.round((fin.monthlyIncome || 0) * employerMatchPercent / 100);
+        const matchStatus = currentlyContributing === false 
+          ? `EMPLOYER MATCH ALERT: User is NOT currently contributing. Employer offers ${employerMatchPercent}% match = $${freeMoneyForfeited}/month FREE MONEY being forfeited. This is ALWAYS priority #1 before any other financial move.`
+          : `EMPLOYER MATCH: User has ${employerMatchPercent}% employer match available (${currentlyContributing ? 'currently contributing' : 'status unknown'}).`;
+        prompt += `\n\n${matchStatus}`;
+      }
+      
+      // AUDIT 17 FIX P2: APR assumption disclosure
+      const hiAprAssumed = !fin.highInterestDebtAPR && (fin.highInterestDebt || 0) > 0;
+      if (hiAprAssumed) {
+        prompt += `\n\nAPR ASSUMPTION DISCLOSURE: High-interest debt APR not provided by user. Any interest calculations use ~18-23% estimated APR. Always include in response: "(estimated at ~18-23% typical APR — check your statement for your actual rate)"`;
+      }
+      
+      // AUDIT 17 FIX P3: Emotional intelligence gate
+      prompt += `\n\nEMOTIONAL SIGNALS: If the user message contains distress signals (can't sleep, overwhelmed, anxious, scared, don't know where to start, stressed, worried), open your response with ONE sentence of acknowledgment before any numbers. Example: "That level of financial stress is real — and the fact you're looking at it directly puts you ahead of most people in the same spot." Then proceed with the plan. Do NOT dwell on the emotion.`;
     }
 
     // AUDIT 11 FIX DEFECT-06: Use activeLever/activeTier if provided, otherwise fall back to baseline
@@ -823,6 +879,21 @@ ${surplusLine}`;
             ? `DEBT SEQUENCING: User has both high-interest ($${hiDebtAmount.toLocaleString()} at ${hiApr}%) and low-interest ($${loDebtAmount.toLocaleString()} at ${loApr}%) debt. Use the avalanche method: pay high-interest debt first (${hiApr}% guaranteed return), then low-interest debt (${loApr}%). This minimizes total interest paid.`
             : `DEBT SEQUENCING: User has both high-interest ($${hiDebtAmount.toLocaleString()} at ${hiApr}%) and low-interest ($${loDebtAmount.toLocaleString()} at ${loApr}%) debt. Interest rates are close — either avalanche (highest rate first) or snowball (smallest balance first) works. Recommend avalanche for mathematical optimality: pay ${hiApr}% debt first.`;
           prompt += `\n\n${sequencingGuidance}`;
+        }
+        
+        // AUDIT 17 FIX P3: Recommendation ordering - debt payoff urgency weight
+        const surplusForPayoff = (fin.monthlyIncome || 0) - (fin.essentialExpenses || 0);
+        const hiDebtPayoffMonths = hiDebtAmount > 0 && surplusForPayoff > 0 ? Math.ceil(hiDebtAmount / surplusForPayoff) : 999;
+        if (hiDebtAmount > 0 && hiDebtPayoffMonths <= 2) {
+          prompt += `\n\nDEBT PAYOFF URGENCY (AUDIT 17): High-interest debt payable in ${hiDebtPayoffMonths} month(s) at current surplus. This is the clear priority — eliminate it before any other lever. The guaranteed ${fin.highInterestDebtAPR ?? 23}% return from payoff exceeds all other opportunities.`;
+        }
+        
+        // AUDIT 17 FIX P1: Income lever surface for thin-margin users
+        const incomeGrowthSignal = (fin as any).incomeGrowthSignal || false;
+        const surplusRatio = (fin.monthlyIncome || 0) > 0 ? ((fin.monthlyIncome || 0) - (fin.essentialExpenses || 0)) / (fin.monthlyIncome || 0) : 0;
+        if (incomeGrowthSignal && surplusRatio < 0.20) {
+          const potentialIncome = Math.round((fin.essentialExpenses || 0) * 0.15);
+          prompt += `\n\nINCOME GROWTH OPPORTUNITY: User signaled income-growth interest AND has thin surplus (${Math.round(surplusRatio * 100)}%). Adding $${potentialIncome}/month in side income would transform their financial trajectory. Include one paragraph on income-side leverage in your response.`;
         }
       }
 
