@@ -72,14 +72,16 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
     : `You have a $${surplus.toLocaleString()}/month surplus after essentials. Maintaining this cushion protects all other goals.`;
 
   const levers: LeverComparisonData[] = [
-    {
+    // AUDIT 16 FIX P3-POLISH: Only show stabilize_cashflow lever if cashflow is actually problematic
+    // Don't show for users with healthy positive surplus (>15% of income)
+    ...(surplus < 0 || surplusRatio < 0.15 ? [{
       lever: 'stabilize_cashflow',
       name: 'Stabilize Cashflow',
       explanation: cashflowDesc,
       keyMetric: 'Monthly surplus',
       keyValue: `$${Math.abs(surplus).toLocaleString()}`,
       timelineMonths: 1,
-    },
+    }] : []),
     // AUDIT 15 FIX DEFECT-15B-GHOST-LEVER: Only show debt lever if user has actual high-interest debt
     ...(highDebt > 0 ? [{
       lever: 'eliminate_high_interest_debt',
@@ -89,14 +91,15 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
       keyValue: `${highDebtMonths} months at $${Math.round(highDebtMonthly).toLocaleString()}/month`,
       timelineMonths: highDebtMonths,
     }] : []),
-    {
+    // AUDIT 16 FIX P3-POLISH: Only show cushion lever if cushion is not already fully funded
+    ...(savings < emergencyTarget3mo ? [{
       lever: 'build_emergency_buffer',
       name: 'Build Emergency Cushion',
       explanation: `Your emergency fund is ${savings > emergencyTarget3mo ? 'solid' : `${Math.round(savings / expenses)}-month cushion`}. The professional standard is 3-6 months of essentials.`,
       keyMetric: 'Target cushion',
       keyValue: `$${emergencyTarget3mo.toLocaleString()} (${emergencyMonths} months to build)`,
       timelineMonths: emergencyMonths,
-    },
+    }] : []),
     {
       lever: 'optimize_discretionary_spend',
       name: 'Optimize Discretionary Spend',
