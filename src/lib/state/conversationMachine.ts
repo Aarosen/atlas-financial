@@ -56,6 +56,7 @@ export type ConversationEvent =
   | { type: 'SEND_ASKED'; text: string; questionKey?: keyof FinancialState }
   | { type: 'SEND_STRATEGY_READY'; baseline: Strategy }
   | { type: 'SEND_FAILED'; err: string }
+  | { type: 'SEND_ERROR_WITH_RETRY'; text: string }
   | { type: 'RESET'; language?: SupportedLanguage };
 
 function createInitialAssistantMessage(language: SupportedLanguage): ChatMessage {
@@ -238,6 +239,15 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
         busy: false,
         streaming: false,
         apiErr: ev.err,
+      };
+
+    case 'SEND_ERROR_WITH_RETRY':
+      return {
+        ...state,
+        busy: false,
+        streaming: false,
+        msgs: [...state.msgs, { r: 'a', t: ev.text, retryable: true }],
+        apiErr: null,
       };
 
     case 'LOAD_SESSION':

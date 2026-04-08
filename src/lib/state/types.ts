@@ -3,6 +3,7 @@ export type Role = 'u' | 'a';
 export type ChatMessage = {
   r: Role;
   t: string;
+  retryable?: boolean;
 };
 
 export type FinancialState = {

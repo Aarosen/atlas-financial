@@ -1497,12 +1497,13 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       
       // AUDIT 15 FIX UX-15-ERROR-RECOVERY: If extraction succeeded but answer generation failed,
       // show context-aware error instead of generic goal questionnaire
+      // AUDIT 16 FIX: Add retry button to error recovery message
       const hasExtractedData = base.fin && (base.fin.monthlyIncome > 0 || base.fin.essentialExpenses > 0);
       if (hasExtractedData) {
         // User provided financial data but answer generation failed
         // Show error with retry button, not goal questionnaire
-        const errorMsg = `I couldn't process that right now, but your numbers are saved. Tap retry to try again.`;
-        dispatch({ type: 'SEND_ASKED', text: errorMsg });
+        const errorMsg = `I couldn't process that right now, but your numbers are saved. Tap the retry button below to try again.`;
+        dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: errorMsg });
         setApiStatus(claude.status);
         return;
       }
