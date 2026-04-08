@@ -799,6 +799,17 @@ ${surplusLine}`;
           const aprPct = fin.highInterestDebtAPR ?? 23;
           prompt += `\n\nDEBT-FIRST PRIORITY: The user has $${fin.highInterestDebt.toLocaleString()} in high-interest debt at ~${aprPct}% APR. When asked about other financial priorities (retirement contributions, savings, investing), always reference this debt-first priority. A guaranteed ${aprPct}% return from debt payoff exceeds most investment returns. Recommend paying off this debt first, then redirecting that payment amount toward retirement contributions or other goals.`;
         }
+        
+        // AUDIT 16 FIX GAP-16-DEBT-SEQUENCE: Add debt sequencing logic when multiple debt types present
+        const hasMultipleDebts = (fin.highInterestDebt || 0) > 0 && (fin.lowInterestDebt || 0) > 0;
+        if (hasMultipleDebts) {
+          const hiApr = fin.highInterestDebtAPR ?? 23;
+          const loApr = fin.lowInterestDebtAPR ?? 5;
+          const sequencingGuidance = hiApr > loApr
+            ? `DEBT SEQUENCING: User has both high-interest ($${fin.highInterestDebt.toLocaleString()} at ${hiApr}%) and low-interest ($${fin.lowInterestDebt.toLocaleString()} at ${loApr}%) debt. Use the avalanche method: pay high-interest debt first (${hiApr}% guaranteed return), then low-interest debt (${loApr}%). This minimizes total interest paid.`
+            : `DEBT SEQUENCING: User has both high-interest ($${fin.highInterestDebt.toLocaleString()} at ${hiApr}%) and low-interest ($${fin.lowInterestDebt.toLocaleString()} at ${loApr}%) debt. Interest rates are close — either avalanche (highest rate first) or snowball (smallest balance first) works. Recommend avalanche for mathematical optimality: pay ${hiApr}% debt first.`;
+          prompt += `\n\n${sequencingGuidance}`;
+        }
       }
 
       prompt += `\n\nWhen answering the user's follow-up question, reference their specific financial situation and recommendation. Be direct and actionable.`;
