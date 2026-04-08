@@ -22,6 +22,11 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
   const highDebt = fin.highInterestDebt || 0;
   const lowDebt = fin.lowInterestDebt || 0;
   const surplus = income - expenses;
+  
+  // AUDIT 15 FIX DEFECT-15-NEG-CASHFLOW-502: Guard against negative cashflow in all calculations
+  const isNegativeCashflow = surplus < 0;
+  const deficit = isNegativeCashflow ? Math.abs(surplus) : 0;
+  const safeSurplus = Math.max(0, surplus); // Use 0 for negative cashflow in calculations
 
   // AUDIT 11 FIX DEFECT-01 & DEFECT-05: Use extracted APR if available, convert from percentage to decimal
   const aprPct = fin.highInterestDebtAPR ?? null;
@@ -30,34 +35,38 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
   // Emergency fund calculations
   const emergencyTarget3mo = expenses * 3;
   const emergencyGap = Math.max(0, emergencyTarget3mo - savings);
-  const emergencyMonthly = surplus > 0 ? Math.min(surplus * 0.3, emergencyGap / 12) : 0;
+  const emergencyMonthly = safeSurplus > 0 ? Math.min(safeSurplus * 0.3, emergencyGap / 12) : 0;
   const emergencyMonths = emergencyMonthly > 0 ? Math.ceil(emergencyGap / emergencyMonthly) : 0;
 
   // AUDIT 12 FIX DEFECT-07: Use shared utility for consistent debt payoff calculation
-  const highDebtMonthly = highDebt > 0 ? calculateMonthlyDebtPayment(surplus) : 0;
+  // AUDIT 15 FIX: Use safeSurplus to prevent negative payment calculations
+  const highDebtMonthly = highDebt > 0 ? calculateMonthlyDebtPayment(safeSurplus) : 0;
   const highDebtPayoffResult = calculateDebtPayoff(highDebt, highDebtMonthly);
   const highDebtMonths = highDebtPayoffResult.months;
   const highDebtMonthlyInterest = Math.round((highDebt * apr) / 12);
 
   // Discretionary optimization
-  const discretionaryEstimate = Math.max(0, surplus * 0.3);
+  const discretionaryEstimate = Math.max(0, safeSurplus * 0.3);
 
   // Future allocation (savings/investment)
-  const futureMonthly = surplus > 0 ? surplus * 0.5 : 0;
+  const futureMonthly = safeSurplus > 0 ? safeSurplus * 0.5 : 0;
   const futureMonths = futureMonthly > 0 ? 1 : 0; // Can start immediately
 
   // AUDIT 14 FIX GAP-01: Retirement contributions calculation
   const retirementSavings = fin.retirementSavings || 0;
   const recommendedRetirementRate = 0.15; // 15% of gross income
   const recommendedRetirementMonthly = Math.round(income * recommendedRetirementRate);
-  const retirementDesc = retirementSavings > 0
-    ? `You have $${retirementSavings.toLocaleString()} in retirement accounts. With $${surplus.toLocaleString()}/month available, consider maximizing tax-advantaged contributions (401k, IRA) first, then taxable brokerage.`
-    : `You don't have retirement savings yet. With $${surplus.toLocaleString()}/month available, starting a 401k or IRA is a powerful long-term move.`;
+  // AUDIT 15 FIX: Don't suggest retirement contributions when in negative cashflow
+  const retirementDesc = isNegativeCashflow
+    ? `You're in a deficit situation. Focus on stabilizing cashflow first, then retirement contributions.`
+    : retirementSavings > 0
+    ? `You have $${retirementSavings.toLocaleString()} in retirement accounts. With $${safeSurplus.toLocaleString()}/month available, consider maximizing tax-advantaged contributions (401k, IRA) first, then taxable brokerage.`
+    : `You don't have retirement savings yet. With $${safeSurplus.toLocaleString()}/month available, starting a 401k or IRA is a powerful long-term move.`;
 
   // AUDIT 12 FIX DEFECT-10: Make stabilize_cashflow description data-driven based on surplus ratio
   const surplusRatio = income > 0 ? surplus / income : 0;
   const cashflowDesc = surplus < 0
-    ? `You're spending ${Math.abs(surplus).toLocaleString()} more than you make each month. Closing this gap is the foundation of any financial plan.`
+    ? `You're spending $${deficit.toLocaleString()} more than you make each month. Closing this gap is the foundation of any financial plan.`
     : surplusRatio < 0.10
     ? `Your monthly surplus is tight — only $${surplus.toLocaleString()}/month after essentials. Protecting this buffer is priority one.`
     : `You have a $${surplus.toLocaleString()}/month surplus after essentials. Maintaining this cushion protects all other goals.`;
@@ -71,14 +80,15 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
       keyValue: `$${Math.abs(surplus).toLocaleString()}`,
       timelineMonths: 1,
     },
-    {
+    // AUDIT 15 FIX DEFECT-15B-GHOST-LEVER: Only show debt lever if user has actual high-interest debt
+    ...(highDebt > 0 ? [{
       lever: 'eliminate_high_interest_debt',
       name: 'Eliminate High-Interest Debt',
       explanation: `You have $${highDebt.toLocaleString()} in high-interest debt costing ~$${highDebtMonthlyInterest.toLocaleString()}/month in interest. Paying this down first is the highest guaranteed return.`,
       keyMetric: 'Payoff timeline',
       keyValue: `${highDebtMonths} months at $${Math.round(highDebtMonthly).toLocaleString()}/month`,
       timelineMonths: highDebtMonths,
-    },
+    }] : []),
     {
       lever: 'build_emergency_buffer',
       name: 'Build Emergency Cushion',

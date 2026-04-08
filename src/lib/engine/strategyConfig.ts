@@ -93,6 +93,22 @@ export function pickLever(args: { net: number; bufMo: number; hiDebt: number; in
   if (net < 0) return 'stabilize_cashflow';
   if (hiDebt > income) return 'eliminate_high_interest_debt';
   if (bufMo < 3) return 'build_emergency_buffer';
+  
+  // AUDIT 15 FIX DEFECT-15A-WRONG-LEVER: When all prerequisites are met (no debt, funded cushion, positive cashflow),
+  // skip discretionary optimization and go directly to growth/retirement tier
+  const cushionFunded = bufMo >= 3;
+  const noHighDebt = hiDebt === 0;
+  const positiveCashflow = net > 0;
+  
+  if (noHighDebt && cushionFunded && positiveCashflow) {
+    // User is in the Long-Term tier — recommend growth lever
+    // Prefer retirement contributions if available, otherwise future allocation
+    if (futPct < strategyConfig.levers.futureTargetPct) {
+      return 'increase_future_allocation';
+    }
+    return 'maximize_retirement_contributions';
+  }
+  
   if (futPct < strategyConfig.levers.futureTargetPct) return 'increase_future_allocation';
   return 'optimize_discretionary_spend';
 }
