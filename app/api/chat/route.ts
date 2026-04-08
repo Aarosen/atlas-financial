@@ -755,7 +755,10 @@ HARD OUTPUT CONSTRAINTS (must follow exactly):
 
     if (fin && (fin.monthlyIncome || fin.essentialExpenses)) {
       const surplus = (fin.monthlyIncome || 0) - (fin.essentialExpenses || 0);
-      prompt += `\n\nUSER PROFILE: Monthly income $${fin.monthlyIncome}, expenses $${fin.essentialExpenses}, surplus $${surplus}.`;
+      // AUDIT 16 FIX DEFECT-15-NEG-CASHFLOW-502: Guard against negative surplus in string interpolation
+      const safeSurplus = Math.max(-999999, Math.min(999999, surplus)); // Clamp to prevent extreme values
+      const surplusDisplay = surplus < 0 ? `deficit of $${Math.abs(surplus)}` : `surplus $${safeSurplus}`;
+      prompt += `\n\nUSER PROFILE: Monthly income $${fin.monthlyIncome}, expenses $${fin.essentialExpenses}, ${surplusDisplay}.`;
       
       // AUDIT 12 FIX DEFECT-09: Add cushion status to prevent recommending funded emergency fund
       const monthlyEssentials = fin.essentialExpenses || 0;
@@ -780,10 +783,13 @@ HARD OUTPUT CONSTRAINTS (must follow exactly):
 
       if (baseline && fin) {
         const surplus = (fin.monthlyIncome || 0) - (fin.essentialExpenses || 0);
+        // AUDIT 16 FIX DEFECT-15-NEG-CASHFLOW-502: Guard against negative surplus display
+        const safeSurplus = Math.max(-999999, Math.min(999999, surplus));
+        const surplusLine = surplus < 0 ? `- Monthly deficit: $${Math.abs(safeSurplus)}` : `- Monthly surplus: $${safeSurplus}`;
         prompt += `\n\nATLAS RECOMMENDATION:
 - Recommended lever: ${baseline.lever}
 - Urgency: ${baseline.urgency}
-- Monthly surplus: $${surplus}`;
+${surplusLine}`;
         
         // AUDIT 14 FIX GAP-01 Part C: Add debt-first priority when active lever is debt elimination
         if (leverToUse === 'eliminate_high_interest_debt' && fin.highInterestDebt && fin.highInterestDebt > 0) {
