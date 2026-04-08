@@ -647,6 +647,9 @@ EXTRACTION RULES:
 
 FIELDS TO EXTRACT (omit any you cannot confidently extract):
 - monthlyIncome: number (monthly take-home / net income, in dollars)
+- monthlyIncomeMin: number (AUDIT 16 FIX: If user has variable/irregular income, extract the LOW end of the range. Example: "some months $2k, some months $8k" → monthlyIncomeMin: 2000, monthlyIncomeMax: 8000. If income is fixed, omit these fields.)
+- monthlyIncomeMax: number (AUDIT 16 FIX: If user has variable/irregular income, extract the HIGH end of the range.)
+- incomeType: string (AUDIT 16 FIX: If user mentions variable/irregular/freelance/gig income, set to "variable". Otherwise omit.)
 - essentialExpenses: number (monthly non-negotiable expenses: rent, utilities, groceries, insurance, minimum debt payments)
 - discretionaryExpenses: number (monthly lifestyle spending: dining, subscriptions, entertainment, clothing)
 - totalSavings: number (total accessible savings and cash holdings)
