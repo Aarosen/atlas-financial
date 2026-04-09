@@ -375,8 +375,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     await db.set('strat', { k: 'baseline', ...b });
     dispatch({ type: 'SEND_STRATEGY_READY', baseline: b });
     dispatch({ type: 'SET_SELECTED_LEVER', lever: b.lever });
+    // AUDIT 18 FIX P0: Wire saveProgress to lever confirmation
+    saveProgress(st.pendingFin, b.lever);
     dispatch({ type: 'SET_PENDING_BLOCK', block: 'lever' });
-  }, [db, engine, st.pendingFin, st.answered, st.unknown]);
+  }, [db, engine, st.pendingFin, st.answered, st.unknown, saveProgress]);
 
   const handleEditFin = useCallback(() => {
     dispatch({ type: 'SET_PENDING_BLOCK', block: null });
@@ -1780,7 +1782,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             dispatch({ type: 'STREAM_CANCELED' });
           }}
           isGuest={!user}
-          onResetConversation={() => dispatch({ type: 'NEW_CONVERSATION' })}
+          onResetConversation={() => {
+            // AUDIT 18 FIX P0: Clear progress on reset
+            clearProgress();
+            dispatch({ type: 'NEW_CONVERSATION' });
+          }}
         />
         {rateLimitRemaining !== undefined && rateLimitRemaining <= 15 && (
           <div

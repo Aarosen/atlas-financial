@@ -657,6 +657,7 @@ FIELDS TO EXTRACT (omit any you cannot confidently extract):
 - employerMatchPercent: number (AUDIT 17 FIX: If user mentions employer 401k match, extract as percentage. Example: "employer matches up to 4%" → 4. Omit if not stated.)
 - currentlyContributing: boolean (AUDIT 17 FIX: If user states whether they're currently contributing to 401k/retirement plan. Omit if not stated.)
 - incomeGrowthSignal: boolean (AUDIT 17 FIX: Set to true if user mentions side income, freelancing, promotion, part-time work, or skills. Omit if not present.)
+- emotionalDistressSignal: boolean (AUDIT 18 FIX: Set to true if user message contains distress signals: can't sleep, overwhelmed, anxious, scared, don't know where to start, stressed, worried, hopeless. Omit if not present.)
 - highInterestDebt: number (total balance of debts above ~7% APR: credit cards, personal loans)
 - lowInterestDebt: number (total balance of debts at or below ~7% APR: student loans, car loans, mortgage)
 - highInterestDebtAPR: number (APR/interest rate of high-interest debt; extract from phrases like "23% APR", "18% interest", "my credit card rate is 21%"; omit if not stated)
@@ -779,17 +780,41 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
   const buildAnswerPrompt = (fin?: Partial<FinancialState> | null, baseline?: Strategy | null, activeLever?: string | null, activeTier?: string | null) => {
     const triageLevel = fin ? getTriageLevel(fin) : 'optimize';
     
+    // AUDIT 18 FIX P0: Move PARTIAL INFO PROTOCOL to position 0 with anti-examples
     let prompt = `You are Atlas. Answer the user's question briefly and clearly.
 
 HARD OUTPUT CONSTRAINTS (must follow exactly):
 - Max 2 sentences
 - No markdown, no formatting
 - Direct answer only
-- Never ask for more information
+- Never ask for more information`;
 
-AUDIT 17 FIX P0 - TRIAGE MODE:
-If triageLevel is 'crisis': Open with "You're in financial triage right now. Here's the one move that stabilizes everything:" followed by exactly one action. Do not present a lever menu. Do not discuss optimization.
-If triageLevel is 'stabilize': Open with "You're close to stable — one move gets you there:" before presenting the primary recommendation.
+    // AUDIT 18 FIX P1: EMOTIONAL INTELLIGENCE GATE at position 0 (before all financial instructions)
+    const emotionalDistressSignal = (fin as any)?.emotionalDistressSignal || false;
+    if (emotionalDistressSignal) {
+      prompt += `\n\nEMOTIONAL INTELLIGENCE GATE (POSITION 0 — ABSOLUTE PRIORITY):
+ABSOLUTE RULE: If the user expressed emotional distress, fear, stress, overwhelm, loss of sleep, or hopelessness — your FIRST sentence MUST acknowledge their feeling. This is non-negotiable.
+Do NOT start with numbers, percentages, or recommendations.
+ONE sentence acknowledgment only. Then proceed with analysis.
+Examples of correct acknowledgments:
+- "That kind of stress is real — carrying debt while trying to sleep is genuinely hard."
+- "Feeling overwhelmed about money is one of the most common experiences there is, and it doesn't mean you're stuck."
+- "The fact that you're looking at this directly, even though it feels overwhelming, puts you ahead of most people in the same spot."`;
+    }
+
+    // AUDIT 18 FIX P0: PARTIAL INFO PROTOCOL at position 0 with explicit anti-examples
+    if (fin && fin.monthlyIncome && !fin.essentialExpenses) {
+      prompt += `\n\nPARTIAL INFO PROTOCOL (POSITION 0 — HIGHEST PRIORITY):
+User provided income but NOT expenses. Your ONLY output is ONE focused question asking for their essential spending estimate.
+MANDATORY: Do NOT produce budget templates, do NOT assign tracking homework, do NOT explain why tracking matters, do NOT ask about goals.
+WRONG RESPONSE: "That's really common! Here's what I'd suggest: First, go through your bank statements for the last month and categorize every transaction into rent, food, transportation..."
+RIGHT RESPONSE: "Roughly what do you spend on essentials — rent, food, transportation, utilities — each month? A ballpark is fine."
+Your response must be ONLY the question. Nothing else.`;
+    }
+
+    prompt += `\n\nAUDIT 17 FIX P0 - TRIAGE MODE:
+If triageLevel is 'crisis': BEGIN with EXACTLY: "You're in financial triage right now. Here's the one move that stabilizes everything:" followed by exactly one action. Do not present a lever menu. Do not discuss optimization.
+If triageLevel is 'stabilize': BEGIN with EXACTLY: "You're close to stable — one move gets you there:" before presenting the primary recommendation.
 If triageLevel is 'growth' or 'optimize': Use standard response format.`;
 
     if (fin && (fin.monthlyIncome || fin.essentialExpenses)) {
@@ -799,15 +824,13 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
       const surplusDisplay = surplus < 0 ? `deficit of $${Math.abs(surplus)}` : `surplus $${safeSurplus}`;
       prompt += `\n\nUSER PROFILE: Monthly income $${fin.monthlyIncome}, expenses $${fin.essentialExpenses}, ${surplusDisplay}, triage level: ${triageLevel}.`;
       
-      // AUDIT 17 FIX P1: Strengthen PARTIAL INFO PROTOCOL to catch "don't know where it goes" pattern
+      // AUDIT 17 FIX P1: Additional PARTIAL INFO checks for secondary scenarios
       const hasIncome = (fin.monthlyIncome || 0) > 0;
       const hasExpenses = (fin.essentialExpenses || 0) > 0;
       const hasSavings = (fin.totalSavings || 0) > 0;
       const hasDebt = (fin.highInterestDebt || 0) > 0 || (fin.lowInterestDebt || 0) > 0;
       
-      if (hasIncome && !hasExpenses) {
-        prompt += `\n\nPARTIAL INFO PROTOCOL (AUDIT 17 ENHANCED): User provided income but NOT expenses. CRITICAL: Your ONLY output is ONE focused question. Do NOT produce budget templates, do NOT assign tracking homework, do NOT explain why tracking matters, do NOT ask about goals. Ask ONLY: "Roughly what do you spend on essentials — rent, food, transportation, utilities — each month? A ballpark is fine." Nothing else.`;
-      } else if (hasIncome && hasExpenses && !hasSavings && !hasDebt) {
+      if (hasIncome && hasExpenses && !hasSavings && !hasDebt) {
         prompt += `\n\nPARTIAL INFO PROTOCOL: User provided income and expenses but NOT savings or debt. Ask: "Do you have any savings or emergency fund?" and "Any debt — credit cards, student loans, car loans?" Build the picture conversationally, not via homework assignment.`;
       }
       
@@ -837,14 +860,11 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
         prompt += `\n\n${matchStatus}`;
       }
       
-      // AUDIT 17 FIX P2: APR assumption disclosure
+      // AUDIT 18 FIX P2: APR assumption disclosure with mandatory inclusion
       const hiAprAssumed = !fin.highInterestDebtAPR && (fin.highInterestDebt || 0) > 0;
       if (hiAprAssumed) {
-        prompt += `\n\nAPR ASSUMPTION DISCLOSURE: High-interest debt APR not provided by user. Any interest calculations use ~18-23% estimated APR. Always include in response: "(estimated at ~18-23% typical APR — check your statement for your actual rate)"`;
+        prompt += `\n\nAPR ASSUMPTION DISCLOSURE (AUDIT 18): High-interest debt APR not provided by user. Any interest calculations use ~18-23% estimated APR. MANDATORY: You MUST include the exact phrase: (estimated at ~18-23% typical APR — check your statement for the real number). This phrase is MANDATORY when APR was not stated. If you omit it, you are presenting a false-precision calculation as fact.`;
       }
-      
-      // AUDIT 17 FIX P3: Emotional intelligence gate
-      prompt += `\n\nEMOTIONAL SIGNALS: If the user message contains distress signals (can't sleep, overwhelmed, anxious, scared, don't know where to start, stressed, worried), open your response with ONE sentence of acknowledgment before any numbers. Example: "That level of financial stress is real — and the fact you're looking at it directly puts you ahead of most people in the same spot." Then proceed with the plan. Do NOT dwell on the emotion.`;
     }
 
     // AUDIT 11 FIX DEFECT-06: Use activeLever/activeTier if provided, otherwise fall back to baseline
@@ -1088,6 +1108,25 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
         console.log('[extract] parsed:', JSON.stringify(fields));
         console.log('[extract] fieldCount:', Object.keys(fields || {}).length);
         
+        // AUDIT 18 FIX P0: Force expenses = null for money-blindness phrases
+        // Users who say "don't know where it goes" need the PARTIAL INFO PROTOCOL, not a budget template
+        const moneyBlindnessPatterns = [
+          /don't know where.*goes/i,
+          /no idea.*spend/i,
+          /can't track/i,
+          /not sure where/i,
+          /everything disappears/i,
+          /money just vanishes/i,
+          /no clue.*expenses/i,
+          /can't account for/i,
+        ];
+        const hasMoneyBlindness = moneyBlindnessPatterns.some(p => p.test(lastUserText || ''));
+        if (hasMoneyBlindness && fields.monthlyIncome) {
+          // Force expenses to null to trigger PARTIAL INFO PROTOCOL
+          fields.essentialExpenses = null;
+          delete fields.discretionaryExpenses;
+        }
+        
         // AUDIT 13 FIX DEFECT-02: Allow negative cashflow (expenses > income is valid financial state)
         // Negative cashflow is a real scenario that needs extraction and display
         // The extraction prompt explicitly requires extracting both income and expenses for negative cashflow
@@ -1101,7 +1140,16 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
     }
 
     if (type === 'answer') {
-      const t0 = String(text || '').trim();
+      let t0 = String(text || '').trim();
+      
+      // AUDIT 18 FIX P2: Post-generation APR disclosure check
+      // If APR was assumed and response doesn't contain disclosure, append it
+      const fin = (body as any)?.fin;
+      const hiAprAssumed = fin && !fin.highInterestDebtAPR && (fin.highInterestDebt || 0) > 0;
+      if (hiAprAssumed && !t0.includes('estimated') && !t0.includes('typical APR')) {
+        t0 += ' (estimated at ~18-23% typical APR — check your statement for the real number)';
+      }
+      
       if (!violatesGuardrails(t0)) {
         return jsonOk({ text: t0, source: 'claude', model: usedModel, tier });
       }

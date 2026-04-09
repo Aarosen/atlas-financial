@@ -35,7 +35,9 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
   // Emergency fund calculations
   const emergencyTarget3mo = expenses * 3;
   const emergencyGap = Math.max(0, emergencyTarget3mo - savings);
-  const emergencyMonthly = safeSurplus > 0 ? Math.min(safeSurplus * 0.3, emergencyGap / 12) : 0;
+  // AUDIT 18 FIX P1: Remove Math.min cap that was forcing emergencyMonthly to ceiling of emergencyGap/12
+  // The allocation rate of 30% of surplus is already a conservative cap. The /12 ceiling was mathematically nonsensical.
+  const emergencyMonthly = safeSurplus > 0 ? safeSurplus * 0.3 : 0;
   // AUDIT 17 FIX GAP-17-CUSHION-CALC: Fix months calculation to use gap, not target
   const emergencyMonths = emergencyGap === 0 ? 0 : (emergencyMonthly > 0 ? Math.ceil(emergencyGap / emergencyMonthly) : 0);
 
