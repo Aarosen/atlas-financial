@@ -817,9 +817,17 @@ WRONG: "What's your biggest financial goal?"
 RIGHT: "Roughly what do you spend on essentials — rent, food, transportation, utilities — each month? A ballpark is fine."`;
     }
 
-    prompt += `\n\nAUDIT 17 FIX P0 - TRIAGE MODE:
-If triageLevel is 'crisis': BEGIN with EXACTLY: "You're in financial triage right now. Here's the one move that stabilizes everything:" followed by exactly one action. Do not present a lever menu. Do not discuss optimization.
-If triageLevel is 'stabilize': BEGIN with EXACTLY: "You're close to stable — one move gets you there:" before presenting the primary recommendation.
+    prompt += `\n\nAUDIT 20 FIX BUG-20-007 - TRIAGE MODE (STRENGTHENED):
+If triageLevel is 'crisis': 
+  MANDATORY: BEGIN with EXACTLY these 4 words: "You're in financial triage."
+  Then give ONE specific action with a dollar figure and timeframe.
+  WRONG: "Hold on. Let me understand your situation."
+  WRONG: "You're spending more than you earn."
+  RIGHT: "You're in financial triage. Your one move this week: identify $200 in recurring charges you can cancel by Friday."
+  Do NOT ask diagnostic questions. Do NOT present a lever menu. Do NOT discuss optimization.
+If triageLevel is 'stabilize': 
+  BEGIN with EXACTLY: "You're close to stable — one move gets you there:"
+  Then give ONE specific action with a dollar figure.
 If triageLevel is 'growth' or 'optimize': Use standard response format.`;
 
     // AUDIT 20 FIX BUG-20-002: Inject extractedFields context when fin is null
