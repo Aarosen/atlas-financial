@@ -25,6 +25,7 @@ export function cleanAtlasResponse(raw: string): string {
     .trim();
 
   // AUDIT 20 FIX BUG-20-004: Enforce ONE NEXT ACTION rule
+  // AUDIT 21 FIX BUG-21-001: Fix Math.min logic with proper null-checks
   // If response asks 2+ questions, truncate to first question only
   const questionCount = (cleaned.match(/\?/g) || []).length;
   if (questionCount > 1) {
@@ -33,15 +34,28 @@ export function cleanAtlasResponse(raw: string): string {
     if (firstQuestionPos !== -1) {
       // Find the end of the sentence containing the first question
       // Look for period, newline, or end of string after the first question mark
+      const periodPos = cleaned.indexOf('.', firstQuestionPos);
+      const nlPos = cleaned.indexOf('\n', firstQuestionPos);
+      
+      // Properly handle -1 returns from indexOf
       const endOfFirstQuestion = Math.min(
-        cleaned.indexOf('.', firstQuestionPos) + 1 || cleaned.length,
-        cleaned.indexOf('\n', firstQuestionPos) || cleaned.length,
+        periodPos !== -1 ? periodPos + 1 : cleaned.length,
+        nlPos !== -1 ? nlPos : cleaned.length,
         cleaned.length
       );
       
       // Truncate to first question and its sentence
       cleaned = cleaned.substring(0, endOfFirstQuestion).trim();
     }
+  }
+
+  // AUDIT 21 FIX REM-21-G: Structured ONE NEXT ACTION enforcement - compound question detector
+  // Detect compound questions: "X, and Y?" or "X or Y?" patterns within questions
+  // This catches questions that ask for multiple pieces of data with a single question mark
+  if (cleaned.includes('?')) {
+    // Replace compound patterns like ", and " or " or " before a question mark with just the question mark
+    // This strips the second part of compound questions
+    cleaned = cleaned.replace(/([^?]+?)(,?\s+(?:and|or)\s+[^?]+\?)/gi, '$1?');
   }
 
   return cleaned;
