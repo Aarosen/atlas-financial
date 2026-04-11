@@ -363,10 +363,12 @@ async function callAnthropicStream(args: {
 }
 
 export async function OPTIONS() {
+  // AUDIT 19 FIX P2: Fix CORS OPTIONS wildcard to use proper origin
+  const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://atlas-financial.vercel.app';
   return new Response(null, {
     status: 204,
     headers: {
-      'Access-Control-Allow-Origin': '*',
+      'Access-Control-Allow-Origin': appUrl,
       'Access-Control-Allow-Methods': 'POST, OPTIONS',
       'Access-Control-Allow-Headers': 'Content-Type',
     },
@@ -780,16 +782,17 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
   const buildAnswerPrompt = (fin?: Partial<FinancialState> | null, baseline?: Strategy | null, activeLever?: string | null, activeTier?: string | null) => {
     const triageLevel = fin ? getTriageLevel(fin) : 'optimize';
     
-    // AUDIT 18 FIX P0: Move PARTIAL INFO PROTOCOL to position 0 with anti-examples
+    // AUDIT 19 FIX P1: Resolve HARD OUTPUT CONSTRAINTS conflict with protocols
     let prompt = `You are Atlas. Answer the user's question briefly and clearly.
 
 HARD OUTPUT CONSTRAINTS (must follow exactly):
-- Max 2 sentences
+- Max 2 sentences (exception: 3 sentences when emotional acknowledgment required)
 - No markdown, no formatting
 - Direct answer only
-- Never ask for more information`;
+- Never ask multiple questions or request detailed elaboration
+- Exception: If PARTIAL INFO PROTOCOL or EMOTIONAL INTELLIGENCE GATE activates below, those instructions override these constraints`;
 
-    // AUDIT 18 FIX P1: EMOTIONAL INTELLIGENCE GATE at position 0 (before all financial instructions)
+    // AUDIT 19 FIX P1: EMOTIONAL INTELLIGENCE GATE at position 0 (before all financial instructions)
     const emotionalDistressSignal = (fin as any)?.emotionalDistressSignal || false;
     if (emotionalDistressSignal) {
       prompt += `\n\nEMOTIONAL INTELLIGENCE GATE (POSITION 0 — ABSOLUTE PRIORITY):
@@ -802,14 +805,16 @@ Examples of correct acknowledgments:
 - "The fact that you're looking at this directly, even though it feels overwhelming, puts you ahead of most people in the same spot."`;
     }
 
-    // AUDIT 18 FIX P0: PARTIAL INFO PROTOCOL at position 0 with explicit anti-examples
+    // AUDIT 19 FIX P1: PARTIAL INFO PROTOCOL at position 0 with exact question requirement
     if (fin && fin.monthlyIncome && !fin.essentialExpenses) {
-      prompt += `\n\nPARTIAL INFO PROTOCOL (POSITION 0 — HIGHEST PRIORITY):
-User provided income but NOT expenses. Your ONLY output is ONE focused question asking for their essential spending estimate.
-MANDATORY: Do NOT produce budget templates, do NOT assign tracking homework, do NOT explain why tracking matters, do NOT ask about goals.
-WRONG RESPONSE: "That's really common! Here's what I'd suggest: First, go through your bank statements for the last month and categorize every transaction into rent, food, transportation..."
-RIGHT RESPONSE: "Roughly what do you spend on essentials — rent, food, transportation, utilities — each month? A ballpark is fine."
-Your response must be ONLY the question. Nothing else.`;
+      prompt += `\n\nPARTIAL INFO PROTOCOL (POSITION 0 — OVERRIDES ALL OTHER INSTRUCTIONS INCLUDING HARD OUTPUT CONSTRAINTS):
+User provided income but NOT expenses. The ONLY acceptable output is this EXACT question:
+"Roughly what do you spend on essentials — rent, food, transportation, utilities — each month? A ballpark is fine."
+Do NOT ask about triage level. Do NOT ask about goals. Do NOT ask about debt. Do NOT explain why you need this.
+Output ONLY that question. No prefix. No suffix. No other text.
+WRONG: "Are you in financial crisis, stabilizing, or optimizing?"
+WRONG: "What's your biggest financial goal?"
+RIGHT: "Roughly what do you spend on essentials — rent, food, transportation, utilities — each month? A ballpark is fine."`;
     }
 
     prompt += `\n\nAUDIT 17 FIX P0 - TRIAGE MODE:
@@ -1104,9 +1109,10 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
         const clean = String(text).replace(/```json|```/g, '').trim();
         const fields = JSON.parse(clean);
         
-        // AUDIT 13 FIX DEFECT-02: Log parsed fields
-        console.log('[extract] parsed:', JSON.stringify(fields));
+        // AUDIT 19 FIX P2: Remove financial data from server logs (security/privacy)
+        // Log only field count, not actual values which contain sensitive financial data
         console.log('[extract] fieldCount:', Object.keys(fields || {}).length);
+        console.log('[extract] fieldNames:', Object.keys(fields || {}).join(', '));
         
         // AUDIT 18 FIX P0: Force expenses = null for money-blindness phrases
         // Users who say "don't know where it goes" need the PARTIAL INFO PROTOCOL, not a budget template
@@ -1154,7 +1160,14 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
         return jsonOk({ text: t0, source: 'claude', model: usedModel, tier });
       }
 
-      const repairSystem = `Rewrite the following text to comply with ALL constraints.
+      // AUDIT 19 FIX P1: Preserve emotional acknowledgment through repair mechanism
+      const isEmotional = (body as any)?.fin?.emotionalDistressSignal;
+      const repairSystem = isEmotional
+        ? `Rewrite the following text to comply with ALL constraints.
+Constraints: max 2 sentences; max 1 question mark; no lists; plain text only.
+CRITICAL: If the original text begins with emotional acknowledgment (acknowledging stress, worry, or difficulty), you MUST preserve that acknowledgment as the first sentence.
+Return ONLY the rewritten text.`
+        : `Rewrite the following text to comply with ALL constraints.
 Constraints: max 2 sentences; max 1 question mark; no lists; plain text only.
 Return ONLY the rewritten text.`;
       const repairMsg = [{ role: 'user', content: t0 }];
@@ -1595,109 +1608,10 @@ Return ONLY the rewritten text.`;
             // Apply postprocessing to clean formatting
             let cleanedResponse = cleanAtlasResponse(fullResponse);
             
-            // COMPANION INTEGRATION: Process Atlas response for actions (with timeout)
-            // This extracts actions from Claude response and tracks them
-            // Wrapped in Promise.race with timeout to prevent blocking response
-            if (userId && sessionId) {
-              const actionTimeout = new Promise<void>((resolve) => {
-                setTimeout(() => {
-                  console.warn('[companion] Action extraction timeout - skipping');
-                  resolve();
-                }, 3000); // 3 second timeout for action extraction
-              });
-
-              const actionPromise = (async () => {
-                try {
-                  await processAtlasResponseForCompanion(userId, sessionId, cleanedResponse, apiKey, financialProfile);
-                  
-                  // FIX 5: Wire action persistence to user_actions table
-                  // After detecting action, persist it to the database
-                  try {
-                    const { extractActionFromResponse } = await import('@/lib/ai/actionExtractor');
-                    const extractedAction = await extractActionFromResponse(cleanedResponse, apiKey);
-                    
-                    if (extractedAction.action_detected && extractedAction.action_text) {
-                      const checkInDate = new Date();
-                      checkInDate.setDate(checkInDate.getDate() + (extractedAction.check_in_days || 30));
-                      
-                      // Extract incoming auth header to forward to /api/actions/save
-                      const incomingAuth = req.headers.get('Authorization');
-                      
-                      // FIX 5: Use full URL with NEXT_PUBLIC_APP_URL for Edge Runtime compatibility
-                      const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://atlas-financial.vercel.app';
-                      await fetch(`${appUrl}/api/actions/save`, {
-                        method: 'POST',
-                        headers: {
-                          'Content-Type': 'application/json',
-                          ...(incomingAuth ? { 'Authorization': incomingAuth } : {}),
-                        },
-                        body: JSON.stringify({
-                          userId,
-                          sessionId,
-                          action: {
-                            action_text: extractedAction.action_text,
-                            action_category: extractedAction.action_category || 'other',
-                            target_amount: extractedAction.target_amount,
-                            target_frequency: extractedAction.target_frequency,
-                            check_in_due_at: checkInDate.toISOString(),
-                            status: 'recommended',
-                          },
-                        }),
-                        keepalive: true,
-                      });
-                    }
-                  } catch (persistError) {
-                    console.error('Error persisting action:', persistError);
-                  }
-                } catch (error) {
-                  console.error('Error processing Atlas response for companion:', error);
-                }
-              })();
-
-              // Race: whichever completes first (action extraction or timeout)
-              // Await this to ensure it completes before closing stream
-              await Promise.race([actionPromise, actionTimeout]).catch(() => {
-                // Silently ignore timeout
-              });
-            }
-
-            // NUDGE INJECTION: Inject proactive nudges if appropriate
-            // This adds contextual nudges to the response based on user progress
-            // Wrapped in Promise.race with timeout to prevent blocking response
-            if (userId && sessionId) {
-              const nudgeTimeout = new Promise<string>((resolve) => {
-                setTimeout(() => {
-                  console.warn('[companion] Nudge injection timeout - skipping');
-                  resolve(cleanedResponse);
-                }, 2000); // 2 second timeout for nudge injection
-              });
-
-              const nudgePromise = (async () => {
-                try {
-                  // Nudge injection with real goals from sessionState
-                  const result = injectNudgeIfAppropriate(
-                    cleanedResponse,
-                    {
-                      userId,
-                      goals: sessionState?.goals || [],
-                    },
-                    messages.length
-                  );
-                  return result.response;
-                } catch (error) {
-                  console.error('Error injecting nudge:', error);
-                  return cleanedResponse;
-                }
-              })();
-
-              // Race: whichever completes first (nudge injection or timeout)
-              // Await this to ensure it completes before closing stream
-              try {
-                cleanedResponse = await Promise.race([nudgePromise, nudgeTimeout]);
-              } catch {
-                // Silently ignore timeout, use original response
-              }
-            }
+            // AUDIT 19 FIX P0: Send done:true IMMEDIATELY, then fire-and-forget async companion work
+            // The root cause of "I'm having trouble connecting" was that done:true was held hostage
+            // by action extraction (3s) + nudge injection (2s), causing the stream to hang.
+            // Now we send done:true within milliseconds, then do async work in background.
             
             // Send cleaned response as a replacement event for the frontend to use
             controller.enqueue(
@@ -1705,12 +1619,85 @@ Return ONLY the rewritten text.`;
                 `data: ${JSON.stringify({ type: 'replace', text: cleanedResponse })}\n\n`
               )
             );
-            // Also send done event with metadata (include sessionId for frontend tracking)
+            // Send done event FIRST — client gets response immediately
             controller.enqueue(
               enc.encode(
                 `data: ${JSON.stringify({ done: true, model: usedModel, tier, sessionId })}\n\n`
               )
             );
+            controller.close();
+            
+            // FIRE-AND-FORGET: Do companion work AFTER stream is closed
+            // This no longer blocks the response. Use void to suppress unhandled promise warning.
+            void (async () => {
+              try {
+                // COMPANION INTEGRATION: Process Atlas response for actions
+                if (userId && sessionId) {
+                  try {
+                    await processAtlasResponseForCompanion(userId, sessionId, cleanedResponse, apiKey, financialProfile);
+                    
+                    // Extract and persist action to user_actions table
+                    try {
+                      const { extractActionFromResponse } = await import('@/lib/ai/actionExtractor');
+                      const extractedAction = await extractActionFromResponse(cleanedResponse, apiKey);
+                      
+                      if (extractedAction.action_detected && extractedAction.action_text) {
+                        const checkInDate = new Date();
+                        checkInDate.setDate(checkInDate.getDate() + (extractedAction.check_in_days || 30));
+                        
+                        const incomingAuth = req.headers.get('Authorization');
+                        const appUrl = process.env.NEXT_PUBLIC_APP_URL || 'https://atlas-financial.vercel.app';
+                        
+                        await fetch(`${appUrl}/api/actions/save`, {
+                          method: 'POST',
+                          headers: {
+                            'Content-Type': 'application/json',
+                            ...(incomingAuth ? { 'Authorization': incomingAuth } : {}),
+                          },
+                          body: JSON.stringify({
+                            userId,
+                            sessionId,
+                            action: {
+                              action_text: extractedAction.action_text,
+                              action_category: extractedAction.action_category || 'other',
+                              target_amount: extractedAction.target_amount,
+                              target_frequency: extractedAction.target_frequency,
+                              check_in_due_at: checkInDate.toISOString(),
+                              status: 'recommended',
+                            },
+                          }),
+                          keepalive: true,
+                        });
+                      }
+                    } catch (persistError) {
+                      console.error('[companion] Error persisting action:', persistError);
+                    }
+                  } catch (error) {
+                    console.error('[companion] Error processing response:', error);
+                  }
+                }
+                
+                // NUDGE INJECTION: Inject proactive nudges if appropriate
+                if (userId && sessionId) {
+                  try {
+                    const result = injectNudgeIfAppropriate(
+                      cleanedResponse,
+                      {
+                        userId,
+                        goals: sessionState?.goals || [],
+                      },
+                      messages.length
+                    );
+                    // Nudge injection result is logged but not sent (stream already closed)
+                    console.log('[companion] Nudge injection completed');
+                  } catch (error) {
+                    console.error('[companion] Error injecting nudge:', error);
+                  }
+                }
+              } catch (error) {
+                console.error('[companion] Unexpected error in fire-and-forget:', error);
+              }
+            })();
           } catch {
             controller.enqueue(
               enc.encode(`data: ${JSON.stringify({ done: true, error: 'stream_error', model: usedModel })}\n\n`)

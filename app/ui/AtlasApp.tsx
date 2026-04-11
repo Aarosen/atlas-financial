@@ -1102,7 +1102,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           }
 
           if (!res.ok) {
-            dispatch({ type: 'SEND_ASKED', text: "I'm having trouble connecting right now. Please try again in a moment." });
+            dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
           } else {
             dispatch({ type: 'STREAM_DONE' });
           }
@@ -1360,7 +1360,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         }
         
         if (!res.ok) {
-          dispatch({ type: 'SEND_ASKED', text: "I'm having trouble connecting right now. Please try again in a moment." });
+          // AUDIT 19 FIX P0: Change SEND_ASKED to SEND_ERROR_WITH_RETRY for proper error handling
+          dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
         } else {
           dispatch({ type: 'STREAM_DONE' });
         }
@@ -1418,7 +1419,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         }
 
         if (!res.ok) {
-          dispatch({ type: 'SEND_ASKED', text: "I'm having trouble connecting right now. Please try again in a moment." });
+          // AUDIT 19 FIX P0: Change SEND_ASKED to SEND_ERROR_WITH_RETRY for proper error handling
+          dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
         } else {
           dispatch({ type: 'STREAM_DONE' });
         }

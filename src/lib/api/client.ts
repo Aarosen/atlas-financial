@@ -342,6 +342,8 @@ export class ClaudeClient {
       return { ok: true, canceled: false, rateLimitRemaining: rlRemaining };
     } catch (e: any) {
       clearTimeout(timeoutId);
+      // AUDIT 19 FIX P0: Add error logging for debugging stream failures
+      console.error('[chatStream] caught error:', e?.name, e?.message, e);
       const canceled = String(e?.name || '').toLowerCase() === 'aborterror';
       if (!this._hadSuccess) {
         this._apiStatus = 'unknown';
