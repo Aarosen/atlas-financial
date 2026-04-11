@@ -1,5 +1,5 @@
 export function cleanAtlasResponse(raw: string): string {
-  return raw
+  let cleaned = raw
     // Remove any leading control tags like [EMPATHY], [CALCULATION_RESULTS], etc.
     .replace(/^\[[A-Z_]+\]\n?/g, '')
     // Remove profile block delimiters (all variations)
@@ -23,4 +23,26 @@ export function cleanAtlasResponse(raw: string): string {
     // Collapse multiple blank lines
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  // AUDIT 20 FIX BUG-20-004: Enforce ONE NEXT ACTION rule
+  // If response asks 2+ questions, truncate to first question only
+  const questionCount = (cleaned.match(/\?/g) || []).length;
+  if (questionCount > 1) {
+    // Find the position of the first question mark
+    const firstQuestionPos = cleaned.indexOf('?');
+    if (firstQuestionPos !== -1) {
+      // Find the end of the sentence containing the first question
+      // Look for period, newline, or end of string after the first question mark
+      const endOfFirstQuestion = Math.min(
+        cleaned.indexOf('.', firstQuestionPos) + 1 || cleaned.length,
+        cleaned.indexOf('\n', firstQuestionPos) || cleaned.length,
+        cleaned.length
+      );
+      
+      // Truncate to first question and its sentence
+      cleaned = cleaned.substring(0, endOfFirstQuestion).trim();
+    }
+  }
+
+  return cleaned;
 }
