@@ -822,27 +822,35 @@ If triageLevel is 'crisis': BEGIN with EXACTLY: "You're in financial triage righ
 If triageLevel is 'stabilize': BEGIN with EXACTLY: "You're close to stable — one move gets you there:" before presenting the primary recommendation.
 If triageLevel is 'growth' or 'optimize': Use standard response format.`;
 
-    if (fin && (fin.monthlyIncome || fin.essentialExpenses)) {
-      const surplus = (fin.monthlyIncome || 0) - (fin.essentialExpenses || 0);
+    // AUDIT 20 FIX BUG-20-002: Inject extractedFields context when fin is null
+    // This fixes answer_stream context blindness where model says "I don't have access to your financial information"
+    const financialContext = fin || {};
+    if (!fin && extractedFields && Object.keys(extractedFields).length > 0) {
+      // Merge extractedFields into context when fin is null
+      Object.assign(financialContext, extractedFields);
+    }
+
+    if (financialContext && (financialContext.monthlyIncome || financialContext.essentialExpenses)) {
+      const surplus = (financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0);
       // AUDIT 16 FIX DEFECT-15-NEG-CASHFLOW-502: Guard against negative surplus in string interpolation
       const safeSurplus = Math.max(-999999, Math.min(999999, surplus)); // Clamp to prevent extreme values
       const surplusDisplay = surplus < 0 ? `deficit of $${Math.abs(surplus)}` : `surplus $${safeSurplus}`;
-      prompt += `\n\nUSER PROFILE: Monthly income $${fin.monthlyIncome}, expenses $${fin.essentialExpenses}, ${surplusDisplay}, triage level: ${triageLevel}.`;
+      prompt += `\n\nUSER PROFILE: Monthly income $${financialContext.monthlyIncome}, expenses $${financialContext.essentialExpenses}, ${surplusDisplay}, triage level: ${triageLevel}.`;
       
       // AUDIT 17 FIX P1: Additional PARTIAL INFO checks for secondary scenarios
-      const hasIncome = (fin.monthlyIncome || 0) > 0;
-      const hasExpenses = (fin.essentialExpenses || 0) > 0;
-      const hasSavings = (fin.totalSavings || 0) > 0;
-      const hasDebt = (fin.highInterestDebt || 0) > 0 || (fin.lowInterestDebt || 0) > 0;
+      const hasIncome = (financialContext.monthlyIncome || 0) > 0;
+      const hasExpenses = (financialContext.essentialExpenses || 0) > 0;
+      const hasSavings = (financialContext.totalSavings || 0) > 0;
+      const hasDebt = (financialContext.highInterestDebt || 0) > 0 || (financialContext.lowInterestDebt || 0) > 0;
       
       if (hasIncome && hasExpenses && !hasSavings && !hasDebt) {
         prompt += `\n\nPARTIAL INFO PROTOCOL: User provided income and expenses but NOT savings or debt. Ask: "Do you have any savings or emergency fund?" and "Any debt — credit cards, student loans, car loans?" Build the picture conversationally, not via homework assignment.`;
       }
       
       // AUDIT 12 FIX DEFECT-09: Add cushion status to prevent recommending funded emergency fund
-      const monthlyEssentials = fin.essentialExpenses || 0;
+      const monthlyEssentials = financialContext.essentialExpenses || 0;
       const cushionTarget = monthlyEssentials * 3;
-      const totalSavings = fin.totalSavings || 0;
+      const totalSavings = financialContext.totalSavings || 0;
       // AUDIT 13 FIX DEFECT-09-FORMATTING: Format cushion status values with currency
       const cushionStatus = totalSavings >= cushionTarget
         ? `EMERGENCY CUSHION: FUNDED ($${totalSavings.toLocaleString()} savings vs. $${cushionTarget.toLocaleString()} target). Do NOT recommend building an emergency fund.`
@@ -850,15 +858,15 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
       prompt += `\n\n${cushionStatus}`;
       
       // AUDIT 13 FIX DEFECT-RETIREMENT: Add retirement context to system prompt
-      if (fin.retirementSavings !== null && fin.retirementSavings !== undefined) {
-        prompt += `\n\nRETIREMENT SAVINGS: User has $${fin.retirementSavings.toLocaleString()} in retirement accounts. When discussing financial goals, reference their retirement balance and provide retirement-specific guidance.`;
+      if (financialContext.retirementSavings !== null && financialContext.retirementSavings !== undefined) {
+        prompt += `\n\nRETIREMENT SAVINGS: User has $${financialContext.retirementSavings.toLocaleString()} in retirement accounts. When discussing financial goals, reference their retirement balance and provide retirement-specific guidance.`;
       }
       
       // AUDIT 17 FIX P1: Employer match detection and priority
-      const employerMatchPercent = (fin as any).employerMatchPercent || null;
-      const currentlyContributing = (fin as any).currentlyContributing || null;
+      const employerMatchPercent = (financialContext as any).employerMatchPercent || null;
+      const currentlyContributing = (financialContext as any).currentlyContributing || null;
       if (employerMatchPercent && employerMatchPercent > 0) {
-        const freeMoneyForfeited = Math.round((fin.monthlyIncome || 0) * employerMatchPercent / 100);
+        const freeMoneyForfeited = Math.round((financialContext.monthlyIncome || 0) * employerMatchPercent / 100);
         const matchStatus = currentlyContributing === false 
           ? `EMPLOYER MATCH ALERT: User is NOT currently contributing. Employer offers ${employerMatchPercent}% match = $${freeMoneyForfeited}/month FREE MONEY being forfeited. This is ALWAYS priority #1 before any other financial move.`
           : `EMPLOYER MATCH: User has ${employerMatchPercent}% employer match available (${currentlyContributing ? 'currently contributing' : 'status unknown'}).`;
@@ -866,7 +874,7 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
       }
       
       // AUDIT 18 FIX P2: APR assumption disclosure with mandatory inclusion
-      const hiAprAssumed = !fin.highInterestDebtAPR && (fin.highInterestDebt || 0) > 0;
+      const hiAprAssumed = !financialContext.highInterestDebtAPR && (financialContext.highInterestDebt || 0) > 0;
       if (hiAprAssumed) {
         prompt += `\n\nAPR ASSUMPTION DISCLOSURE (AUDIT 18): High-interest debt APR not provided by user. Any interest calculations use ~18-23% estimated APR. MANDATORY: You MUST include the exact phrase: (estimated at ~18-23% typical APR — check your statement for the real number). This phrase is MANDATORY when APR was not stated. If you omit it, you are presenting a false-precision calculation as fact.`;
       }
@@ -877,8 +885,8 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
     if (leverToUse) {
       prompt += `\n\nACTIVE RECOMMENDATION: ${leverToUse.replace(/_/g, ' ')}. Your response must reinforce this recommendation and not suggest contradictory strategies.`;
 
-      if (baseline && fin) {
-        const surplus = (fin.monthlyIncome || 0) - (fin.essentialExpenses || 0);
+      if (baseline && financialContext) {
+        const surplus = (financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0);
         // AUDIT 16 FIX DEFECT-15-NEG-CASHFLOW-502: Guard against negative surplus display
         const safeSurplus = Math.max(-999999, Math.min(999999, surplus));
         const surplusLine = surplus < 0 ? `- Monthly deficit: $${Math.abs(safeSurplus)}` : `- Monthly surplus: $${safeSurplus}`;
@@ -888,18 +896,18 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
 ${surplusLine}`;
         
         // AUDIT 14 FIX GAP-01 Part C: Add debt-first priority when active lever is debt elimination
-        if (leverToUse === 'eliminate_high_interest_debt' && fin.highInterestDebt && fin.highInterestDebt > 0) {
-          const aprPct = fin.highInterestDebtAPR ?? 23;
-          prompt += `\n\nDEBT-FIRST PRIORITY: The user has $${fin.highInterestDebt.toLocaleString()} in high-interest debt at ~${aprPct}% APR. When asked about other financial priorities (retirement contributions, savings, investing), always reference this debt-first priority. A guaranteed ${aprPct}% return from debt payoff exceeds most investment returns. Recommend paying off this debt first, then redirecting that payment amount toward retirement contributions or other goals.`;
+        if (leverToUse === 'eliminate_high_interest_debt' && financialContext.highInterestDebt && financialContext.highInterestDebt > 0) {
+          const aprPct = financialContext.highInterestDebtAPR ?? 23;
+          prompt += `\n\nDEBT-FIRST PRIORITY: The user has $${financialContext.highInterestDebt.toLocaleString()} in high-interest debt at ~${aprPct}% APR. When asked about other financial priorities (retirement contributions, savings, investing), always reference this debt-first priority. A guaranteed ${aprPct}% return from debt payoff exceeds most investment returns. Recommend paying off this debt first, then redirecting that payment amount toward retirement contributions or other goals.`;
         }
         
         // AUDIT 16 FIX GAP-16-DEBT-SEQUENCE: Add debt sequencing logic when multiple debt types present
-        const hiDebtAmount = fin.highInterestDebt || 0;
-        const loDebtAmount = fin.lowInterestDebt || 0;
+        const hiDebtAmount = financialContext.highInterestDebt || 0;
+        const loDebtAmount = financialContext.lowInterestDebt || 0;
         const hasMultipleDebts = hiDebtAmount > 0 && loDebtAmount > 0;
         if (hasMultipleDebts) {
-          const hiApr = fin.highInterestDebtAPR ?? 23;
-          const loApr = fin.lowInterestDebtAPR ?? 5;
+          const hiApr = financialContext.highInterestDebtAPR ?? 23;
+          const loApr = financialContext.lowInterestDebtAPR ?? 5;
           const sequencingGuidance = hiApr > loApr
             ? `DEBT SEQUENCING: User has both high-interest ($${hiDebtAmount.toLocaleString()} at ${hiApr}%) and low-interest ($${loDebtAmount.toLocaleString()} at ${loApr}%) debt. Use the avalanche method: pay high-interest debt first (${hiApr}% guaranteed return), then low-interest debt (${loApr}%). This minimizes total interest paid.`
             : `DEBT SEQUENCING: User has both high-interest ($${hiDebtAmount.toLocaleString()} at ${hiApr}%) and low-interest ($${loDebtAmount.toLocaleString()} at ${loApr}%) debt. Interest rates are close — either avalanche (highest rate first) or snowball (smallest balance first) works. Recommend avalanche for mathematical optimality: pay ${hiApr}% debt first.`;
@@ -907,17 +915,17 @@ ${surplusLine}`;
         }
         
         // AUDIT 17 FIX P3: Recommendation ordering - debt payoff urgency weight
-        const surplusForPayoff = (fin.monthlyIncome || 0) - (fin.essentialExpenses || 0);
+        const surplusForPayoff = (financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0);
         const hiDebtPayoffMonths = hiDebtAmount > 0 && surplusForPayoff > 0 ? Math.ceil(hiDebtAmount / surplusForPayoff) : 999;
         if (hiDebtAmount > 0 && hiDebtPayoffMonths <= 2) {
-          prompt += `\n\nDEBT PAYOFF URGENCY (AUDIT 17): High-interest debt payable in ${hiDebtPayoffMonths} month(s) at current surplus. This is the clear priority — eliminate it before any other lever. The guaranteed ${fin.highInterestDebtAPR ?? 23}% return from payoff exceeds all other opportunities.`;
+          prompt += `\n\nDEBT PAYOFF URGENCY (AUDIT 17): High-interest debt payable in ${hiDebtPayoffMonths} month(s) at current surplus. This is the clear priority — eliminate it before any other lever. The guaranteed ${financialContext.highInterestDebtAPR ?? 23}% return from payoff exceeds all other opportunities.`;
         }
         
         // AUDIT 17 FIX P1: Income lever surface for thin-margin users
-        const incomeGrowthSignal = (fin as any).incomeGrowthSignal || false;
-        const surplusRatio = (fin.monthlyIncome || 0) > 0 ? ((fin.monthlyIncome || 0) - (fin.essentialExpenses || 0)) / (fin.monthlyIncome || 0) : 0;
+        const incomeGrowthSignal = (financialContext as any).incomeGrowthSignal || false;
+        const surplusRatio = (financialContext.monthlyIncome || 0) > 0 ? ((financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0)) / (financialContext.monthlyIncome || 0) : 0;
         if (incomeGrowthSignal && surplusRatio < 0.20) {
-          const potentialIncome = Math.round((fin.essentialExpenses || 0) * 0.15);
+          const potentialIncome = Math.round((financialContext.essentialExpenses || 0) * 0.15);
           prompt += `\n\nINCOME GROWTH OPPORTUNITY: User signaled income-growth interest AND has thin surplus (${Math.round(surplusRatio * 100)}%). Adding $${potentialIncome}/month in side income would transform their financial trajectory. Include one paragraph on income-side leverage in your response.`;
         }
       }
@@ -1433,6 +1441,46 @@ Return ONLY the rewritten text.`;
         }
       }
 
+      // AUDIT 20 FIX BUG-20-003: Dynamic protocol injection for chat path
+      // Move PARTIAL INFO, TRIAGE, and EMOTIONAL INTELLIGENCE protocols from buildAnswerPrompt()
+      // to the chat path so they fire during main onboarding conversation
+      let dynamicProtocols = '';
+      
+      // PARTIAL INFO PROTOCOL: When income is provided but expenses are missing
+      if (extractedFields?.monthlyIncome && !extractedFields?.essentialExpenses) {
+        dynamicProtocols += `\n\nPARTIAL INFO PROTOCOL (POSITION 0 — OVERRIDES ALL OTHER INSTRUCTIONS):
+User provided income but NOT expenses. The ONLY acceptable output is this EXACT question:
+"Roughly what do you spend on essentials — rent, food, transportation, utilities — each month? A ballpark is fine."
+Do NOT ask about triage level. Do NOT ask about goals. Do NOT ask about debt. Do NOT explain why you need this.
+Output ONLY that question. No prefix. No suffix. No other text.`;
+      }
+      
+      // TRIAGE PROTOCOL: When spending exceeds income (financial crisis)
+      if (extractedFields?.monthlyIncome && extractedFields?.essentialExpenses &&
+          (extractedFields.essentialExpenses as number) > (extractedFields.monthlyIncome as number)) {
+        const deficit = (extractedFields.essentialExpenses as number) - (extractedFields.monthlyIncome as number);
+        dynamicProtocols += `\n\nTRIAGE PROTOCOL (POSITION 0 — CRITICAL):
+User is in financial triage (spending $${deficit} more than they earn monthly).
+MANDATORY: Open your response with EXACTLY: "You're in financial triage."
+Then show the burn rate: "At $${deficit}/month deficit, you'll exhaust savings in X months."
+Then give ONE specific action with a dollar figure.
+Do NOT ask "where is the money coming from" (past question). Ask "What can you cut?" (action question).
+Do NOT provide false reassurance. Be direct about the crisis.`;
+      }
+      
+      // EMOTIONAL INTELLIGENCE GATE: When user shows emotional distress
+      if (extractedFields?.emotionalDistressSignal) {
+        dynamicProtocols += `\n\nEMOTIONAL INTELLIGENCE GATE (POSITION 0 — ABSOLUTE PRIORITY):
+User is in emotional distress (fear, stress, overwhelm, hopelessness).
+MANDATORY: Your FIRST sentence must acknowledge their feeling before any numbers or advice.
+Do NOT start with numbers, percentages, or recommendations.
+ONE sentence acknowledgment only. Then proceed with analysis.
+Examples of correct acknowledgments:
+- "That kind of stress is real — carrying debt while trying to sleep is genuinely hard."
+- "Feeling overwhelmed about money is one of the most common experiences there is, and it doesn't mean you're stuck."
+- "The fact that you're looking at this directly, even though it feels overwhelming, puts you ahead of most people in the same spot."`;
+      }
+
       // Step 3: Build enriched system prompt with session state block FIRST
       // The session state block is injected first so it's never trimmed away
       const emotionTag = detectEmotion(messages);
@@ -1466,8 +1514,9 @@ Return ONLY the rewritten text.`;
 
       const promptSections: string[] = [
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
-        sessionStateBlock,           // ← Always included, never trimmed (position 1)
-        ...(calculationBlockSection ? [calculationBlockSection] : []), // ← REM-K: POSITION 2 = calculation block MUST NEVER BE TRIMMED (matches stated intent)
+        ...(dynamicProtocols ? [dynamicProtocols] : []), // ← AUDIT 20 FIX: Dynamic protocols (PARTIAL INFO, TRIAGE, EMOTIONAL) injected at position 1
+        sessionStateBlock,           // ← Always included, never trimmed (position 2)
+        ...(calculationBlockSection ? [calculationBlockSection] : []), // ← REM-K: POSITION 3 = calculation block MUST NEVER BE TRIMMED (matches stated intent)
         ...(strategyContextBlock ? [strategyContextBlock] : []), // ← STRATEGY CONTEXT = tier/lever/urgency/confidence/metrics
         ...(objectionBlock ? [objectionBlock] : []), // ← REM-G: OBJECTION HANDLING = psychological barrier detection and reframing
         ...(priorContextBlock ? [priorContextBlock] : []), // ← REM-L: PRIOR CONTEXT = trusted server-generated data from Supabase (no sanitization needed)
@@ -1625,7 +1674,6 @@ Return ONLY the rewritten text.`;
                 `data: ${JSON.stringify({ done: true, model: usedModel, tier, sessionId })}\n\n`
               )
             );
-            controller.close();
             
             // FIRE-AND-FORGET: Do companion work AFTER stream is closed
             // This no longer blocks the response. Use void to suppress unhandled promise warning.
