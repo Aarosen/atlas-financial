@@ -1657,6 +1657,30 @@ Examples of correct acknowledgments:
             // Apply postprocessing to clean formatting
             let cleanedResponse = cleanAtlasResponse(fullResponse);
             
+            // AUDIT 20 FIX BUG-20-006: Move nudge injection BEFORE stream close
+            // Previously nudge injection ran in fire-and-forget AFTER stream closed, so it never reached client
+            // Now evaluate and inject nudges BEFORE sending done:true
+            if (userId && sessionId) {
+              try {
+                const nudgeResult = injectNudgeIfAppropriate(
+                  cleanedResponse,
+                  {
+                    userId,
+                    goals: sessionState?.goals || [],
+                  },
+                  messages.length
+                );
+                // Use nudged response if nudge was injected, otherwise use original
+                if (nudgeResult && nudgeResult.nudgeInjected && nudgeResult.response) {
+                  cleanedResponse = nudgeResult.response;
+                  console.log('[nudge] Nudge successfully injected into response');
+                }
+              } catch (error) {
+                console.error('[nudge] Error injecting nudge:', error);
+                // Continue with original response if nudge injection fails
+              }
+            }
+            
             // AUDIT 19 FIX P0: Send done:true IMMEDIATELY, then fire-and-forget async companion work
             // The root cause of "I'm having trouble connecting" was that done:true was held hostage
             // by action extraction (3s) + nudge injection (2s), causing the stream to hang.
