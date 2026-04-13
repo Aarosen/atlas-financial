@@ -662,8 +662,8 @@ FIELDS TO EXTRACT (omit any you cannot confidently extract):
 - emotionalDistressSignal: boolean (AUDIT 18 FIX: Set to true if user message contains distress signals: can't sleep, overwhelmed, anxious, scared, don't know where to start, stressed, worried, hopeless. Omit if not present.)
 - highInterestDebt: number (total balance of debts above ~7% APR: credit cards, personal loans)
 - lowInterestDebt: number (total balance of debts at or below ~7% APR: student loans, car loans, mortgage)
-- highInterestDebtAPR: number (APR/interest rate of high-interest debt; extract from phrases like "23% APR", "18% interest", "my credit card rate is 21%"; omit if not stated)
-- lowInterestDebtAPR: number (APR/interest rate of low-interest debt; extract from phrases like "4.5% student loan", "2.9% car loan"; omit if not stated)
+- highInterestDebtAPR: number (AUDIT 23 FIX REM-23-D: APR/interest rate of high-interest debt; extract ONLY if explicitly stated by user from phrases like "23% APR", "18% interest", "my credit card rate is 21%", "at 22%", "charging 19%"; CRITICAL: do NOT infer or assume a rate; omit if not explicitly stated in user's message)
+- lowInterestDebtAPR: number (AUDIT 23 FIX REM-23-D: APR/interest rate of low-interest debt; extract ONLY if explicitly stated from phrases like "4.5% student loan", "2.9% car loan", "at 5%"; CRITICAL: do NOT infer or assume a rate; omit if not explicitly stated)
 - monthlyDebtPayments: number (total minimum monthly payments across all debt)
 - proposedPayment: number (monthly payment amount for a specific purchase being evaluated; extract ONLY when user is evaluating a specific purchase like 'I want to buy a house with a $2,500/month payment' or 'the car payment would be $450/month' or 'the apartment is $1,800/month'; omit if user is not evaluating a specific purchase)
 - primaryGoal: one of "stability" | "growth" | "flexibility" | "wealth_building"
@@ -762,7 +762,9 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
     const surplusRatio = income > 0 ? surplus / income : 0;
     const savings = fin.totalSavings || 0;
     const hiDebt = fin.highInterestDebt || 0;
-    const emergencyTarget = expenses * 3;
+    // AUDIT 23 FIX REM-23-C: Fix emergency fund target inconsistency (3 months → 6 months)
+    // Code was using 3-month target but model advises 6-month target. Unify to 6 months.
+    const emergencyTarget = expenses * 6;
     
     // AUDIT 22 FIX BUG-22-002: Crisis only when cashflow is negative or near-zero
     // Crisis: negative cashflow or extreme thin margin (< 5% surplus ratio)
@@ -937,29 +939,46 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
 ${surplusLine}`;
         
         // AUDIT 14 FIX GAP-01 Part C: Add debt-first priority when active lever is debt elimination
+        // AUDIT 23 FIX REM-23-B: Remove hardcoded APR fallback (?? 23) that causes hallucination
         if (leverToUse === 'eliminate_high_interest_debt' && financialContext.highInterestDebt && financialContext.highInterestDebt > 0) {
-          const aprPct = financialContext.highInterestDebtAPR ?? 23;
-          prompt += `\n\nDEBT-FIRST PRIORITY: The user has $${financialContext.highInterestDebt.toLocaleString()} in high-interest debt at ~${aprPct}% APR. When asked about other financial priorities (retirement contributions, savings, investing), always reference this debt-first priority. A guaranteed ${aprPct}% return from debt payoff exceeds most investment returns. Recommend paying off this debt first, then redirecting that payment amount toward retirement contributions or other goals.`;
+          const aprPct = financialContext.highInterestDebtAPR;
+          if (aprPct && typeof aprPct === 'number' && aprPct > 0 && aprPct < 100) {
+            prompt += `\n\nDEBT-FIRST PRIORITY: The user has $${financialContext.highInterestDebt.toLocaleString()} in high-interest debt at ${aprPct}% APR. When asked about other financial priorities (retirement contributions, savings, investing), always reference this debt-first priority. A guaranteed ${aprPct}% return from debt payoff exceeds most investment returns. Recommend paying off this debt first, then redirecting that payment amount toward retirement contributions or other goals.`;
+          } else {
+            prompt += `\n\nDEBT-FIRST PRIORITY: The user has $${financialContext.highInterestDebt.toLocaleString()} in high-interest debt (APR unknown). When asked about other financial priorities (retirement contributions, savings, investing), always reference this debt-first priority. High-interest debt typically carries a guaranteed return from payoff that exceeds most investment returns. Recommend paying off this debt first, then redirecting that payment amount toward retirement contributions or other goals. Ask the user for the APR if needed for precise calculations.`;
+          }
         }
         
         // AUDIT 16 FIX GAP-16-DEBT-SEQUENCE: Add debt sequencing logic when multiple debt types present
+        // AUDIT 23 FIX REM-23-B: Remove hardcoded APR fallbacks (?? 23, ?? 5) that cause hallucination
         const hiDebtAmount = financialContext.highInterestDebt || 0;
         const loDebtAmount = financialContext.lowInterestDebt || 0;
         const hasMultipleDebts = hiDebtAmount > 0 && loDebtAmount > 0;
         if (hasMultipleDebts) {
-          const hiApr = financialContext.highInterestDebtAPR ?? 23;
-          const loApr = financialContext.lowInterestDebtAPR ?? 5;
-          const sequencingGuidance = hiApr > loApr
-            ? `DEBT SEQUENCING: User has both high-interest ($${hiDebtAmount.toLocaleString()} at ${hiApr}%) and low-interest ($${loDebtAmount.toLocaleString()} at ${loApr}%) debt. Use the avalanche method: pay high-interest debt first (${hiApr}% guaranteed return), then low-interest debt (${loApr}%). This minimizes total interest paid.`
-            : `DEBT SEQUENCING: User has both high-interest ($${hiDebtAmount.toLocaleString()} at ${hiApr}%) and low-interest ($${loDebtAmount.toLocaleString()} at ${loApr}%) debt. Interest rates are close — either avalanche (highest rate first) or snowball (smallest balance first) works. Recommend avalanche for mathematical optimality: pay ${hiApr}% debt first.`;
-          prompt += `\n\n${sequencingGuidance}`;
+          const hiApr = financialContext.highInterestDebtAPR;
+          const loApr = financialContext.lowInterestDebtAPR;
+          
+          // Only provide specific APR guidance if both APRs are known
+          if (hiApr && typeof hiApr === 'number' && loApr && typeof loApr === 'number' && hiApr > 0 && loApr > 0) {
+            const sequencingGuidance = hiApr > loApr
+              ? `DEBT SEQUENCING: User has both high-interest ($${hiDebtAmount.toLocaleString()} at ${hiApr}%) and low-interest ($${loDebtAmount.toLocaleString()} at ${loApr}%) debt. Use the avalanche method: pay high-interest debt first (${hiApr}% guaranteed return), then low-interest debt (${loApr}%). This minimizes total interest paid.`
+              : `DEBT SEQUENCING: User has both high-interest ($${hiDebtAmount.toLocaleString()} at ${hiApr}%) and low-interest ($${loDebtAmount.toLocaleString()} at ${loApr}%) debt. Interest rates are close — either avalanche (highest rate first) or snowball (smallest balance first) works. Recommend avalanche for mathematical optimality: pay ${hiApr}% debt first.`;
+            prompt += `\n\n${sequencingGuidance}`;
+          } else {
+            // If APRs are not fully known, provide generic guidance without specific rates
+            prompt += `\n\nDEBT SEQUENCING: User has both high-interest and low-interest debt. Use the avalanche method: pay the highest-rate debt first, then the lower-rate debt. This minimizes total interest paid. Ask the user for specific APRs if needed for precise calculations.`;
+          }
         }
         
         // AUDIT 17 FIX P3: Recommendation ordering - debt payoff urgency weight
+        // AUDIT 23 FIX REM-23-B: Remove hardcoded APR fallback (?? 23)
         const surplusForPayoff = (financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0);
         const hiDebtPayoffMonths = hiDebtAmount > 0 && surplusForPayoff > 0 ? Math.ceil(hiDebtAmount / surplusForPayoff) : 999;
         if (hiDebtAmount > 0 && hiDebtPayoffMonths <= 2) {
-          prompt += `\n\nDEBT PAYOFF URGENCY (AUDIT 17): High-interest debt payable in ${hiDebtPayoffMonths} month(s) at current surplus. This is the clear priority — eliminate it before any other lever. The guaranteed ${financialContext.highInterestDebtAPR ?? 23}% return from payoff exceeds all other opportunities.`;
+          const aprText = financialContext.highInterestDebtAPR && typeof financialContext.highInterestDebtAPR === 'number' 
+            ? `The guaranteed ${financialContext.highInterestDebtAPR}% return from payoff exceeds all other opportunities.`
+            : `High-interest debt elimination is the clear priority — the guaranteed return exceeds most other opportunities.`;
+          prompt += `\n\nDEBT PAYOFF URGENCY (AUDIT 17): High-interest debt payable in ${hiDebtPayoffMonths} month(s) at current surplus. This is the clear priority — eliminate it before any other lever. ${aprText}`;
         }
         
         // AUDIT 17 FIX P1: Income lever surface for thin-margin users
@@ -1711,6 +1730,30 @@ Examples of correct acknowledgments:
               // Strip any false-reassurance opener and prepend correct one
               cleanedResponse = "You're in financial triage. " + cleanedResponse;
               console.log('[triage] Forced triage opening via post-processing');
+            }
+            
+            // AUDIT 23 FIX REM-23-A: Deterministic triage question suppression
+            // Prompt-based RULE 8 has been verified non-functional across 2 audit cycles.
+            // Code must enforce the no-question constraint for triage responses.
+            if (isTriageSituation && cleanedResponse.startsWith("You're in financial triage.")) {
+              // Split into sentences. Remove any sentence containing "?"
+              const sentences = cleanedResponse
+                .split(/(?<=[.!?])\s+/)
+                .filter(sentence => !sentence.includes('?'));
+              
+              let strippedResponse = sentences.join(' ').trim();
+              
+              // If the cleaning removed all content after the opener, add a deterministic action
+              if (strippedResponse === "You're in financial triage." || strippedResponse.length < 50) {
+                const deficit = Math.abs(
+                  ((extractedFields?.essentialExpenses as number) || 0) - 
+                  ((extractedFields?.monthlyIncome as number) || 0)
+                );
+                strippedResponse = `You're in financial triage. You're spending $${deficit} more than you earn each month. Your one move this week: list every subscription and non-essential bill you pay, and cancel or pause the three smallest ones today. Every dollar you recover goes directly to stopping the bleeding.`;
+              }
+              
+              cleanedResponse = strippedResponse;
+              console.log('[triage-REM23A] Stripped diagnostic questions from triage response');
             }
             
             // AUDIT 20 FIX BUG-20-006: Move nudge injection BEFORE stream close
