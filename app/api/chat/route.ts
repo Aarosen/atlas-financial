@@ -867,12 +867,12 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
       }
       if ((financialContext as any).lowInterestDebt && (financialContext as any).lowInterestDebt > 0) {
         const lowAPR = (financialContext as any).lowInterestDebtAPR;
-        // AUDIT 22 FIX REM-22-D: Validate low-interest APR before including
+        // AUDIT 24 FIX REM-24-E: Remove low-interest APR fallback (~5%) — same hallucination pattern as high-interest
         let lowAPRText = '';
         if (lowAPR && typeof lowAPR === 'number' && lowAPR > 0 && lowAPR < 100) {
           lowAPRText = `at ${lowAPR}%`;
         } else {
-          lowAPRText = `at ~5%`;
+          lowAPRText = `(APR not provided)`;
         }
         prompt += ` Low-interest debt: $${((financialContext as any).lowInterestDebt as number).toLocaleString()} ${lowAPRText}.`;
       }
@@ -930,10 +930,12 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
         }
       }
       
-      // AUDIT 18 FIX P2: APR assumption disclosure with mandatory inclusion
+      // AUDIT 24 FIX REM-24-A: APR hallucination root cause — prohibit rate guessing entirely
+      // Previous fix (REM-23-B) removed numeric fallback but left text instruction authorizing 18-23% use
+      // This caused model to use 18% and perform correct arithmetic, making false data look authoritative
       const hiAprAssumed = !financialContext.highInterestDebtAPR && (financialContext.highInterestDebt || 0) > 0;
       if (hiAprAssumed) {
-        prompt += `\n\nAPR ASSUMPTION DISCLOSURE (AUDIT 18): High-interest debt APR not provided by user. Any interest calculations use ~18-23% estimated APR. MANDATORY: You MUST include the exact phrase: (estimated at ~18-23% typical APR — check your statement for the real number). This phrase is MANDATORY when APR was not stated. If you omit it, you are presenting a false-precision calculation as fact.`;
+        prompt += `\n\nAPR UNKNOWN — HARD CONSTRAINT: User has not stated their debt interest rate. You are FORBIDDEN from stating any specific APR or computing interest costs. Do NOT say "18%", "23%", or any other rate. Do NOT calculate monthly interest. Say ONLY "high-interest debt" without a rate. If the user asks about payoff timeline, say: "To give you an exact timeline, I need your APR — it's on your statement or in your card's app." Any interest calculation without the actual APR is fabricated data.`;
       }
     }
 
@@ -1567,6 +1569,23 @@ Examples of correct acknowledgments:
 - "Feeling overwhelmed about money is one of the most common experiences there is, and it doesn't mean you're stuck."
 - "The fact that you're looking at this directly, even though it feels overwhelming, puts you ahead of most people in the same spot."`;
       }
+      
+      // AUDIT 24 FIX REM-24-B: Move income lever to chat path (was dead code in buildAnswerPrompt)
+      // Surface income-side option for tight-surplus users with high-interest debt
+      const ilIncome = (financialProfile?.monthlyIncome as number) || 0;
+      const ilExpenses = (financialProfile?.essentialExpenses as number) || 0;
+      const ilDebt = (financialProfile?.highInterestDebt as number) || 0;
+      const ilSurplusRatio = ilIncome > 0 ? (ilIncome - ilExpenses) / ilIncome : 0;
+      const ilSurplus = ilIncome - ilExpenses;
+      if (ilSurplusRatio < 0.20 && ilSurplusRatio > 0 && ilDebt > 0) {
+        const ilPotentialIncome = Math.round(ilExpenses * 0.15);
+        const ilCurrentMonths = ilSurplus > 0 ? Math.ceil(ilDebt / ilSurplus) : 999;
+        const ilBoostedMonths = (ilSurplus + ilPotentialIncome) > 0 ? Math.ceil(ilDebt / (ilSurplus + ilPotentialIncome)) : 999;
+        const ilMonthsSaved = ilCurrentMonths - ilBoostedMonths;
+        if (ilMonthsSaved > 0) {
+          dynamicProtocols += `\n\nINCOME LEVER: User has thin surplus ($${ilSurplus}/month, ${Math.round(ilSurplusRatio * 100)}% of income) and $${ilDebt.toLocaleString()} in debt. If they added $${ilPotentialIncome}/month from side income or a raise, debt payoff accelerates by ${ilMonthsSaved} months. After your main recommendation, surface this as "The other lever": "Adding $${ilPotentialIncome}/month in income would cut your payoff timeline by ${ilMonthsSaved} months."`;
+        }
+      }
 
       // Step 3: Build enriched system prompt with session state block FIRST
       // The session state block is injected first so it's never trimmed away
@@ -1769,13 +1788,22 @@ Examples of correct acknowledgments:
             let cleanedResponse = cleanAtlasResponse(fullResponse);
             
             // AUDIT 21 FIX REM-21-D: Force triage opening via post-processing deterministic check
+            // AUDIT 24 FIX REM-24-C: Expand to check fin (saved profile) in addition to extractedFields
             // The TRIAGE PROTOCOL is injected but model doesn't consistently comply in chat path
             // This deterministic post-processing ensures triage responses always start with the correct phrase
+            // Must check both extractedFields (from message) and fin (from saved profile)
             const isTriageSituation = 
-              extractedFields &&
-              (extractedFields.essentialExpenses as number) > 0 &&
-              (extractedFields.monthlyIncome as number) > 0 &&
-              (extractedFields.essentialExpenses as number) > (extractedFields.monthlyIncome as number);
+              // Check extractedFields (from message-level extraction)
+              (extractedFields &&
+               (extractedFields.essentialExpenses as number) > 0 &&
+               (extractedFields.monthlyIncome as number) > 0 &&
+               (extractedFields.essentialExpenses as number) > (extractedFields.monthlyIncome as number))
+              ||
+              // Check fin (from saved profile) — ensures post-processing fires for profile users
+              (fin &&
+               (fin.essentialExpenses || 0) > 0 &&
+               (fin.monthlyIncome || 0) > 0 &&
+               (fin.essentialExpenses || 0) > (fin.monthlyIncome || 0));
             
             if (isTriageSituation && !cleanedResponse.startsWith("You're in financial triage.")) {
               // Strip any false-reassurance opener and prepend correct one
