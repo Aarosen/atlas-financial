@@ -906,14 +906,28 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
       }
       
       // AUDIT 17 FIX P1: Employer match detection and priority
+      // AUDIT 23 FIX REM-23-E: Enhance employer match logic to address debt tradeoff
       const employerMatchPercent = (financialContext as any).employerMatchPercent || null;
       const currentlyContributing = (financialContext as any).currentlyContributing || null;
       if (employerMatchPercent && employerMatchPercent > 0) {
         const freeMoneyForfeited = Math.round((financialContext.monthlyIncome || 0) * employerMatchPercent / 100);
-        const matchStatus = currentlyContributing === false 
-          ? `EMPLOYER MATCH ALERT: User is NOT currently contributing. Employer offers ${employerMatchPercent}% match = $${freeMoneyForfeited}/month FREE MONEY being forfeited. This is ALWAYS priority #1 before any other financial move.`
-          : `EMPLOYER MATCH: User has ${employerMatchPercent}% employer match available (${currentlyContributing ? 'currently contributing' : 'status unknown'}).`;
-        prompt += `\n\n${matchStatus}`;
+        const hiDebt = (financialContext as any).highInterestDebt || 0;
+        const hiApr = (financialContext as any).highInterestDebtAPR;
+        
+        // If user has high-interest debt, address the match vs debt tradeoff explicitly
+        if (hiDebt > 0 && hiApr && typeof hiApr === 'number' && hiApr > 0) {
+          const matchReturn = employerMatchPercent * 2; // Assume 100% match = 2x return
+          const matchStatus = currentlyContributing === false 
+            ? `EMPLOYER MATCH + DEBT TRADEOFF: User is NOT currently contributing to ${employerMatchPercent}% match ($${freeMoneyForfeited}/month) AND has ${hiApr}% high-interest debt ($${hiDebt.toLocaleString()}). CRITICAL RULE: ALWAYS capture the full employer match FIRST (it is a 100% return on day one). Then direct remaining surplus to the high-interest debt. Never leave employer match money on the table. The math: match is ~${matchReturn}% guaranteed return vs debt at ${hiApr}% cost. Get the match first, then attack the debt.`
+            : `EMPLOYER MATCH + DEBT CONTEXT: User has ${employerMatchPercent}% employer match available (${currentlyContributing ? 'currently contributing' : 'status unknown'}) AND ${hiApr}% high-interest debt. ALWAYS prioritize: (1) Capture full employer match first (guaranteed return), (2) Then direct remaining surplus to the debt. Explain this tradeoff with the math.`;
+          prompt += `\n\n${matchStatus}`;
+        } else {
+          // No high-interest debt, or APR unknown
+          const matchStatus = currentlyContributing === false 
+            ? `EMPLOYER MATCH ALERT: User is NOT currently contributing. Employer offers ${employerMatchPercent}% match = $${freeMoneyForfeited}/month FREE MONEY being forfeited. This is ALWAYS priority #1 before any other financial move.`
+            : `EMPLOYER MATCH: User has ${employerMatchPercent}% employer match available (${currentlyContributing ? 'currently contributing' : 'status unknown'}).`;
+          prompt += `\n\n${matchStatus}`;
+        }
       }
       
       // AUDIT 18 FIX P2: APR assumption disclosure with mandatory inclusion
@@ -982,10 +996,23 @@ ${surplusLine}`;
         }
         
         // AUDIT 17 FIX P1: Income lever surface for thin-margin users
+        // AUDIT 23 FIX REM-23-F: Surface income lever for ALL tight-surplus users, not just those who signaled growth
         const incomeGrowthSignal = (financialContext as any).incomeGrowthSignal || false;
         const surplusRatio = (financialContext.monthlyIncome || 0) > 0 ? ((financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0)) / (financialContext.monthlyIncome || 0) : 0;
-        if (incomeGrowthSignal && surplusRatio < 0.20) {
-          const potentialIncome = Math.round((financialContext.essentialExpenses || 0) * 0.15);
+        const currentSurplus = (financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0);
+        const potentialIncome = Math.round((financialContext.essentialExpenses || 0) * 0.15);
+        
+        // Surface income lever for tight-surplus users (< 20% surplus ratio) with debt
+        if (surplusRatio < 0.20 && surplusRatio > 0 && hiDebtAmount > 0) {
+          const currentPayoffMonths = hiDebtAmount > 0 && currentSurplus > 0 ? Math.ceil(hiDebtAmount / currentSurplus) : 999;
+          const boostedPayoffMonths = hiDebtAmount > 0 && (currentSurplus + potentialIncome) > 0 ? Math.ceil(hiDebtAmount / (currentSurplus + potentialIncome)) : 999;
+          const monthsSaved = currentPayoffMonths - boostedPayoffMonths;
+          
+          if (monthsSaved > 0) {
+            prompt += `\n\nINCOME LEVER (AUDIT 23): User's surplus is thin at $${currentSurplus}/month (${Math.round(surplusRatio * 100)}% of income). If they increased monthly income by $${potentialIncome} (achievable via side work, raise negotiation, or reduced withholding), debt payoff would accelerate by ${monthsSaved} months. Surface this as "The other lever": after the debt action, mention this income opportunity. Example: "The other lever is income — adding $${potentialIncome}/month from a side gig or negotiating a raise would cut your payoff timeline by ${monthsSaved} months."`;
+          }
+        } else if (incomeGrowthSignal && surplusRatio < 0.20) {
+          // Original logic: if user signaled income growth interest
           prompt += `\n\nINCOME GROWTH OPPORTUNITY: User signaled income-growth interest AND has thin surplus (${Math.round(surplusRatio * 100)}%). Adding $${potentialIncome}/month in side income would transform their financial trajectory. Include one paragraph on income-side leverage in your response.`;
         }
       }
@@ -1617,17 +1644,41 @@ Examples of correct acknowledgments:
         ];
       }
       
-      let response = await callAnthropicStream({
-        apiKey,
-        model: usedModel,
-        maxTokens: maxTokens,
-        system: enrichedSystemPrompt,
-        messages: messagesToSend,
-      });
+      // AUDIT 23 FIX REM-23-G: Add comprehensive error logging for dual APR 502 diagnosis
+      let response: any = null;
+      try {
+        response = await callAnthropicStream({
+          apiKey,
+          model: usedModel,
+          maxTokens: maxTokens,
+          system: enrichedSystemPrompt,
+          messages: messagesToSend,
+        });
+      } catch (error: any) {
+        console.error('[CLAUDE-API-ERROR] Exception during callAnthropicStream:', {
+          error: error?.message,
+          systemPromptLength: enrichedSystemPrompt?.length,
+          messageCount: messagesToSend?.length,
+          model: usedModel,
+        });
+        return jsonError(502, `Upstream API error (exception): ${error?.message}`);
+      }
 
       // Model fallback logic
       if (!response.ok) {
         let bodyText = await readUpstreamErrorBody(response);
+        
+        // AUDIT 23 FIX REM-23-G: Log full error details for 502 diagnosis
+        if (response.status >= 500) {
+          console.error('[CLAUDE-API-ERROR] Upstream 5xx error:', {
+            status: response.status,
+            body: bodyText.substring(0, 500),
+            systemPromptLength: enrichedSystemPrompt?.length,
+            messageCount: messagesToSend?.length,
+            model: usedModel,
+          });
+        }
+        
         if (response.status === 404 && bodyText.includes('not_found_error') && bodyText.includes('model')) {
           for (const m of modelCandidates.slice(1)) {
             usedModel = m;
