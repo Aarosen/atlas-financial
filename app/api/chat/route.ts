@@ -764,12 +764,14 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
     const hiDebt = fin.highInterestDebt || 0;
     const emergencyTarget = expenses * 3;
     
-    // Crisis: negative cashflow, no buffer with debt, or extreme thin margin
+    // AUDIT 22 FIX BUG-22-002: Crisis only when cashflow is negative or near-zero
+    // Crisis: negative cashflow or extreme thin margin (< 5% surplus ratio)
     if (surplus < 0) return 'crisis';
-    if (surplusRatio < 0.05 || (savings < expenses && hiDebt > 0)) return 'crisis';
+    if (surplusRatio < 0.05) return 'crisis';
     
-    // Stabilize: thin margin or underfunded emergency fund
-    if (surplusRatio < 0.15 || savings < emergencyTarget) return 'stabilize';
+    // AUDIT 22 FIX BUG-22-002: Stabilize includes users with underfunded emergency fund AND high-interest debt
+    // Stabilize: thin margin (< 15% surplus ratio) OR underfunded emergency fund OR (underfunded savings + high-interest debt)
+    if (surplusRatio < 0.15 || savings < emergencyTarget || (savings < expenses && hiDebt > 0)) return 'stabilize';
     
     // Growth: has debt to pay down
     if (hiDebt > 0) return 'growth';
@@ -851,12 +853,26 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
       // Previously debt/savings amounts were not visible to model when fin was null
       if ((financialContext as any).highInterestDebt && (financialContext as any).highInterestDebt > 0) {
         const debtAPR = (financialContext as any).highInterestDebtAPR;
-        const aprText = debtAPR ? `at ${debtAPR}% APR` : `(APR unknown — assume 18-24% range)`;
+        // AUDIT 22 FIX REM-22-D: Validate APR is a reasonable number before including in prompt
+        // AUDIT 22 FIX REM-22-E: Do NOT guess a specific APR when unknown; prohibit fabrication
+        let aprText = '';
+        if (debtAPR && typeof debtAPR === 'number' && debtAPR > 0 && debtAPR < 100) {
+          aprText = `at ${debtAPR}% APR`;
+        } else {
+          aprText = `(APR unknown — do NOT guess a specific rate; say "high-interest debt at unknown APR" to the user)`;
+        }
         prompt += ` High-interest debt: $${((financialContext as any).highInterestDebt as number).toLocaleString()} ${aprText}.`;
       }
       if ((financialContext as any).lowInterestDebt && (financialContext as any).lowInterestDebt > 0) {
-        const lowAPR = (financialContext as any).lowInterestDebtAPR || '5%';
-        prompt += ` Low-interest debt: $${((financialContext as any).lowInterestDebt as number).toLocaleString()} at ~${lowAPR}%.`;
+        const lowAPR = (financialContext as any).lowInterestDebtAPR;
+        // AUDIT 22 FIX REM-22-D: Validate low-interest APR before including
+        let lowAPRText = '';
+        if (lowAPR && typeof lowAPR === 'number' && lowAPR > 0 && lowAPR < 100) {
+          lowAPRText = `at ${lowAPR}%`;
+        } else {
+          lowAPRText = `at ~5%`;
+        }
+        prompt += ` Low-interest debt: $${((financialContext as any).lowInterestDebt as number).toLocaleString()} ${lowAPRText}.`;
       }
       if ((financialContext as any).totalSavings !== undefined && (financialContext as any).totalSavings > 0) {
         prompt += ` Current savings: $${((financialContext as any).totalSavings as number).toLocaleString()}.`;

@@ -49,14 +49,5 @@ export function cleanAtlasResponse(raw: string): string {
     }
   }
 
-  // AUDIT 21 FIX REM-21-G: Structured ONE NEXT ACTION enforcement - compound question detector
-  // Detect compound questions: "X, and Y?" or "X or Y?" patterns within questions
-  // This catches questions that ask for multiple pieces of data with a single question mark
-  if (cleaned.includes('?')) {
-    // Replace compound patterns like ", and " or " or " before a question mark with just the question mark
-    // This strips the second part of compound questions
-    cleaned = cleaned.replace(/([^?]+?)(,?\s+(?:and|or)\s+[^?]+\?)/gi, '$1?');
-  }
-
   return cleaned;
 }
