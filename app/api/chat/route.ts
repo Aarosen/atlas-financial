@@ -1742,7 +1742,15 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
       const matchAlreadyKnown = !!(financialProfile as any)?.employerMatchPercent;
       const userMessageMentionsMatch = /employer|401k|match|retirement\s+plan/i.test(lastUserMsg);
 
-      if (hasDebtForMatch && hasIncomeForMatch && !matchAlreadyKnown && !userMessageMentionsMatch) {
+      // REM-30-A: Add conversation history check to prevent repeating the employer match question
+      // Without this, the question fires on every turn until employerMatchPercent is populated.
+      // conversationHistory contains all prior assistant messages — check if we already asked.
+      const matchAlreadyAskedInHistory = (conversationHistory as any[]).some(msg =>
+        msg.role === 'assistant' &&
+        /does your employer offer a 401k match/i.test(String(msg.content || ''))
+      );
+
+      if (hasDebtForMatch && hasIncomeForMatch && !matchAlreadyKnown && !userMessageMentionsMatch && !matchAlreadyAskedInHistory) {
         dynamicProtocols += `\n\nEMPLOYER MATCH UNKNOWN: User has debt and income but has not mentioned whether their employer offers a 401k match. After giving debt advice, ask: "One quick question — does your employer offer a 401k match? If yes, that changes the math on what to prioritize first." Ask this ONCE, at the end of your response. Do not ask it in follow-up messages if it's already been asked.`;
       }
 
