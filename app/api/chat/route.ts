@@ -1624,6 +1624,14 @@ Examples of correct acknowledgments:
           dynamicProtocols += `\n\nEMPLOYER MATCH: User has ${emMatchPct}% employer match available. If not currently contributing, this is $${freeMoneyForfeited}/month in free money being forfeited — always the first financial priority.`;
         }
       }
+      
+      // AUDIT 26 FIX REM-26-D: Surface profile savings data in chat path
+      // Savings injection at line 880 (buildAnswerPrompt) is unreachable by chat users
+      // Add savings context to dynamicProtocols to prevent re-asking for data already in profile
+      const chatSavings = (financialProfile?.totalSavings as number) ?? (financialProfile as any)?.savings ?? null;
+      if (chatSavings !== null && chatSavings >= 0) {
+        dynamicProtocols += `\n\nPROFILE SAVINGS: User has $${chatSavings.toLocaleString()} in total savings. Do NOT ask "how much do you have in savings?" — you already know this. Use it in your guidance (emergency fund gap, runway calculations, lump-sum debt payoff potential).`;
+      }
 
       // Step 3: Build enriched system prompt with session state block FIRST
       // The session state block is injected first so it's never trimmed away
