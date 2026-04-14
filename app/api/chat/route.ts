@@ -876,8 +876,14 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
         }
         prompt += ` Low-interest debt: $${((financialContext as any).lowInterestDebt as number).toLocaleString()} ${lowAPRText}.`;
       }
-      if ((financialContext as any).totalSavings !== undefined && (financialContext as any).totalSavings > 0) {
-        prompt += ` Current savings: $${((financialContext as any).totalSavings as number).toLocaleString()}.`;
+      // AUDIT 27 FIX REM-27-C: Explicitly state savings status to prevent debt-as-savings confusion
+      // When savings is undefined or zero, explicitly label it as such to prevent model from inferring savings from debt balance
+      const totalSavingsValue = (financialContext as any).totalSavings;
+      if (totalSavingsValue !== undefined && totalSavingsValue > 0) {
+        prompt += ` Current savings: $${(totalSavingsValue as number).toLocaleString()}.`;
+      } else if (totalSavingsValue === 0 || totalSavingsValue === undefined) {
+        // Explicitly state zero savings to prevent model from confusing debt balance with savings
+        prompt += ` Current savings: $0 (not provided).`;
       }
       
       // AUDIT 17 FIX P1: Additional PARTIAL INFO checks for secondary scenarios
@@ -1439,6 +1445,44 @@ Return ONLY the rewritten text.`;
         // Continue without calculation block if error occurs
       }
 
+      // AUDIT 27 FIX REM-27-A Part 1: Authoritative null-APR data injection
+      // When debt exists but APR is unknown, inject explicit "APR: NOT PROVIDED" into calculationBlock
+      // This fills the void that the model otherwise fills with training knowledge (18%)
+      // The model respects authoritative data (T8 confirms: when APR IS in block, model uses it exactly)
+      // Solution: make the absence of APR equally authoritative
+      const nullAprDebt = (financialProfile?.highInterestDebt as number) || 0;
+      const nullAprValue = (financialProfile as any)?.highInterestDebtAPR;
+      if (nullAprDebt > 0 && (!nullAprValue || typeof nullAprValue !== 'number') && !calculationBlock) {
+        calculationBlock = `DEBT CONTEXT (Authoritative Data — DO NOT OVERRIDE):
+High-interest debt balance: $${nullAprDebt.toLocaleString()}
+APR: NOT PROVIDED BY USER — UNKNOWN
+Monthly interest cost: CANNOT BE CALCULATED (APR not known)
+Payoff timeline: CANNOT BE CALCULATED (APR not known)
+CONSTRAINT: Do not state any specific APR. Do not calculate interest costs. Do not say "at 18%" or any percentage. The user has not provided this information. If they ask about interest costs or payoff timeline, say: "I need your APR to calculate that — it's on your credit card statement or in your card's app." This constraint is absolute.`;
+      }
+
+      // AUDIT 27 FIX REM-27-B: Employer match into calculationBlock (replaces dynamicProtocols injection)
+      // The model ignores employer match instructions in dynamicProtocols because training says "debt first"
+      // Solution: inject match guidance into authoritative calculationBlock so model respects it
+      const emMatchPctCalc = (financialProfile as any)?.employerMatchPercent;
+      const emContributingCalc = (financialProfile as any)?.currentlyContributing;
+      const emIncomeCalc = (financialProfile?.monthlyIncome as number) || 0;
+      
+      if (emMatchPctCalc && typeof emMatchPctCalc === 'number' && emMatchPctCalc > 0 && emIncomeCalc > 0) {
+        const freeMoneyMonth = Math.round(emIncomeCalc * emMatchPctCalc / 100);
+        const matchBlock = !emContributingCalc
+          ? `\n\nEMPLOYER MATCH (Authoritative — MUST INCLUDE IN RESPONSE):
+Match rate: ${emMatchPctCalc}% of salary
+Free money being forfeited monthly: $${freeMoneyMonth} (100% guaranteed return)
+Currently contributing: NO — THIS IS A CRITICAL GAP
+RULE: Employer match capture is ALWAYS priority #1 before any other financial move. $${freeMoneyMonth}/month free money beats paying down any debt. ALWAYS lead with: "Before anything else, start contributing enough to capture your full ${emMatchPctCalc}% employer match — that's $${freeMoneyMonth}/month you're leaving on the table."`
+          : `\n\nEMPLOYER MATCH (Authoritative):
+Match rate: ${emMatchPctCalc}% of salary
+Currently contributing: YES — good
+Monthly match captured: $${freeMoneyMonth}`;
+        calculationBlock = (calculationBlock || '') + matchBlock;
+      }
+
       // REMEDIATION 1: Restore objection handling from LLM-extracted data
       let objectionBlock = '';
       try {
@@ -1587,43 +1631,14 @@ Examples of correct acknowledgments:
         }
       }
       
-      // AUDIT 26 FIX REM-26-A Part 3: APR prohibition in chat path dynamicProtocols
-      // REM-24-A placed this in buildAnswerPrompt — unreachable by chat path users
-      // This ensures chat path users with debt but no known APR receive the prohibition
-      const chatHiDebt = (financialProfile?.highInterestDebt as number) || 0;
-      const chatHiApr = (financialProfile as any)?.highInterestDebtAPR;
-      if (chatHiDebt > 0 && (!chatHiApr || typeof chatHiApr !== 'number')) {
-        dynamicProtocols += `\n\nAPR UNKNOWN — HARD CONSTRAINT: User has not stated their debt interest rate. FORBIDDEN: stating any specific APR (18%, 22%, or any number). FORBIDDEN: computing monthly interest cost. FORBIDDEN: stating "at X% APR". Say ONLY "high-interest debt" without a rate. If asked about payoff timeline with interest, say: "To give you an exact payoff timeline with interest costs, I need your APR — it's on your statement or in your card's app." Do NOT calculate interest on an assumed rate. Any interest calculation without the actual APR is fabricated data.`;
-      }
+      // AUDIT 27 FIX REM-27-A Part 2: Removed redundant APR prohibition from dynamicProtocols
+      // REM-27-A Part 1 now injects authoritative "APR: NOT PROVIDED" into calculationBlock
+      // This is more effective than text-based prohibition in dynamicProtocols
+      // The model respects authoritative data blocks (T8 confirms) over prompt instructions
       
-      // AUDIT 26 FIX REM-26-C: Employer match to dynamicProtocols (chat path)
-      // buildAnswerPrompt() contains this logic but chat path never calls it
-      const emMatchPct = (financialProfile as any)?.employerMatchPercent || null;
-      const emCurrentlyContributing = (financialProfile as any)?.currentlyContributing || false;
-      const emHiDebt = (financialProfile?.highInterestDebt as number) || 0;
-      const emHiApr = (financialProfile as any)?.highInterestDebtAPR || null;
-      const emMonthlyIncome = (financialProfile?.monthlyIncome as number) || 0;
-      
-      if (emMatchPct && emMatchPct > 0) {
-        const freeMoneyForfeited = Math.round(emMonthlyIncome * emMatchPct / 100);
-        
-        if (emHiDebt > 0 && emHiApr && typeof emHiApr === 'number') {
-          const matchReturn = emMatchPct * 2;
-          const matchGuidance = !emCurrentlyContributing
-            ? `EMPLOYER MATCH + DEBT TRADEOFF: User is NOT currently contributing to ${emMatchPct}% match ($${freeMoneyForfeited}/month) AND has ${emHiApr}% high-interest debt ($${emHiDebt.toLocaleString()}). CRITICAL RULE: ALWAYS capture the full employer match FIRST (it is a 100% return on day one). Then direct remaining surplus to the high-interest debt. The math: match is ~${matchReturn}% guaranteed return vs debt at ${emHiApr}% cost. Get the match first, then attack the debt.` 
-            : `EMPLOYER MATCH + DEBT CONTEXT: User has ${emMatchPct}% employer match available AND ${emHiApr}% high-interest debt. ALWAYS prioritize: (1) Capture full employer match first (guaranteed return), (2) Then direct remaining surplus to debt.`;
-          dynamicProtocols += `\n\n${matchGuidance}`;
-        } else if (emHiDebt > 0) {
-          // Debt present but APR unknown — still flag the match
-          const matchGuidance = !emCurrentlyContributing
-            ? `EMPLOYER MATCH ALERT: User is NOT currently contributing. Employer offers ${emMatchPct}% match = $${freeMoneyForfeited}/month in FREE MONEY being forfeited. Capture the full match before directing extra money to debt.` 
-            : `EMPLOYER MATCH: User has ${emMatchPct}% employer match available (currently contributing).`;
-          dynamicProtocols += `\n\n${matchGuidance}`;
-        } else {
-          // No debt — still surface the match context
-          dynamicProtocols += `\n\nEMPLOYER MATCH: User has ${emMatchPct}% employer match available. If not currently contributing, this is $${freeMoneyForfeited}/month in free money being forfeited — always the first financial priority.`;
-        }
-      }
+      // AUDIT 27 FIX REM-27-B Part 2: Removed redundant employer match from dynamicProtocols
+      // REM-27-B Part 1 now injects employer match into calculationBlock as authoritative data
+      // This is more effective than text-based guidance in dynamicProtocols
       
       // AUDIT 26 FIX REM-26-D: Surface profile savings data in chat path
       // Savings injection at line 880 (buildAnswerPrompt) is unreachable by chat users
