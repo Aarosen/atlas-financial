@@ -21,6 +21,11 @@ jobs:
       - name: Install dependencies
         run: npm ci
 
+      - name: Install evals dependencies
+        run: |
+          cd src/evals
+          npm ci
+
       - name: Run failure clustering
         run: |
           cd src/evals
