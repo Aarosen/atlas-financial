@@ -1451,20 +1451,23 @@ Return ONLY the rewritten text.`;
         // Continue without calculation block if error occurs
       }
 
-      // AUDIT 27 FIX REM-27-A Part 1: Authoritative null-APR data injection
+      // AUDIT 27 FIX REM-27-A Part 1: Authoritative null-APR data injection (CORRECTED)
       // When debt exists but APR is unknown, inject explicit "APR: NOT PROVIDED" into calculationBlock
       // This fills the void that the model otherwise fills with training knowledge (18%)
+      // CRITICAL FIX: Always inject this block when debt exists without APR, even if other calculations exist
       // The model respects authoritative data (T8 confirms: when APR IS in block, model uses it exactly)
-      // Solution: make the absence of APR equally authoritative
+      // Solution: make the absence of APR equally authoritative by ALWAYS including this block
       const nullAprDebt = (financialProfile?.highInterestDebt as number) || 0;
       const nullAprValue = (financialProfile as any)?.highInterestDebtAPR;
-      if (nullAprDebt > 0 && (!nullAprValue || typeof nullAprValue !== 'number') && !calculationBlock) {
-        calculationBlock = `DEBT CONTEXT (Authoritative Data — DO NOT OVERRIDE):
+      if (nullAprDebt > 0 && (!nullAprValue || typeof nullAprValue !== 'number')) {
+        const nullAprBlock = `DEBT CONTEXT (Authoritative Data — DO NOT OVERRIDE):
 High-interest debt balance: $${nullAprDebt.toLocaleString()}
 APR: NOT PROVIDED BY USER — UNKNOWN
 Monthly interest cost: CANNOT BE CALCULATED (APR not known)
 Payoff timeline: CANNOT BE CALCULATED (APR not known)
 CONSTRAINT: Do not state any specific APR. Do not calculate interest costs. Do not say "at 18%" or any percentage. The user has not provided this information. If they ask about interest costs or payoff timeline, say: "I need your APR to calculate that — it's on your credit card statement or in your card's app." This constraint is absolute.`;
+        // Prepend null-APR block to ensure it's seen first and takes precedence
+        calculationBlock = nullAprBlock + (calculationBlock ? `\n\n${calculationBlock}` : '');
       }
 
       // AUDIT 27 FIX REM-27-B: Employer match into calculationBlock (replaces dynamicProtocols injection)
