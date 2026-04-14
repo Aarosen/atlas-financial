@@ -1781,6 +1781,20 @@ This rate is from the user's profile. Do NOT substitute 18% or any other estimat
             content: prefillContent
           }
         ];
+      } else if (chatKnownApr && chatKnownDebt > 0) {
+        // REM-29-B: Prefill for known APR when calculationBlock doesn't exist
+        // This forces the model to continue from a context where the APR is already stated,
+        // preventing it from falling back to training knowledge (18%).
+        const monthlyInterestCost = Math.round(chatKnownDebt * chatKnownApr / 100 / 12);
+        const prefillContent = `Based on your $${chatKnownDebt.toLocaleString()} debt at ${chatKnownApr}% APR, your monthly interest cost is $${monthlyInterestCost.toLocaleString()}. Here's what this means:`;
+        
+        messagesToSend = [
+          ...trimmedMessages,
+          {
+            role: 'assistant' as const,
+            content: prefillContent
+          }
+        ];
       }
       
       // AUDIT 27 FIX REM-27-D: Add retry mechanism for 502 errors
