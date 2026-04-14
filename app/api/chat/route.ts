@@ -1737,13 +1737,19 @@ Examples of correct acknowledgments:
       
       // If calculation block exists, use prefill pattern: inject it as assistant message
       // This forces Claude to continue from the calculation output instead of generating its own numbers
+      // CRITICAL: For null-APR blocks, use stronger prefilling to prevent model from overriding the constraint
       let messagesToSend = trimmedMessages;
       if (calculationBlock) {
+        const hasNullAprConstraint = calculationBlock.includes('APR: NOT PROVIDED BY USER');
+        const prefillContent = hasNullAprConstraint
+          ? `[CALCULATION COMPLETE]\n${calculationBlock}\n\nI cannot calculate your exact payoff timeline or interest costs without your APR. Here's what I know:`
+          : `[CALCULATION COMPLETE]\n${calculationBlock}\n\nNow let me explain these results in plain language:`;
+        
         messagesToSend = [
           ...trimmedMessages,
           {
             role: 'assistant' as const,
-            content: `[CALCULATION COMPLETE]\n${calculationBlock}\n\nNow let me explain these results in plain language:`
+            content: prefillContent
           }
         ];
       }
