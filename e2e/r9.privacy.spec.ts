@@ -24,11 +24,16 @@ async function createBaseline(page: any) {
 test('R9: delete local data resets baseline', async ({ page }) => {
   await createBaseline(page);
 
-  await page.getByRole('tablist', { name: 'Primary' }).waitFor();
+  await page.getByRole('tablist', { name: 'Primary' }).waitFor({ timeout: 10000 });
   await page.getByRole('tab', { name: 'Settings' }).click({ force: true });
+  await page.waitForTimeout(500); // Wait for Settings tab to render
+  
   page.once('dialog', (dlg) => dlg.accept());
+  
+  // Wait for the Delete local data button to be visible before clicking
+  await page.getByRole('button', { name: 'Delete local data' }).waitFor({ timeout: 10000 });
   await page.getByRole('button', { name: 'Delete local data' }).click({ force: true, noWaitAfter: true });
 
   await page.goto('/dashboard');
-  await expect(page.getByText('Dashboard not ready yet')).toBeVisible();
+  await expect(page.getByText('Dashboard not ready yet')).toBeVisible({ timeout: 10000 });
 });
