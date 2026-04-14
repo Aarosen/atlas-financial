@@ -8,7 +8,7 @@
 export interface Debt {
   name: string;
   balance: number;
-  interestRate: number; // Annual percentage rate (e.g., 18.5 for 18.5%)
+  interestRate: number | null; // Annual percentage rate (e.g., 18.5 for 18.5%), null if unknown
   minimumPayment: number;
 }
 
@@ -46,7 +46,11 @@ export function calculateAvalanche(
   debts: Debt[],
   monthlyPayment: number
 ): DebtPayoffResult {
-  if (debts.length === 0 || monthlyPayment <= 0) {
+  // AUDIT 26 FIX REM-26-A Part 2: Filter out debts with unknown APR
+  // Cannot calculate payoff timeline without APR — skip them entirely
+  const debtsWithAPR = debts.filter((d) => d.interestRate !== null && d.interestRate !== undefined);
+  
+  if (debtsWithAPR.length === 0 || monthlyPayment <= 0) {
     return {
       strategy: 'avalanche',
       monthsToPayoff: 0,
@@ -59,8 +63,8 @@ export function calculateAvalanche(
   }
 
   // Sort by interest rate (highest first)
-  const sortedDebts = debts
-    .map((d) => ({ ...d }))
+  const sortedDebts = debtsWithAPR
+    .map((d) => ({ ...d, interestRate: d.interestRate as number }))
     .sort((a, b) => b.interestRate - a.interestRate);
 
   return simulatePayoff(sortedDebts, monthlyPayment, 'avalanche');
@@ -73,7 +77,11 @@ export function calculateSnowball(
   debts: Debt[],
   monthlyPayment: number
 ): DebtPayoffResult {
-  if (debts.length === 0 || monthlyPayment <= 0) {
+  // AUDIT 26 FIX REM-26-A Part 2: Filter out debts with unknown APR
+  // Cannot calculate payoff timeline without APR — skip them entirely
+  const debtsWithAPR = debts.filter((d) => d.interestRate !== null && d.interestRate !== undefined);
+  
+  if (debtsWithAPR.length === 0 || monthlyPayment <= 0) {
     return {
       strategy: 'snowball',
       monthsToPayoff: 0,
@@ -86,8 +94,8 @@ export function calculateSnowball(
   }
 
   // Sort by balance (smallest first)
-  const sortedDebts = debts
-    .map((d) => ({ ...d }))
+  const sortedDebts = debtsWithAPR
+    .map((d) => ({ ...d, interestRate: d.interestRate as number }))
     .sort((a, b) => a.balance - b.balance);
 
   return simulatePayoff(sortedDebts, monthlyPayment, 'snowball');
@@ -95,6 +103,7 @@ export function calculateSnowball(
 
 /**
  * Simulate month-by-month payoff
+ * AUDIT 26 FIX REM-26-A Part 2: Only accepts debts with known APR (number, not null)
  */
 function simulatePayoff(
   debts: Debt[],
@@ -116,7 +125,7 @@ function simulatePayoff(
     // Calculate interest for all debts
     let totalInterestThisMonth = 0;
     for (const debt of debtsCopy) {
-      if (debt.balance > 0) {
+      if (debt.balance > 0 && debt.interestRate !== null && typeof debt.interestRate === 'number') {
         const monthlyRate = debt.interestRate / 100 / 12;
         const interestCharge = debt.balance * monthlyRate;
         debt.balance += interestCharge;

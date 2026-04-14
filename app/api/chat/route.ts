@@ -1586,6 +1586,44 @@ Examples of correct acknowledgments:
           dynamicProtocols += `\n\nINCOME LEVER: User has thin surplus ($${ilSurplus}/month, ${Math.round(ilSurplusRatio * 100)}% of income) and $${ilDebt.toLocaleString()} in debt. If they added $${ilPotentialIncome}/month from side income or a raise, debt payoff accelerates by ${ilMonthsSaved} months. After your main recommendation, surface this as "The other lever": "Adding $${ilPotentialIncome}/month in income would cut your payoff timeline by ${ilMonthsSaved} months."`;
         }
       }
+      
+      // AUDIT 26 FIX REM-26-A Part 3: APR prohibition in chat path dynamicProtocols
+      // REM-24-A placed this in buildAnswerPrompt — unreachable by chat path users
+      // This ensures chat path users with debt but no known APR receive the prohibition
+      const chatHiDebt = (financialProfile?.highInterestDebt as number) || 0;
+      const chatHiApr = (financialProfile as any)?.highInterestDebtAPR;
+      if (chatHiDebt > 0 && (!chatHiApr || typeof chatHiApr !== 'number')) {
+        dynamicProtocols += `\n\nAPR UNKNOWN — HARD CONSTRAINT: User has not stated their debt interest rate. FORBIDDEN: stating any specific APR (18%, 22%, or any number). FORBIDDEN: computing monthly interest cost. FORBIDDEN: stating "at X% APR". Say ONLY "high-interest debt" without a rate. If asked about payoff timeline with interest, say: "To give you an exact payoff timeline with interest costs, I need your APR — it's on your statement or in your card's app." Do NOT calculate interest on an assumed rate. Any interest calculation without the actual APR is fabricated data.`;
+      }
+      
+      // AUDIT 26 FIX REM-26-C: Employer match to dynamicProtocols (chat path)
+      // buildAnswerPrompt() contains this logic but chat path never calls it
+      const emMatchPct = (financialProfile as any)?.employerMatchPercent || null;
+      const emCurrentlyContributing = (financialProfile as any)?.currentlyContributing || false;
+      const emHiDebt = (financialProfile?.highInterestDebt as number) || 0;
+      const emHiApr = (financialProfile as any)?.highInterestDebtAPR || null;
+      const emMonthlyIncome = (financialProfile?.monthlyIncome as number) || 0;
+      
+      if (emMatchPct && emMatchPct > 0) {
+        const freeMoneyForfeited = Math.round(emMonthlyIncome * emMatchPct / 100);
+        
+        if (emHiDebt > 0 && emHiApr && typeof emHiApr === 'number') {
+          const matchReturn = emMatchPct * 2;
+          const matchGuidance = !emCurrentlyContributing
+            ? `EMPLOYER MATCH + DEBT TRADEOFF: User is NOT currently contributing to ${emMatchPct}% match ($${freeMoneyForfeited}/month) AND has ${emHiApr}% high-interest debt ($${emHiDebt.toLocaleString()}). CRITICAL RULE: ALWAYS capture the full employer match FIRST (it is a 100% return on day one). Then direct remaining surplus to the high-interest debt. The math: match is ~${matchReturn}% guaranteed return vs debt at ${emHiApr}% cost. Get the match first, then attack the debt.` 
+            : `EMPLOYER MATCH + DEBT CONTEXT: User has ${emMatchPct}% employer match available AND ${emHiApr}% high-interest debt. ALWAYS prioritize: (1) Capture full employer match first (guaranteed return), (2) Then direct remaining surplus to debt.`;
+          dynamicProtocols += `\n\n${matchGuidance}`;
+        } else if (emHiDebt > 0) {
+          // Debt present but APR unknown — still flag the match
+          const matchGuidance = !emCurrentlyContributing
+            ? `EMPLOYER MATCH ALERT: User is NOT currently contributing. Employer offers ${emMatchPct}% match = $${freeMoneyForfeited}/month in FREE MONEY being forfeited. Capture the full match before directing extra money to debt.` 
+            : `EMPLOYER MATCH: User has ${emMatchPct}% employer match available (currently contributing).`;
+          dynamicProtocols += `\n\n${matchGuidance}`;
+        } else {
+          // No debt — still surface the match context
+          dynamicProtocols += `\n\nEMPLOYER MATCH: User has ${emMatchPct}% employer match available. If not currently contributing, this is $${freeMoneyForfeited}/month in free money being forfeited — always the first financial priority.`;
+        }
+      }
 
       // Step 3: Build enriched system prompt with session state block FIRST
       // The session state block is injected first so it's never trimmed away
@@ -1789,20 +1827,20 @@ Examples of correct acknowledgments:
             
             // AUDIT 21 FIX REM-21-D: Force triage opening via post-processing deterministic check
             // AUDIT 24 FIX REM-24-C: Expand to check fin (saved profile) in addition to extractedFields
+            // AUDIT 26 FIX REM-26-B: Remove monthlyIncome > 0 guard — zero income IS a triage situation
             // The TRIAGE PROTOCOL is injected but model doesn't consistently comply in chat path
             // This deterministic post-processing ensures triage responses always start with the correct phrase
             // Must check both extractedFields (from message) and fin (from saved profile)
+            // Zero income (job loss) is the most extreme triage scenario — must be included
             const isTriageSituation = 
               // Check extractedFields (from message-level extraction)
               (extractedFields &&
                (extractedFields.essentialExpenses as number) > 0 &&
-               (extractedFields.monthlyIncome as number) > 0 &&
-               (extractedFields.essentialExpenses as number) > (extractedFields.monthlyIncome as number))
+               (extractedFields.essentialExpenses as number) > ((extractedFields.monthlyIncome as number) || 0))
               ||
               // Check fin (from saved profile) — ensures post-processing fires for profile users
               (fin &&
                (fin.essentialExpenses || 0) > 0 &&
-               (fin.monthlyIncome || 0) > 0 &&
                (fin.essentialExpenses || 0) > (fin.monthlyIncome || 0));
             
             if (isTriageSituation && !cleanedResponse.startsWith("You're in financial triage.")) {

@@ -407,20 +407,29 @@ function buildDebtsArray(profile: FinancialProfile): Debt[] {
 
   const highInterestDebt = profile.highInterestDebt ?? 0;
   if (highInterestDebt > 0) {
+    // AUDIT 26 FIX REM-26-A Part 1: Fix field name mismatch
+    // profile.highInterestRate does NOT exist. The actual field is highInterestDebtAPR.
+    // Do NOT default to 18.5% — that causes hallucination on 100% of requests without explicit APR.
+    // If APR is unknown, set to null and skip interest calculation entirely.
+    const hiApr = (profile as any).highInterestDebtAPR ?? null;
     debts.push({
       name: 'High-interest debt',
       balance: highInterestDebt,
-      interestRate: profile.highInterestRate ?? 18.5, // Use actual rate if provided, default to 18.5% for credit cards
+      interestRate: hiApr, // null if APR not provided — do NOT guess
       minimumPayment: (highInterestDebt * 0.02) || 25, // 2% minimum
     });
   }
 
   const lowInterestDebt = profile.lowInterestDebt ?? 0;
   if (lowInterestDebt > 0) {
+    // AUDIT 26 FIX REM-26-A Part 1: Fix field name mismatch
+    // profile.lowInterestRate does NOT exist. The actual field is lowInterestDebtAPR.
+    // Do NOT default to 5.5% — same hallucination pattern as high-interest.
+    const loApr = (profile as any).lowInterestDebtAPR ?? null;
     debts.push({
       name: 'Low-interest debt',
       balance: lowInterestDebt,
-      interestRate: profile.lowInterestRate ?? 5.5, // Use actual rate if provided, default to 5.5% for personal loans
+      interestRate: loApr, // null if APR not provided — do NOT guess
       minimumPayment: (lowInterestDebt * 0.01) || 25, // 1% minimum
     });
   }
