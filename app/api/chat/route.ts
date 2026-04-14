@@ -1695,10 +1695,11 @@ Examples of correct acknowledgments:
       const chatKnownDebt = (financialProfile?.highInterestDebt as number) || 0;
       if (chatKnownDebt > 0 && chatKnownApr && typeof chatKnownApr === 'number' && chatKnownApr > 0 && chatKnownApr < 100) {
         const monthlyInterestCost = Math.round(chatKnownDebt * chatKnownApr / 100 / 12);
-        dynamicProtocols += `\n\nKNOWN APR (Authoritative — use this exact rate):
-High-interest debt: $${chatKnownDebt.toLocaleString()} at ${chatKnownApr}% APR
+        dynamicProtocols += `\n\nKNOWN APR (AUTHORITATIVE DATA — MUST USE):
+User's high-interest debt: $${chatKnownDebt.toLocaleString()}
+User's APR: ${chatKnownApr}% (confirmed from profile)
 Monthly interest cost: $${monthlyInterestCost.toLocaleString()}
-This rate is from the user's profile. Do NOT substitute 18% or any other estimate. Use ${chatKnownApr}% in all calculations.`;
+CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST use ${chatKnownApr}% in all calculations and discussions. Do NOT estimate, assume, or substitute any other rate. Do NOT say "typically 18%" or "usually 20%". The user's actual rate is ${chatKnownApr}%.`;
       }
 
       // Step 3: Build enriched system prompt with session state block FIRST
@@ -1773,21 +1774,6 @@ This rate is from the user's profile. Do NOT substitute 18% or any other estimat
         const prefillContent = hasNullAprConstraint
           ? `[CALCULATION COMPLETE]\n${calculationBlock}\n\nI cannot calculate your exact payoff timeline or interest costs without your APR. Here's what I know:`
           : `[CALCULATION COMPLETE]\n${calculationBlock}\n\nNow let me explain these results in plain language:`;
-        
-        messagesToSend = [
-          ...trimmedMessages,
-          {
-            role: 'assistant' as const,
-            content: prefillContent
-          }
-        ];
-      } else if (chatKnownApr && typeof chatKnownApr === 'number' && chatKnownDebt > 0) {
-        // REM-29-B: Prefill for known APR when calculationBlock doesn't exist
-        // This forces the model to continue from a context where the APR is already stated,
-        // preventing it from falling back to training knowledge (18%).
-        // The prefill must be a complete statement that the model continues from, not a question.
-        const monthlyInterestCost = Math.round(chatKnownDebt * (chatKnownApr as number) / 100 / 12);
-        const prefillContent = `I have your key numbers: $${chatKnownDebt.toLocaleString()} debt at ${chatKnownApr}% APR, which costs you $${monthlyInterestCost.toLocaleString()} per month in interest alone. `;
         
         messagesToSend = [
           ...trimmedMessages,
