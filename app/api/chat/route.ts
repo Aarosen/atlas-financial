@@ -1785,8 +1785,9 @@ This rate is from the user's profile. Do NOT substitute 18% or any other estimat
         // REM-29-B: Prefill for known APR when calculationBlock doesn't exist
         // This forces the model to continue from a context where the APR is already stated,
         // preventing it from falling back to training knowledge (18%).
+        // The prefill must be a complete statement that the model continues from, not a question.
         const monthlyInterestCost = Math.round(chatKnownDebt * chatKnownApr / 100 / 12);
-        const prefillContent = `Based on your $${chatKnownDebt.toLocaleString()} debt at ${chatKnownApr}% APR, your monthly interest cost is $${monthlyInterestCost.toLocaleString()}. Here's what this means:`;
+        const prefillContent = `I have your key numbers: $${chatKnownDebt.toLocaleString()} debt at ${chatKnownApr}% APR, which costs you $${monthlyInterestCost.toLocaleString()} per month in interest alone. `;
         
         messagesToSend = [
           ...trimmedMessages,
