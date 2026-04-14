@@ -1953,6 +1953,100 @@ Examples of correct acknowledgments:
               console.log('[triage-REM23A] Stripped diagnostic questions from triage response');
             }
             
+            // ============================================================
+            // REM-28-A: APR hallucination post-processor
+            // ARCHITECTURE: After 10 failed prompt/data approaches, this is the definitive fix.
+            // Modeled on REM-23-A (triage question suppression), which has been 100% reliable.
+            // When profile has high-interest debt but no APR was provided, strip any sentences
+            // containing fabricated APR percentages or derived interest cost calculations.
+            const postProcDebt = (financialProfile?.highInterestDebt as number) || 0;
+            const postProcApr = (financialProfile as any)?.highInterestDebtAPR;
+            const profileHasDebtNoApr =
+              postProcDebt > 0 &&
+              (!postProcApr || typeof postProcApr !== 'number');
+
+            if (profileHasDebtNoApr) {
+              const aprSentences = cleanedResponse.split(/(?<=[.!?])\s+/);
+              const aprStripped = aprSentences.filter(sentence => {
+                // Strip: "at 18% APR", "at 20% interest rate", "at 24%"
+                if (/\bat\s+\d+(\.\d+)?%(\s*(APR|interest\s*rate|interest))?/i.test(sentence) && !sentence.includes('?')) return false;
+                // Strip: "18% APR", "your 20% APR debt", "the 24% APR"
+                if (/\d+(\.\d+)?%\s+(APR|interest\s+rate)/i.test(sentence) && !sentence.includes('?')) return false;
+                // Strip: "charging 18%", "charges 20%"
+                if (/charg(es?|ing)\s+\d+(\.\d+)?%/i.test(sentence)) return false;
+                // Strip: "$180/month in interest", "$150 per month in interest", "$120 a month in interest"
+                if (/\$\d[\d,]*\s*(\/month|per month|a month|monthly)\s+in\s+interest/i.test(sentence)) return false;
+                // Strip: "interest of $180", "interest costs $150", "interest is $120"
+                if (/interest\s+(of|costs?\s*you|charges?|is|are)\s+\$\d[\d,]*/i.test(sentence) && !sentence.includes('?')) return false;
+                // Strip: APR arithmetic shown explicitly — "$10,000 × 0.18 ÷ 12"
+                if (/\$[\d,]+\s*[×x*]\s*0\.\d+\s*[÷/]\s*12/i.test(sentence)) return false;
+                return true;
+              });
+
+              const preAprStrip = cleanedResponse;
+              cleanedResponse = aprStripped.join(' ').trim();
+
+              if (cleanedResponse !== preAprStrip) {
+                console.log('[apr-postprocess-REM28A] Stripped APR hallucination sentences from response');
+              }
+            }
+
+            // ============================================================
+            // REM-28-B: Debt-savings confusion post-processor
+            // Confirmed pattern (T3, T7): model says "$X in savings" when $X is DEBT and no savings exist.
+            // RULE 5C in atlasSystemPrompt.ts was ineffective. Code-level replacement is the fix.
+            const postProcSavings =
+              (financialProfile?.totalSavings as number) ??
+              (financialProfile as any)?.savings ??
+              null;
+            const profileHasDebtNoSavings =
+              postProcDebt > 0 &&
+              (postProcSavings === null || postProcSavings === undefined);
+
+            if (profileHasDebtNoSavings) {
+              const debtAmountStr = postProcDebt.toLocaleString();
+              // Match: "$12,000 in savings", "$12,000 in your savings", "$12,000 saved", "$12,000 in savings right now"
+              const fakeSavingsPattern = new RegExp(
+                `\\$${debtAmountStr.replace(/,/g, ',?')}\\s*(in\\s+(your\\s+)?savings(\\s+right\\s+now)?|saved(\\s+right\\s+now)?)`,
+                'gi'
+              );
+              if (fakeSavingsPattern.test(cleanedResponse)) {
+                cleanedResponse = cleanedResponse.replace(
+                  fakeSavingsPattern,
+                  `$${debtAmountStr} in high-interest debt` 
+                );
+                console.log('[debt-savings-postprocess-REM28B] Corrected debt/savings confusion in response');
+              }
+            }
+
+            // ============================================================
+            // REM-28-C: Employer match append post-processor
+            // The model receives employer match data in calculationBlock and prefill but ignores it
+            // in the generated prose (T15, T15b confirmed). Post-processing detects the omission
+            // and appends a standardized match reminder when the model failed to surface it.
+            const postProcMatchPct = (financialProfile as any)?.employerMatchPercent;
+            const postProcContributing = (financialProfile as any)?.currentlyContributing;
+            const postProcIncome = (financialProfile?.monthlyIncome as number) || 0;
+
+            const shouldEnforceMatch =
+              postProcMatchPct &&
+              typeof postProcMatchPct === 'number' &&
+              postProcMatchPct > 0 &&
+              postProcContributing === false &&
+              postProcIncome > 0;
+
+            if (shouldEnforceMatch) {
+              // Check if the model mentioned the employer match in its response
+              const matchMentioned = /employer\s+match|company\s+match|\bmatching\s+contribution|\bmatch\s+rate\b/i.test(cleanedResponse);
+
+              if (!matchMentioned) {
+                const freeMoneyMonth = Math.round(postProcIncome * postProcMatchPct / 100);
+                const matchReminder = ` One more thing that takes priority: your employer offers a ${postProcMatchPct}% match that you're not currently capturing — that's $${freeMoneyMonth.toLocaleString()}/month in free money (a guaranteed 100% return). Contribute enough to get the full match before putting extra toward debt. No debt payoff rate beats a 100% guaranteed return.`;
+                cleanedResponse = cleanedResponse + matchReminder;
+                console.log('[employer-match-postprocess-REM28C] Appended employer match reminder (model omitted it)');
+              }
+            }
+            
             // AUDIT 20 FIX BUG-20-006: Move nudge injection BEFORE stream close
             // Previously nudge injection ran in fire-and-forget AFTER stream closed, so it never reached client
             // Now evaluate and inject nudges BEFORE sending done:true
