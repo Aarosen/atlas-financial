@@ -898,7 +898,10 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
       
       // AUDIT 12 FIX DEFECT-09: Add cushion status to prevent recommending funded emergency fund
       const monthlyEssentials = financialContext.essentialExpenses || 0;
-      const cushionTarget = monthlyEssentials * 3;
+      // REM-29-C: Align emergency cushion target with RULE 8A (6 months, not 3)
+      // RULE 8A in atlasSystemPrompt.ts specifies 6 months. This was using 3, creating
+      // a conflict: the data context told the model "3 months", the system prompt rule told it "6 months".
+      const cushionTarget = monthlyEssentials * 6;
       const totalSavings = financialContext.totalSavings || 0;
       // AUDIT 13 FIX DEFECT-09-FORMATTING: Format cushion status values with currency
       const cushionStatus = totalSavings >= cushionTarget
@@ -1257,13 +1260,11 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
     if (type === 'answer') {
       let t0 = String(text || '').trim();
       
-      // AUDIT 18 FIX P2: Post-generation APR disclosure check
-      // If APR was assumed and response doesn't contain disclosure, append it
+      // AUDIT 18 FIX P2: Post-generation APR disclosure check (REMOVED by REM-29-A)
+      // Previous code appended fabricated "~18-23% typical APR" to answer path responses.
+      // This violated RULE 5B (absolute prohibition on APR estimation).
+      // Removed in Audit 29. The model's system prompt (RULE 5B) now governs APR handling.
       const fin = (body as any)?.fin;
-      const hiAprAssumed = fin && !fin.highInterestDebtAPR && (fin.highInterestDebt || 0) > 0;
-      if (hiAprAssumed && !t0.includes('estimated') && !t0.includes('typical APR')) {
-        t0 += ' (estimated at ~18-23% typical APR — check your statement for the real number)';
-      }
       
       if (!violatesGuardrails(t0)) {
         return jsonOk({ text: t0, source: 'claude', model: usedModel, tier });
@@ -1303,6 +1304,19 @@ Return ONLY the rewritten text.`;
       const lastUserMsg = sanitizeMemorySummary(rawUserMsg).slice(0, 8000); // Cap at 8000 chars
       const conversationHistory = messages || [];
       const financialProfile = { ...(fin || {}), ...(extractedFields || {}) };
+
+      // REM-29-D: Sanitize string fields in financialProfile before system prompt injection
+      // Numeric/boolean fields are type-checked throughout. String fields need sanitization.
+      // This prevents a crafted fin object from injecting instructions into the model context.
+      if (financialProfile) {
+        const stringFields = ['notes', 'goal', 'incomeSource', 'debtType'] as const;
+        for (const field of stringFields) {
+          const val = (financialProfile as any)[field];
+          if (typeof val === 'string') {
+            (financialProfile as any)[field] = sanitizeMemorySummary(val);
+          }
+        }
+      }
 
       // Track answered fields when extractor successfully extracts them
       // This prevents infinite loops when user provides zero income or other falsy values
@@ -1670,6 +1684,21 @@ Examples of correct acknowledgments:
         } catch (e) {
           console.warn('[REM-27-F] Debt progress context failed:', e);
         }
+      }
+
+      // REM-29-B: Explicit known APR injection for chat path
+      // The chat path currently relies on calculationBlock for APR data, which only generates
+      // when financialDecision.domain === 'debt_payoff'. Domain detection is non-deterministic,
+      // so APR data is silently absent when domain detection doesn't fire (T-28-2 failure).
+      // This explicit injection ensures the model always has authoritative APR data regardless of domain.
+      const chatKnownApr = (financialProfile as any)?.highInterestDebtAPR;
+      const chatKnownDebt = (financialProfile?.highInterestDebt as number) || 0;
+      if (chatKnownDebt > 0 && chatKnownApr && typeof chatKnownApr === 'number' && chatKnownApr > 0 && chatKnownApr < 100) {
+        const monthlyInterestCost = Math.round(chatKnownDebt * chatKnownApr / 100 / 12);
+        dynamicProtocols += `\n\nKNOWN APR (Authoritative — use this exact rate):
+High-interest debt: $${chatKnownDebt.toLocaleString()} at ${chatKnownApr}% APR
+Monthly interest cost: $${monthlyInterestCost.toLocaleString()}
+This rate is from the user's profile. Do NOT substitute 18% or any other estimate. Use ${chatKnownApr}% in all calculations.`;
       }
 
       // Step 3: Build enriched system prompt with session state block FIRST
