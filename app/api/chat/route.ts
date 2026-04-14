@@ -1265,6 +1265,37 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
       // This violated RULE 5B (absolute prohibition on APR estimation).
       // Removed in Audit 29. The model's system prompt (RULE 5B) now governs APR handling.
       const fin = (body as any)?.fin;
+
+      // REM-29-G: Apply post-processors to answer path (parity with chat path REM-28-A and REM-28-B)
+      const answerDebt = (fin?.highInterestDebt as number) || 0;
+      const answerApr = fin?.highInterestDebtAPR;
+      const answerSavings = fin?.totalSavings ?? null;
+
+      // REM-28-A equivalent: strip APR hallucinations when APR is unknown
+      if (answerDebt > 0 && (!answerApr || typeof answerApr !== 'number')) {
+        const answerSentences = t0.split(/(?<=[.!?])\s+/);
+        t0 = answerSentences.filter(s => {
+          if (/\bat\s+\d+(\.\d+)?%(\s*(APR|interest\s*rate|interest))?/i.test(s) && !s.includes('?')) return false;
+          if (/\d+(\.\d+)?%\s+(APR|interest\s+rate)/i.test(s) && !s.includes('?')) return false;
+          if (/charg(es?|ing)\s+\d+(\.\d+)?%/i.test(s)) return false;
+          if (/\$\d[\d,]*\s*(\/month|per month|a month|monthly)\s+in\s+interest/i.test(s)) return false;
+          if (/interest\s+(of|costs?\s*you|charges?|is|are)\s+\$\d[\d,]*/i.test(s) && !s.includes('?')) return false;
+          if (/\$[\d,]+\s*[×x*]\s*0\.\d+\s*[÷/]\s*12/i.test(s)) return false;
+          return true;
+        }).join(' ').trim();
+      }
+
+      // REM-28-B equivalent: fix debt-savings confusion
+      if (answerDebt > 0 && (answerSavings === null || answerSavings === undefined)) {
+        const debtStr = answerDebt.toLocaleString();
+        const fakeSavingsPattern = new RegExp(
+          `\\$${debtStr.replace(/,/g, ',?')}\\s*(in\\s+(your\\s+)?savings(\\s+right\\s+now)?|saved(\\s+right\\s+now)?)`,
+          'gi'
+        );
+        if (fakeSavingsPattern.test(t0)) {
+          t0 = t0.replace(fakeSavingsPattern, `$${debtStr} in high-interest debt`);
+        }
+      }
       
       if (!violatesGuardrails(t0)) {
         return jsonOk({ text: t0, source: 'claude', model: usedModel, tier });
@@ -1702,6 +1733,19 @@ Monthly interest cost: $${monthlyInterestCost.toLocaleString()}
 CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST use ${chatKnownApr}% in all calculations and discussions. Do NOT estimate, assume, or substitute any other rate. Do NOT say "typically 18%" or "usually 20%". The user's actual rate is ${chatKnownApr}%.`;
       }
 
+      // REM-29-F: Proactive employer match question
+      // When user has debt and income but no employer match data in profile,
+      // add a follow-up question to surface this critical variable.
+      // Employer match changes the debt-vs-retirement calculation entirely.
+      const hasDebtForMatch = chatKnownDebt > 0 || (financialProfile?.highInterestDebt as number || 0) > 0;
+      const hasIncomeForMatch = (financialProfile?.monthlyIncome as number || 0) > 0;
+      const matchAlreadyKnown = !!(financialProfile as any)?.employerMatchPercent;
+      const userMessageMentionsMatch = /employer|401k|match|retirement\s+plan/i.test(lastUserMsg);
+
+      if (hasDebtForMatch && hasIncomeForMatch && !matchAlreadyKnown && !userMessageMentionsMatch) {
+        dynamicProtocols += `\n\nEMPLOYER MATCH UNKNOWN: User has debt and income but has not mentioned whether their employer offers a 401k match. After giving debt advice, ask: "One quick question — does your employer offer a 401k match? If yes, that changes the math on what to prioritize first." Ask this ONCE, at the end of your response. Do not ask it in follow-up messages if it's already been asked.`;
+      }
+
       // Step 3: Build enriched system prompt with session state block FIRST
       // The session state block is injected first so it's never trimmed away
       const emotionTag = detectEmotion(messages);
@@ -1733,6 +1777,29 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
       // Build strategy context block from baseline
       const strategyContextBlock = buildStrategyContextBlock(baseline);
 
+      // REM-29-E: Cross-session financial progress context
+      let progressContext = '';
+      if (userId && userId !== 'guest' && (financialProfile?.highInterestDebt as number) > 0) {
+        try {
+          const { getPriorFinancialSnapshot } = await import('@/lib/profile');
+          const prior = await getPriorFinancialSnapshot(userId);
+          if (prior && prior.highInterestDebt !== undefined && financialProfile?.highInterestDebt !== undefined) {
+            const currentDebt = (financialProfile.highInterestDebt as number) || 0;
+            const priorDebt = prior.highInterestDebt;
+            const debtPaidDown = priorDebt - currentDebt;
+            if (debtPaidDown > 0 && priorDebt > 0) {
+              const pctPaid = Math.round((debtPaidDown / priorDebt) * 100);
+              const priorDate = prior.timestamp ? new Date(prior.timestamp).toLocaleDateString('en-US', { month: 'long', day: 'numeric' }) : 'last session';
+              progressContext = `\n\nCROSS-SESSION PROGRESS (since ${priorDate}):
+Prior debt: $${priorDebt.toLocaleString()} | Current debt: $${currentDebt.toLocaleString()} | Paid down: $${debtPaidDown.toLocaleString()} (${pctPaid}%)
+INSTRUCTION: Acknowledge this progress explicitly in your response. Say something like: "Since ${priorDate}, you've paid down $${debtPaidDown.toLocaleString()} — that's ${pctPaid}% of your original balance. That's real progress." Acknowledge it before giving new advice.`;
+            }
+          }
+        } catch (e) {
+          console.warn('[REM-29-E] Cross-session progress retrieval failed:', e);
+        }
+      }
+
       const promptSections: string[] = [
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
         ...(dynamicProtocols ? [dynamicProtocols] : []), // ← AUDIT 20 FIX: Dynamic protocols (PARTIAL INFO, TRIAGE, EMOTIONAL) injected at position 1
@@ -1754,6 +1821,7 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         comprehensionContext,
         languageContext,
         exampleContext,
+        ...(progressContext ? [progressContext] : []), // ← REM-29-E: Cross-session progress
       ];
       
       // REM-M: Increase budget to 32,000 chars to ensure companion context features reach Claude

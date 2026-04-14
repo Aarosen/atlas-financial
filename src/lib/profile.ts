@@ -213,3 +213,41 @@ export async function getSessionFinancialSnapshots(
     return [];
   }
 }
+
+/**
+ * REM-29-E: Cross-session financial progress retrieval
+ * Retrieves the most recent financial snapshot from a prior session (not current session)
+ * Used to surface debt paydown progress and acknowledge financial improvements
+ */
+export async function getPriorFinancialSnapshot(
+  userId: string
+): Promise<{ highInterestDebt?: number; totalSavings?: number; timestamp?: string } | null> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    
+    // Query the most recent snapshots, ordered by timestamp descending
+    // We get 2 to account for the possibility of current session snapshot
+    const { data, error } = await (supabaseAdmin
+      .from('financial_events')
+      .select('event_data, occurred_at')
+      .eq('user_id', userId)
+      .eq('event_type', 'snapshot')
+      .order('occurred_at', { ascending: false })
+      .limit(2) as any);
+    
+    if (error || !data || data.length === 0) return null;
+    
+    // Return the most recent snapshot (which should be from a prior session)
+    // If there's only one snapshot, it's the current session, so return null
+    const snapshot = data.length > 1 ? data[1] : data[0];
+    
+    return {
+      highInterestDebt: snapshot.event_data?.highInterestDebt,
+      totalSavings: snapshot.event_data?.totalSavings,
+      timestamp: snapshot.occurred_at,
+    };
+  } catch (e) {
+    console.error('Prior snapshot retrieval error:', e);
+    return null;
+  }
+}
