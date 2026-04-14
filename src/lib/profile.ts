@@ -113,3 +113,103 @@ async function recalculateCompleteness(userId: string): Promise<void> {
     console.error('Completeness calculation error:', e);
   }
 }
+
+/**
+ * AUDIT 27 FIX REM-27-F: Cross-session debt progress tracking
+ * Compares current debt balance to previous session and generates progress context
+ * Returns: { debtPaidDown: number, percentageReduction: number, previousBalance: number }
+ */
+export async function getDebtProgressContext(
+  userId: string,
+  currentHighInterestDebt: number
+): Promise<{ debtPaidDown: number; percentageReduction: number; previousBalance: number } | null> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    
+    // Get the user's profile to find previous debt balance
+    const { data: profile, error } = await (supabaseAdmin
+      .from('financial_profiles')
+      .select('high_interest_debt')
+      .eq('user_id', userId)
+      .single() as any);
+    
+    if (error || !profile) return null;
+    
+    const previousBalance = profile.high_interest_debt || 0;
+    if (previousBalance <= 0) return null; // No prior debt to compare
+    
+    const debtPaidDown = Math.max(0, previousBalance - currentHighInterestDebt);
+    const percentageReduction = previousBalance > 0 ? Math.round((debtPaidDown / previousBalance) * 100) : 0;
+    
+    return {
+      debtPaidDown,
+      percentageReduction,
+      previousBalance,
+    };
+  } catch (e) {
+    console.error('Debt progress calculation error:', e);
+    return null;
+  }
+}
+
+/**
+ * AUDIT 27 FIX REM-27-G: Multi-turn context retention
+ * Stores financial data snapshots within a session for multi-turn reference
+ * Allows model to reference "earlier you said..." within same conversation
+ */
+export async function storeSessionFinancialSnapshot(
+  userId: string,
+  sessionId: string,
+  financialData: {
+    monthlyIncome?: number;
+    essentialExpenses?: number;
+    totalSavings?: number;
+    highInterestDebt?: number;
+    lowInterestDebt?: number;
+    timestamp: string;
+  }
+): Promise<void> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    
+    // Store snapshot in financial_events table for multi-turn reference
+    await (supabaseAdmin as any)
+      .from('financial_events')
+      .insert({
+        user_id: userId,
+        session_id: sessionId,
+        event_type: 'snapshot',
+        event_data: financialData,
+        occurred_at: new Date().toISOString(),
+      });
+  } catch (e) {
+    console.error('Session snapshot storage error:', e);
+  }
+}
+
+/**
+ * AUDIT 27 FIX REM-27-G: Retrieve session financial snapshots for multi-turn context
+ * Returns all financial snapshots from current session for model reference
+ */
+export async function getSessionFinancialSnapshots(
+  userId: string,
+  sessionId: string
+): Promise<any[]> {
+  try {
+    const supabaseAdmin = getSupabaseAdmin();
+    
+    const { data, error } = await (supabaseAdmin
+      .from('financial_events')
+      .select('event_data, occurred_at')
+      .eq('user_id', userId)
+      .eq('session_id', sessionId)
+      .eq('event_type', 'snapshot')
+      .order('occurred_at', { ascending: true }) as any);
+    
+    if (error || !data) return [];
+    return data.map((row: any) => row.event_data);
+  } catch (e) {
+    console.error('Session snapshot retrieval error:', e);
+    return [];
+  }
+}

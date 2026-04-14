@@ -936,12 +936,18 @@ If triageLevel is 'growth' or 'optimize': Use standard response format.`;
         }
       }
       
-      // AUDIT 24 FIX REM-24-A: APR hallucination root cause — prohibit rate guessing entirely
-      // Previous fix (REM-23-B) removed numeric fallback but left text instruction authorizing 18-23% use
-      // This caused model to use 18% and perform correct arithmetic, making false data look authoritative
-      const hiAprAssumed = !financialContext.highInterestDebtAPR && (financialContext.highInterestDebt || 0) > 0;
-      if (hiAprAssumed) {
-        prompt += `\n\nAPR UNKNOWN — HARD CONSTRAINT: User has not stated their debt interest rate. You are FORBIDDEN from stating any specific APR or computing interest costs. Do NOT say "18%", "23%", or any other rate. Do NOT calculate monthly interest. Say ONLY "high-interest debt" without a rate. If the user asks about payoff timeline, say: "To give you an exact timeline, I need your APR — it's on your statement or in your card's app." Any interest calculation without the actual APR is fabricated data.`;
+      // AUDIT 27 FIX REM-27-E: Apply authoritative APR data to answer path (same as chat path)
+      // Previously used text-based prohibition which model overrides with training knowledge
+      // Now use authoritative data injection to prevent APR hallucination
+      const answerPathHiDebt = (financialContext.highInterestDebt || 0) > 0;
+      const answerPathHiApr = financialContext.highInterestDebtAPR;
+      if (answerPathHiDebt && (!answerPathHiApr || typeof answerPathHiApr !== 'number')) {
+        prompt += `\n\nDEBT CONTEXT (Authoritative Data — DO NOT OVERRIDE):
+High-interest debt balance: $${(financialContext.highInterestDebt as number).toLocaleString()}
+APR: NOT PROVIDED BY USER — UNKNOWN
+Monthly interest cost: CANNOT BE CALCULATED (APR not known)
+Payoff timeline: CANNOT BE CALCULATED (APR not known)
+CONSTRAINT: Do not state any specific APR. Do not calculate interest costs. Do not say "at 18%" or any percentage. The user has not provided this information. If they ask about interest costs or payoff timeline, say: "I need your APR to calculate that — it's on your credit card statement or in your card's app." This constraint is absolute.`;
       }
     }
 
@@ -1648,6 +1654,21 @@ Examples of correct acknowledgments:
         dynamicProtocols += `\n\nPROFILE SAVINGS: User has $${chatSavings.toLocaleString()} in total savings. Do NOT ask "how much do you have in savings?" — you already know this. Use it in your guidance (emergency fund gap, runway calculations, lump-sum debt payoff potential).`;
       }
 
+      // AUDIT 27 FIX REM-27-F: Cross-session debt progress tracking
+      // When user has debt, compare to previous session and surface progress
+      // This transforms Atlas from one-time advisor into returning companion
+      if (userId && (financialProfile?.highInterestDebt as number) > 0) {
+        try {
+          const { getDebtProgressContext } = await import('@/lib/profile');
+          const debtProgress = await getDebtProgressContext(userId, financialProfile.highInterestDebt as number);
+          if (debtProgress && debtProgress.debtPaidDown > 0) {
+            dynamicProtocols += `\n\nDEBT PROGRESS: Last session you had $${debtProgress.previousBalance.toLocaleString()} in high-interest debt. Today: $${(financialProfile.highInterestDebt as number).toLocaleString()}. You've paid down $${debtProgress.debtPaidDown.toLocaleString()} (${debtProgress.percentageReduction}% reduction). Acknowledge this progress explicitly — "You've paid down $${debtProgress.debtPaidDown.toLocaleString()} since last time — that's real progress." Then continue with next steps.`;
+          }
+        } catch (e) {
+          console.warn('[REM-27-F] Debt progress context failed:', e);
+        }
+      }
+
       // Step 3: Build enriched system prompt with session state block FIRST
       // The session state block is injected first so it's never trimmed away
       const emotionTag = detectEmotion(messages);
@@ -1724,24 +1745,51 @@ Examples of correct acknowledgments:
         ];
       }
       
-      // AUDIT 23 FIX REM-23-G: Add comprehensive error logging for dual APR 502 diagnosis
+      // AUDIT 27 FIX REM-27-D: Add retry mechanism for 502 errors
+      // T13 consistently returns 502 — likely upstream Anthropic API intermittent issue
+      // Implement exponential backoff retry (max 2 retries, 1s + 2s delays)
       let response: any = null;
-      try {
-        response = await callAnthropicStream({
-          apiKey,
-          model: usedModel,
-          maxTokens: maxTokens,
-          system: enrichedSystemPrompt,
-          messages: messagesToSend,
-        });
-      } catch (error: any) {
-        console.error('[CLAUDE-API-ERROR] Exception during callAnthropicStream:', {
-          error: error?.message,
-          systemPromptLength: enrichedSystemPrompt?.length,
-          messageCount: messagesToSend?.length,
-          model: usedModel,
-        });
-        return jsonError(502, `Upstream API error (exception): ${error?.message}`);
+      let lastError: any = null;
+      const maxRetries = 2;
+      
+      for (let attempt = 0; attempt <= maxRetries; attempt++) {
+        try {
+          response = await callAnthropicStream({
+            apiKey,
+            model: usedModel,
+            maxTokens: maxTokens,
+            system: enrichedSystemPrompt,
+            messages: messagesToSend,
+          });
+          
+          // Check if response is a 502 error
+          if (response && response.status === 502 && attempt < maxRetries) {
+            const delayMs = Math.pow(2, attempt) * 1000; // 1s, 2s
+            console.warn(`[CLAUDE-API-RETRY] 502 error on attempt ${attempt + 1}, retrying in ${delayMs}ms...`);
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+            continue; // Retry
+          }
+          
+          // Success or non-502 error — break out of retry loop
+          break;
+        } catch (error: any) {
+          lastError = error;
+          if (attempt < maxRetries) {
+            const delayMs = Math.pow(2, attempt) * 1000;
+            console.warn(`[CLAUDE-API-RETRY] Exception on attempt ${attempt + 1}, retrying in ${delayMs}ms...`, {
+              error: error?.message,
+            });
+            await new Promise(resolve => setTimeout(resolve, delayMs));
+          } else {
+            console.error('[CLAUDE-API-ERROR] Exception during callAnthropicStream (all retries exhausted):', {
+              error: error?.message,
+              systemPromptLength: enrichedSystemPrompt?.length,
+              messageCount: messagesToSend?.length,
+              model: usedModel,
+            });
+            return jsonError(502, `Upstream API error (exception): ${error?.message}`);
+          }
+        }
       }
 
       // Model fallback logic
@@ -1942,6 +1990,24 @@ Examples of correct acknowledgments:
             // This no longer blocks the response. Use void to suppress unhandled promise warning.
             void (async () => {
               try {
+                // AUDIT 27 FIX REM-27-G: Multi-turn context retention
+                // Store financial snapshot for this turn so model can reference "earlier you said..." in same session
+                if (userId && sessionId && financialProfile && (financialProfile.monthlyIncome || financialProfile.highInterestDebt)) {
+                  try {
+                    const { storeSessionFinancialSnapshot } = await import('@/lib/profile');
+                    await storeSessionFinancialSnapshot(userId, sessionId, {
+                      monthlyIncome: financialProfile.monthlyIncome,
+                      essentialExpenses: financialProfile.essentialExpenses,
+                      totalSavings: financialProfile.totalSavings,
+                      highInterestDebt: financialProfile.highInterestDebt,
+                      lowInterestDebt: financialProfile.lowInterestDebt,
+                      timestamp: new Date().toISOString(),
+                    });
+                  } catch (e) {
+                    console.warn('[REM-27-G] Session snapshot storage failed:', e);
+                  }
+                }
+
                 // COMPANION INTEGRATION: Process Atlas response for actions
                 if (userId && sessionId) {
                   try {
