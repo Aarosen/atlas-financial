@@ -13,8 +13,6 @@ import { detectLanguage } from '@/lib/ai/multiLanguage';
 import { trimPromptSections } from '@/lib/ai/promptTrim';
 import { normalizeSlang, type SupportedLanguage } from '@/lib/ai/slangMapper';
 import { processUserMessageAdaptively } from '@/lib/ai/conversationAdaptationLayer';
-import { isDirectFollowUpQuestion, generateDirectAnswer, shouldReplaceWithDirectAnswer } from '@/lib/ai/directAnswerEngine';
-import { extractConversationContext, enhanceWithContextAwareness, assessUrgency, generateContextAwareActions } from '@/lib/ai/contextAwarenessEngine';
 import { buildConversationArc, generateSessionSynthesis, isReadyForSynthesis } from '@/lib/ai/conversationArcEngine';
 import { detectCrisisSignals, generateCrisisResponse } from '@/lib/ai/crisisDetectionEngine';
 import { extractCulturalContext, adjustBudgetForObligations, generateCulturalAcknowledgment } from '@/lib/ai/culturalFinanceEngine';
@@ -1064,20 +1062,12 @@ Structure (use headings or short labels when helpful):
 Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if needed.`;
 
   try {
-    // CONTEXT WINDOW TRUNCATION: If conversation exceeds 40 messages, keep last 30 + prepend summary
+    // CONTEXT WINDOW TRUNCATION: If conversation exceeds 40 messages, keep last 30
     let trimmedMessages = messages;
-    let contextWindowNote = '';
     
     if (messages.length > 40) {
       // Keep the last 30 messages to stay within token limits
       const recentMessages = messages.slice(-30);
-      const truncatedMessages = messages.slice(0, -30);
-      
-      // Create a summary of earlier conversation
-      if (truncatedMessages.length > 0) {
-        contextWindowNote = `[Earlier conversation with ${truncatedMessages.length} messages truncated for context window. User's financial situation and goals remain consistent.]`;
-      }
-      
       trimmedMessages = recentMessages;
     }
     
@@ -1806,6 +1796,26 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
 
       if (hasDebtForMatch && hasIncomeForMatch && !matchAlreadyKnown && !userMessageMentionsMatch && !matchAlreadyAskedInHistory) {
         dynamicProtocols += `\n\nEMPLOYER MATCH UNKNOWN: User has debt and income but has not mentioned whether their employer offers a 401k match. After giving debt advice, ask: "One quick question — does your employer offer a 401k match? If yes, that changes the math on what to prioritize first." Ask this ONCE, at the end of your response. Do not ask it in follow-up messages if it's already been asked.`;
+      }
+
+      // OP-2: Deepen optimize-tier guidance for HNW and gig worker profiles
+      // Users with zero debt and funded emergency fund need specialized guidance beyond generic "optimize"
+      const optimizeTierIncome = (financialProfile?.monthlyIncome as number) || 0;
+      const optimizeTierSavings = (financialProfile?.totalSavings as number) || 0;
+      const optimizeTierExpenses = (financialProfile?.essentialExpenses as number) || 0;
+      const optimizeTierDebt = (financialProfile?.highInterestDebt as number) || 0;
+      const chatTriageLevel = getTriageLevel(financialProfile as any);
+      const isHighNetWorth = optimizeTierSavings > optimizeTierExpenses * 24 && optimizeTierDebt === 0;
+      const isGigWorker = (financialProfile as any)?.incomeType === 'variable' || (financialProfile as any)?.incomeType === 'gig';
+      
+      if (chatTriageLevel === 'optimize') {
+        if (isHighNetWorth) {
+          // HNW-specific guidance: tax efficiency, asset location, complex strategies
+          dynamicProtocols += `\n\nOPTIMIZE TIER — HIGH NET WORTH: User has substantial assets (${optimizeTierSavings > 0 ? `$${optimizeTierSavings.toLocaleString()}` : 'significant savings'}) and zero debt. Their optimization levers are: (1) Tax efficiency — is asset location optimal (tax-deferred vs taxable accounts)? (2) Roth conversion opportunities? (3) Are they maxing tax-advantaged accounts before taxable? (4) Fee drag in investment accounts? For these decisions, a fee-only CFP should verify investment product selection and complex tax scenarios. Acknowledge professional guidance naturally when discussing specific investment products or tax strategies.`;
+        } else if (isGigWorker) {
+          // Gig worker-specific guidance: self-employment tax, quarterly estimates, retirement options
+          dynamicProtocols += `\n\nOPTIMIZE TIER — GIG WORKER: User has variable income and zero debt. Their optimization levers are: (1) Self-employment tax planning — quarterly estimated taxes and deduction optimization? (2) Retirement account choice — SEP-IRA vs Solo 401k vs Roth SEP? (3) Income smoothing — how to handle variable monthly income? (4) Deduction tracking — home office, equipment, professional development? These are the biggest financial gaps for self-employed workers. Surface these specifically when discussing income or retirement planning.`;
+        }
       }
 
       // Step 3: Build enriched system prompt with session state block FIRST
