@@ -47,6 +47,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { validateMessageLength } from '@/lib/api/messageLengthValidator';
 import { preserveUnsentMessage, retrieveUnsentMessage, clearUnsentMessage } from '@/lib/api/offlineHandler';
 import { useProgressTracking, generateProgressGreeting } from '@/lib/progress/useProgressTracking';
+import { saveGuestFinancialData, loadGuestFinancialData } from '@/lib/storage/guestFinancialStorage';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -281,6 +282,24 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       loadMemory();
     }
   }, [userId, loadMemory]);
+
+  // REM-31-G: Load guest financial data from localStorage on mount
+  useEffect(() => {
+    if (userId === 'guest' && st.msgs.length === 0 && mounted) {
+      const guestFin = loadGuestFinancialData();
+      if (guestFin && Object.keys(guestFin).length > 0) {
+        // Merge guest financial data with current state
+        dispatch({ type: 'SET_PENDING_FIN', fin: { ...st.fin, ...guestFin } });
+      }
+    }
+  }, [userId, st.msgs.length, mounted]);
+
+  // REM-31-G: Save guest financial data to localStorage whenever it changes
+  useEffect(() => {
+    if (userId === 'guest' && st.fin && Object.keys(st.fin).length > 0) {
+      saveGuestFinancialData(st.fin);
+    }
+  }, [userId, st.fin]);
 
   // First-session onboarding: inject opening message if conversation is empty
   useEffect(() => {
