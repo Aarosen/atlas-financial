@@ -95,12 +95,20 @@ export function LandingScreen({
             initial={{ opacity: 0, y: 20 }}
             animate={{ opacity: 1, y: 0 }}
             transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
-            style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}
+            style={{
+              marginTop: 20,
+              display: 'flex',
+              justifyContent: 'center',
+              gap: 12,
+              flexWrap: 'wrap',
+              flexDirection: 'column',
+              alignItems: 'center',
+            }}
           >
-            <Button onClick={onStart} variant="primary" size="md">
+            <Button onClick={onStart} variant="primary" size="md" style={{ width: '100%', maxWidth: 280 }}>
               Start a conversation →
             </Button>
-            <Button onClick={() => setShowAuth(true)} variant="secondary" size="md">
+            <Button onClick={() => setShowAuth(true)} variant="secondary" size="md" style={{ width: '100%', maxWidth: 280 }}>
               Log in
             </Button>
           </motion.div>
