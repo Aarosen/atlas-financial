@@ -152,6 +152,7 @@ textarea:focus-visible{
 .atlasDot:nth-child(2){animation-delay:160ms}
 .atlasDot:nth-child(3){animation-delay:320ms}
 @keyframes atlas-dot{0%,80%,100%{transform:translateY(0);opacity:0.35}40%{transform:translateY(-4px);opacity:0.85}}
+@keyframes atlasDrawerIn{from{transform:translateX(100%)}to{transform:translateX(0)}}
 
 .atlasMsgAEnter{animation:atlas-msg-in var(--dur-ui) var(--ease-standard) both}
 @keyframes atlas-msg-in{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}

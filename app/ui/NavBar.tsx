@@ -90,21 +90,21 @@ export default function NavBar() {
   }, [isMobile]);
 
   useEffect(() => {
+    if (!isMenuOpen) return;
+
     const handleEscape = (e: KeyboardEvent) => {
-      if (e.key === 'Escape' && isMenuOpen) {
+      if (e.key === 'Escape') {
         setIsMenuOpen(false);
         hamburgerRef.current?.focus();
       }
     };
 
-    if (isMenuOpen) {
-      document.addEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'hidden';
-    }
+    document.addEventListener('keydown', handleEscape);
+    document.body.style.overflow = 'hidden';
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.body.style.overflow = 'unset';
+      document.body.style.overflow = '';
     };
   }, [isMenuOpen]);
 
@@ -255,7 +255,7 @@ export default function NavBar() {
           <button
             ref={hamburgerRef}
             onClick={toggleMenu}
-            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
+            aria-label={isMenuOpen ? 'Close menu' : 'Open menu'}
             aria-expanded={isMenuOpen}
             aria-controls="mobile-menu"
             style={{
@@ -269,109 +269,106 @@ export default function NavBar() {
               justifyContent: 'center',
               cursor: 'pointer',
               color: 'var(--ink)',
-              transition: 'background .15s',
+              flexShrink: 0,
             }}
-            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg2)')}
-            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
         )}
       </div>
 
-      {/* Mobile Navigation Menu - Slides from right, only on mobile */}
+      {/* Mobile Navigation Drawer */}
       {isMobile && isMenuOpen && (
         <>
+          {/* Backdrop overlay — click to close */}
           <div
-            className="fixed z-40 bg-black/50 transition-opacity duration-300 ease-in-out"
             onClick={closeMenu}
             aria-hidden="true"
-            style={{ top: 52, right: 0, bottom: 0, left: 0, animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
+            style={{
+              position: 'fixed',
+              inset: 0,
+              zIndex: 40,
+              background: 'rgba(0, 0, 0, 0.5)',
+            }}
           />
-          <div 
+
+          {/* Drawer panel */}
+          <div
             ref={menuRef}
             id="mobile-menu"
-            className="fixed right-0 top-0 z-50 overflow-y-auto"
-            style={{ 
+            role="navigation"
+            aria-label="Mobile navigation"
+            style={{
+              position: 'fixed',
+              top: 0,
+              right: 0,
+              height: '100dvh',
+              width: 'min(280px, 80vw)',
+              zIndex: 50,
               background: 'var(--card)',
               borderLeft: '1px solid var(--bdr)',
               boxShadow: 'var(--sh3)',
-              animation: 'slideInRight 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-              willChange: 'transform',
-              width: 'min(320px, 85vw)',
-              height: '100dvh',
+              display: 'flex',
+              flexDirection: 'column',
+              animation: 'atlasDrawerIn 280ms cubic-bezier(0.4, 0, 0.2, 1)',
             }}
-            role="navigation"
-            aria-label="Mobile navigation"
           >
-            <style>{`
-              @keyframes slideInRight {
-                from {
-                  transform: translateX(100%);
-                }
-                to {
-                  transform: translateX(0);
-                }
-              }
-              @keyframes fadeIn {
-                from {
-                  opacity: 0;
-                }
-                to {
-                  opacity: 1;
-                }
-              }
-            `}</style>
-            <div className="p-6 space-y-2">
-              {/* Drawer header */}
-              <div style={{ paddingBottom: 16, borderBottom: '1px solid var(--bdr)', display: 'flex', alignItems: 'center', gap: 8 }}>
-                <AtlasLogo size={18} />
-                <span style={{ fontWeight: 950, letterSpacing: '-0.02em', color: 'var(--ink)' }}>Atlas</span>
-              </div>
-
-              {/* Nav items */}
-              <div style={{ paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
-                {navItems.map((item, index) => (
-                  <button
-                    key={item.href}
-                    onClick={() => {
-                      window.location.href = item.href;
-                      closeMenu();
-                    }}
-                    className="atlasClickCard"
-                    style={{ 
-                      width: '100%',
-                      textAlign: 'left',
-                      padding: '16px 16px',
-                      borderRadius: 'var(--r-sm)',
-                      color: 'var(--ink)',
-                      fontWeight: 700,
-                      fontSize: '14px',
-                      transitionProperty: 'background-color, transform',
-                      animationDelay: `${index * 50}ms`,
-                      minHeight: '44px',
-                      display: 'flex',
-                      alignItems: 'center'
-                    }}
-                  >
-                    {item.label}
-                  </button>
-                ))}
-              </div>
-
-              {/* Start CTA */}
-              <div style={{ paddingTop: '16px', borderTop: '1px solid var(--bdr)' }}>
+            {/* Nav items — flex:1 makes this section grow and push Start to the bottom */}
+            <nav style={{
+              flex: 1,
+              display: 'flex',
+              flexDirection: 'column',
+              padding: '24px 16px 0 16px',
+              gap: 4,
+              overflowY: 'auto',
+            }}>
+              {navItems.map((item) => (
                 <button
+                  key={item.href}
                   onClick={() => {
-                    window.location.href = '/conversation';
+                    window.location.href = item.href;
                     closeMenu();
                   }}
-                  className="btn btnPrimary btnMd"
-                  style={{ width: '100%' }}
+                  style={{
+                    display: 'flex',
+                    alignItems: 'center',
+                    width: '100%',
+                    minHeight: 52,
+                    padding: '0 16px',
+                    border: 'none',
+                    background: 'transparent',
+                    borderRadius: 'var(--r-sm)',
+                    color: 'var(--ink)',
+                    fontWeight: 700,
+                    fontSize: 15,
+                    textAlign: 'left',
+                    cursor: 'pointer',
+                    transition: 'background .15s',
+                  }}
+                  onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg2)')}
+                  onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
                 >
-                  Start
+                  {item.label}
                 </button>
-              </div>
+              ))}
+            </nav>
+
+            {/* Start CTA — pinned to bottom by flex layout above */}
+            <div style={{
+              padding: '16px',
+              borderTop: '1px solid var(--bdr)',
+              flexShrink: 0,
+            }}>
+              <button
+                onClick={() => {
+                  window.location.href = '/conversation';
+                  closeMenu();
+                }}
+                className="btn btnPrimary btnMd"
+                style={{ width: '100%' }}
+              >
+                Start
+              </button>
             </div>
           </div>
         </>
