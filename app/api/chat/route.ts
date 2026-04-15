@@ -59,6 +59,16 @@ const RATE_LIMIT_GUEST = 20; // 20 requests per minute for guests
 const RATE_LIMIT_AUTHENTICATED = 100; // 100 requests per minute for authenticated users
 const RATE_WINDOW = 60_000; // 1 minute
 
+// ============================================================
+// REM-31-E: Financial threshold constants (REM-29-I)
+// These control which financial tier users are assigned to.
+// Any change here changes the advice ALL users receive.
+// ============================================================
+const TRIAGE_CRISIS_SURPLUS_RATIO = 0.05;   // Below 5% surplus = crisis tier
+const TRIAGE_STABILIZE_SURPLUS_RATIO = 0.15; // Below 15% surplus = stabilize tier
+const INCOME_LEVER_SURPLUS_RATIO = 0.20;    // Below 20% surplus = show income lever
+const INCOME_LEVER_POTENTIAL_PCT = 0.15;    // 15% of expenses as achievable income bump
+
 type EmotionTag = 'anxious' | 'ashamed' | 'analytical' | 'motivated' | 'uncertain' | 'neutral';
 
 const SUPPORTED_LANGUAGES: SupportedLanguage[] = ['en', 'es', 'fr', 'zh'];
@@ -769,11 +779,11 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
     // AUDIT 22 FIX BUG-22-002: Crisis only when cashflow is negative or near-zero
     // Crisis: negative cashflow or extreme thin margin (< 5% surplus ratio)
     if (surplus < 0) return 'crisis';
-    if (surplusRatio < 0.05) return 'crisis';
+    if (surplusRatio < TRIAGE_CRISIS_SURPLUS_RATIO) return 'crisis';
     
     // AUDIT 22 FIX BUG-22-002: Stabilize includes users with underfunded emergency fund AND high-interest debt
     // Stabilize: thin margin (< 15% surplus ratio) OR underfunded emergency fund OR (underfunded savings + high-interest debt)
-    if (surplusRatio < 0.15 || savings < emergencyTarget || (savings < expenses && hiDebt > 0)) return 'stabilize';
+    if (surplusRatio < TRIAGE_STABILIZE_SURPLUS_RATIO || savings < emergencyTarget || (savings < expenses && hiDebt > 0)) return 'stabilize';
     
     // Growth: has debt to pay down
     if (hiDebt > 0) return 'growth';
@@ -1017,10 +1027,10 @@ ${surplusLine}`;
         const incomeGrowthSignal = (financialContext as any).incomeGrowthSignal || false;
         const surplusRatio = (financialContext.monthlyIncome || 0) > 0 ? ((financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0)) / (financialContext.monthlyIncome || 0) : 0;
         const currentSurplus = (financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0);
-        const potentialIncome = Math.round((financialContext.essentialExpenses || 0) * 0.15);
+        const potentialIncome = Math.round((financialContext.essentialExpenses || 0) * INCOME_LEVER_POTENTIAL_PCT);
         
         // Surface income lever for tight-surplus users (< 20% surplus ratio) with debt
-        if (surplusRatio < 0.20 && surplusRatio > 0 && hiDebtAmount > 0) {
+        if (surplusRatio < INCOME_LEVER_SURPLUS_RATIO && surplusRatio > 0 && hiDebtAmount > 0) {
           const currentPayoffMonths = hiDebtAmount > 0 && currentSurplus > 0 ? Math.ceil(hiDebtAmount / currentSurplus) : 999;
           const boostedPayoffMonths = hiDebtAmount > 0 && (currentSurplus + potentialIncome) > 0 ? Math.ceil(hiDebtAmount / (currentSurplus + potentialIncome)) : 999;
           const monthsSaved = currentPayoffMonths - boostedPayoffMonths;
@@ -1028,7 +1038,7 @@ ${surplusLine}`;
           if (monthsSaved > 0) {
             prompt += `\n\nINCOME LEVER (AUDIT 23): User's surplus is thin at $${currentSurplus}/month (${Math.round(surplusRatio * 100)}% of income). If they increased monthly income by $${potentialIncome} (achievable via side work, raise negotiation, or reduced withholding), debt payoff would accelerate by ${monthsSaved} months. Surface this as "The other lever": after the debt action, mention this income opportunity. Example: "The other lever is income — adding $${potentialIncome}/month from a side gig or negotiating a raise would cut your payoff timeline by ${monthsSaved} months."`;
           }
-        } else if (incomeGrowthSignal && surplusRatio < 0.20) {
+        } else if (incomeGrowthSignal && surplusRatio < INCOME_LEVER_SURPLUS_RATIO) {
           // Original logic: if user signaled income growth interest
           prompt += `\n\nINCOME GROWTH OPPORTUNITY: User signaled income-growth interest AND has thin surplus (${Math.round(surplusRatio * 100)}%). Adding $${potentialIncome}/month in side income would transform their financial trajectory. Include one paragraph on income-side leverage in your response.`;
         }
@@ -1628,6 +1638,41 @@ Monthly match captured: $${freeMoneyMonth}`;
         }
       }
 
+      // REM-31-C: Wire conversation arc engine
+      // Build arc to detect conversation phase and check synthesis readiness
+      let arcContext = '';
+      let synthesisSuffix = '';
+      try {
+        if (conversationHistory.length >= 2) {
+          const arc = buildConversationArc(
+            (conversationHistory as any[]).map(m => ({
+              role: m.role as 'user' | 'assistant',
+              content: String(m.content || ''),
+            })),
+            financialProfile as any
+          );
+          
+          // Add phase awareness to dynamicProtocols
+          if (arc.phase === 'action') {
+            arcContext = `\n\nCONVERSATION PHASE: User is in ACTION phase — they understand the situation and are ready to move. Do not re-explain. Give one concrete next step they can do today.`;
+          } else if (arc.phase === 'decision') {
+            arcContext = `\n\nCONVERSATION PHASE: User is in DECISION phase — comparing options or making choices. Help them decide, not just explore.`;
+          } else if (arc.phase === 'reflection') {
+            arcContext = `\n\nCONVERSATION PHASE: User is in REFLECTION phase — evaluating progress. Acknowledge what they've done before recommending next steps.`;
+          }
+          
+          // Session synthesis when ready
+          if (arc.readyForSynthesis && isReadyForSynthesis(conversationHistory as any[])) {
+            const synthesis = generateSessionSynthesis(arc, financialProfile as any, conversationHistory as any[]);
+            // Add synthesis to financial profile context — model can reference it
+            arcContext += `\n\nSESSION SYNTHESIS READY: User has completed ${arc.questionsAsked.length} questions. After your main response, offer: "Want me to summarize your financial priorities and next steps so far?"`;
+          }
+        }
+      } catch (e) {
+        console.warn('[arc-engine] Conversation arc failed:', e);
+        // Non-fatal — continue without arc context
+      }
+
       // AUDIT 20 FIX BUG-20-003: Dynamic protocol injection for chat path
       // Move PARTIAL INFO, TRIAGE, and EMOTIONAL INTELLIGENCE protocols from buildAnswerPrompt()
       // to the chat path so they fire during main onboarding conversation
@@ -1675,13 +1720,21 @@ Examples of correct acknowledgments:
       const ilDebt = (financialProfile?.highInterestDebt as number) || 0;
       const ilSurplusRatio = ilIncome > 0 ? (ilIncome - ilExpenses) / ilIncome : 0;
       const ilSurplus = ilIncome - ilExpenses;
-      if (ilSurplusRatio < 0.20 && ilSurplusRatio > 0 && ilDebt > 0) {
-        const ilPotentialIncome = Math.round(ilExpenses * 0.15);
+      if (ilSurplusRatio < INCOME_LEVER_SURPLUS_RATIO && ilSurplusRatio > 0 && ilDebt > 0) {
+        const ilPotentialIncome = Math.round(ilExpenses * INCOME_LEVER_POTENTIAL_PCT);
         const ilCurrentMonths = ilSurplus > 0 ? Math.ceil(ilDebt / ilSurplus) : 999;
         const ilBoostedMonths = (ilSurplus + ilPotentialIncome) > 0 ? Math.ceil(ilDebt / (ilSurplus + ilPotentialIncome)) : 999;
         const ilMonthsSaved = ilCurrentMonths - ilBoostedMonths;
         if (ilMonthsSaved > 0) {
-          dynamicProtocols += `\n\nINCOME LEVER: User has thin surplus ($${ilSurplus}/month, ${Math.round(ilSurplusRatio * 100)}% of income) and $${ilDebt.toLocaleString()} in debt. If they added $${ilPotentialIncome}/month from side income or a raise, debt payoff accelerates by ${ilMonthsSaved} months. After your main recommendation, surface this as "The other lever": "Adding $${ilPotentialIncome}/month in income would cut your payoff timeline by ${ilMonthsSaved} months."`;
+          // REM-31-D: Replace generic income lever suggestions with specific, actionable alternatives (REM-29-H)
+          // "Side income or a raise" is advice available on any personal finance blog.
+          // Atlas differentiates by providing concrete, specific alternatives with real mechanics.
+          const w4Adjustment = Math.round(ilPotentialIncome * 0.7);
+          dynamicProtocols += `\n\nINCOME LEVER: User has thin surplus ($${ilSurplus}/month, ${Math.round(ilSurplusRatio * 100)}% of income) and $${ilDebt.toLocaleString()} in debt. If they added $${ilPotentialIncome}/month, debt payoff accelerates by ${ilMonthsSaved} months. After your main recommendation, surface this as "The other lever — three ways to add $${ilPotentialIncome}/month:
+(1) Negotiate a raise: book a 30-minute meeting with your manager this week. Asking once for 5-10% has a high success rate and zero downside.
+(2) One freelance project per month: your existing skills (writing, design, data analysis, tutoring) can generate $${Math.round(ilPotentialIncome / 2)}–$${ilPotentialIncome} in a single project.
+(3) Adjust your W-4: if you got a federal tax refund last year, you're over-withholding — adjust your W-4 to get $${w4Adjustment}–$${ilPotentialIncome} per month back in your paycheck immediately.
+Surface these specifically, not generically."`;
         }
       }
       
@@ -1745,9 +1798,10 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
       // REM-30-A: Add conversation history check to prevent repeating the employer match question
       // Without this, the question fires on every turn until employerMatchPercent is populated.
       // conversationHistory contains all prior assistant messages — check if we already asked.
+      // REM-31-F: Unify regex patterns with post-processor to catch all match question variants
       const matchAlreadyAskedInHistory = (conversationHistory as any[]).some(msg =>
         msg.role === 'assistant' &&
-        /does your employer offer a 401k match/i.test(String(msg.content || ''))
+        /employer\s+match|company\s+match|\bmatching\s+contribution|\b401k\s+match|does\s+your\s+employer/i.test(String(msg.content || ''))
       );
 
       if (hasDebtForMatch && hasIncomeForMatch && !matchAlreadyKnown && !userMessageMentionsMatch && !matchAlreadyAskedInHistory) {
@@ -1811,6 +1865,7 @@ INSTRUCTION: Acknowledge this progress explicitly in your response. Say somethin
       const promptSections: string[] = [
         ATLAS_SYSTEM_PROMPT,         // ← Use new Sprint 1 system prompt (position 0)
         ...(dynamicProtocols ? [dynamicProtocols] : []), // ← AUDIT 20 FIX: Dynamic protocols (PARTIAL INFO, TRIAGE, EMOTIONAL) injected at position 1
+        ...(arcContext ? [arcContext] : []), // ← REM-31-C: Conversation arc context (phase awareness + synthesis readiness)
         sessionStateBlock,           // ← Always included, never trimmed (position 2)
         ...(calculationBlockSection ? [calculationBlockSection] : []), // ← REM-K: POSITION 3 = calculation block MUST NEVER BE TRIMMED (matches stated intent)
         ...(strategyContextBlock ? [strategyContextBlock] : []), // ← STRATEGY CONTEXT = tier/lever/urgency/confidence/metrics
@@ -2011,6 +2066,27 @@ INSTRUCTION: Acknowledge this progress explicitly in your response. Say somethin
             // Apply postprocessing to clean formatting
             let cleanedResponse = cleanAtlasResponse(fullResponse);
             
+            // REM-31-A: Wire self-check quality assurance layer
+            // runSelfCheck was implemented but never called — this wires it in
+            // Only run self-check if response exceeds a minimum length (skip for very short responses)
+            if (cleanedResponse.length > 100) {
+              try {
+                const selfCheckResult = await runSelfCheck({
+                  apiKey,
+                  model: usedModel,
+                  userMessage: lastUserMsg,
+                  atlasResponse: cleanedResponse,
+                });
+                if (selfCheckResult.revised && selfCheckResult.text) {
+                  cleanedResponse = selfCheckResult.text;
+                  console.log('[self-check] Response revised by quality check');
+                }
+              } catch (e) {
+                console.warn('[self-check] Self-check failed, using original response:', e);
+                // Non-fatal: proceed with original cleanedResponse
+              }
+            }
+            
             // AUDIT 21 FIX REM-21-D: Force triage opening via post-processing deterministic check
             // AUDIT 24 FIX REM-24-C: Expand to check fin (saved profile) in addition to extractedFields
             // AUDIT 26 FIX REM-26-B: Remove monthlyIncome > 0 guard — zero income IS a triage situation
@@ -2052,7 +2128,10 @@ INSTRUCTION: Acknowledge this progress explicitly in your response. Say somethin
                   ((extractedFields?.essentialExpenses as number) || 0) - 
                   ((extractedFields?.monthlyIncome as number) || 0)
                 );
-                strippedResponse = `You're in financial triage. You're spending $${deficit} more than you earn each month. Your one move this week: list every subscription and non-essential bill you pay, and cancel or pause the three smallest ones today. Every dollar you recover goes directly to stopping the bleeding.`;
+                // REM-31-B: Fix OP-1 — triage fallback says "three largest" not "three smallest"
+                // A person in triage needs to eliminate the largest expense drains, not the smallest.
+                // Canceling three $5/month subscriptions when a $300/month streaming bundle exists is meaningless.
+                strippedResponse = `You're in financial triage. You're spending $${deficit} more than you earn each month. Your one move this week: identify your three largest non-essential expenses — what you spend on subscriptions, dining, and convenience services. Which one can you reduce by $200 this month. Every dollar you recover stops the bleeding.`;
               }
               
               cleanedResponse = strippedResponse;
