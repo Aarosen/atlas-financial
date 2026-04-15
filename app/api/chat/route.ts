@@ -139,7 +139,7 @@ Return JSON only:
     const response = await callAnthropic({
       apiKey: args.apiKey,
       model: args.model,
-      maxTokens: 500,
+      maxTokens: 1500,  // Self-check must be able to return a full revised_response; Atlas responses can be ~1200 tokens
       system,
       messages,
     });
@@ -1034,7 +1034,8 @@ ${surplusLine}`;
           const monthsSaved = currentPayoffMonths - boostedPayoffMonths;
           
           if (monthsSaved > 0) {
-            prompt += `\n\nINCOME LEVER (AUDIT 23): User's surplus is thin at $${currentSurplus}/month (${Math.round(surplusRatio * 100)}% of income). If they increased monthly income by $${potentialIncome} (achievable via side work, raise negotiation, or reduced withholding), debt payoff would accelerate by ${monthsSaved} months. Surface this as "The other lever": after the debt action, mention this income opportunity. Example: "The other lever is income — adding $${potentialIncome}/month from a side gig or negotiating a raise would cut your payoff timeline by ${monthsSaved} months."`;
+            const w4Adjustment = Math.round(potentialIncome * 0.7);
+            prompt += `\n\nINCOME LEVER: User's surplus is thin at $${currentSurplus}/month (${Math.round(surplusRatio * 100)}% of income). If they added $${potentialIncome}/month, debt payoff accelerates by ${monthsSaved} months. Surface "The other lever — three ways to add $${potentialIncome}/month: (1) Negotiate a raise: book a 30-minute meeting with your manager this week. Asking once for 5–10% has a high success rate and zero downside. (2) One freelance project per month: your existing skills can generate $${Math.round(potentialIncome / 2)}–$${potentialIncome} in a single project. (3) Adjust your W-4: if you got a federal tax refund last year, you're over-withholding — adjust your W-4 to get $${w4Adjustment}–$${potentialIncome} per month back in your paycheck immediately." Surface these specifically, not generically.`;
           }
         } else if (incomeGrowthSignal && surplusRatio < INCOME_LEVER_SURPLUS_RATIO) {
           // Original logic: if user signaled income growth interest
@@ -1631,7 +1632,6 @@ Monthly match captured: $${freeMoneyMonth}`;
       // REM-31-C: Wire conversation arc engine
       // Build arc to detect conversation phase and check synthesis readiness
       let arcContext = '';
-      let synthesisSuffix = '';
       try {
         if (conversationHistory.length >= 2) {
           const arc = buildConversationArc(
