@@ -96,6 +96,7 @@ export function ConversationScreen({
   isGuest = false,
   onResetConversation,
   inputEnabled = true,
+  isMobile = false,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -103,6 +104,7 @@ export function ConversationScreen({
   apiStatus: 'unknown' | 'online' | 'degraded' | 'offline';
   msgs: ChatMessage[];
   busy: boolean;
+  isMobile?: boolean;
   pendingBlock?: 'confirm' | 'lever' | 'next' | null;
   pendingFin?: { monthlyIncome: number; essentialExpenses: number; totalSavings: number; highInterestDebt: number | null; lowInterestDebt: number | null; retirementSavings?: number | null } | null;
   selectedLever?: string | null;
@@ -423,7 +425,7 @@ export function ConversationScreen({
 
       {/* Main scrollable conversation area - optimized for single-screen view */}
       {/* TASK 2.3: Anchor messages to bottom using spacer element instead of justify-content: flex-end */}
-      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, overflowAnchor: 'none' } as React.CSSProperties}>
+      <div ref={scRef} data-testid="conversationScroll" style={{ flex: 1, overflowY: 'auto', overflowX: 'hidden', display: 'flex', flexDirection: 'column', minHeight: 0, overflowAnchor: 'none', paddingBottom: isMobile ? 80 : 24 } as React.CSSProperties}>
         <div style={{ flex: 1, minHeight: 0 }} aria-hidden />
         <div style={{ display: 'flex', flexDirection: 'column', justifyContent: 'flex-start', width: '100%', maxWidth: '720px', margin: '0 auto', paddingLeft: 'var(--padX)', paddingRight: 'var(--padX)', paddingTop: '2px', paddingBottom: '2px' }}>
           <h1 style={{ position: 'absolute', width: 1, height: 1, padding: 0, margin: -1, overflow: 'hidden', clip: 'rect(0,0,0,0)', whiteSpace: 'nowrap', border: 0 }}>Conversation</h1>

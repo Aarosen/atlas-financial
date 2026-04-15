@@ -1737,6 +1737,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           apiStatus={apiStatus}
           msgs={st.msgs}
           busy={st.busy}
+          isMobile={isMobile}
           pendingBlock={st.pendingBlock}
           pendingFin={st.pendingFin}
           selectedLever={st.selectedLever}

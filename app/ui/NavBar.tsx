@@ -97,22 +97,13 @@ export default function NavBar() {
       }
     };
 
-    const handleClickOutside = (e: MouseEvent) => {
-      if (menuRef.current && !menuRef.current.contains(e.target as Node) && 
-          hamburgerRef.current && !hamburgerRef.current.contains(e.target as Node)) {
-        setIsMenuOpen(false);
-      }
-    };
-
     if (isMenuOpen) {
       document.addEventListener('keydown', handleEscape);
-      document.addEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = 'hidden';
     }
 
     return () => {
       document.removeEventListener('keydown', handleEscape);
-      document.removeEventListener('mousedown', handleClickOutside);
       document.body.style.overflow = 'unset';
     };
   }, [isMenuOpen]);
@@ -264,10 +255,24 @@ export default function NavBar() {
           <button
             ref={hamburgerRef}
             onClick={toggleMenu}
-            className="btn btnPrimary btnSm"
-            aria-label="Main menu"
+            aria-label={isMenuOpen ? "Close menu" : "Open menu"}
             aria-expanded={isMenuOpen}
             aria-controls="mobile-menu"
+            style={{
+              background: 'transparent',
+              border: '1px solid var(--bdr)',
+              borderRadius: 'var(--r-sm)',
+              width: 40,
+              height: 40,
+              display: 'flex',
+              alignItems: 'center',
+              justifyContent: 'center',
+              cursor: 'pointer',
+              color: 'var(--ink)',
+              transition: 'background .15s',
+            }}
+            onMouseEnter={(e) => (e.currentTarget.style.background = 'var(--bg2)')}
+            onMouseLeave={(e) => (e.currentTarget.style.background = 'transparent')}
           >
             {isMenuOpen ? <X size={20} /> : <Menu size={20} />}
           </button>
@@ -278,21 +283,23 @@ export default function NavBar() {
       {isMobile && isMenuOpen && (
         <>
           <div
-            className="fixed inset-0 z-40 bg-black/50 transition-opacity duration-300 ease-in-out"
+            className="fixed z-40 bg-black/50 transition-opacity duration-300 ease-in-out"
             onClick={closeMenu}
             aria-hidden="true"
-            style={{ animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
+            style={{ top: 52, right: 0, bottom: 0, left: 0, animation: 'fadeIn 300ms cubic-bezier(0.4, 0, 0.2, 1)' }}
           />
           <div 
             ref={menuRef}
             id="mobile-menu"
-            className="fixed right-0 top-0 h-screen w-80 z-50 overflow-y-auto"
+            className="fixed right-0 top-0 z-50 overflow-y-auto"
             style={{ 
               background: 'var(--card)',
               borderLeft: '1px solid var(--bdr)',
               boxShadow: 'var(--sh3)',
               animation: 'slideInRight 300ms cubic-bezier(0.4, 0, 0.2, 1)',
-              willChange: 'transform'
+              willChange: 'transform',
+              width: 'min(320px, 85vw)',
+              height: '100dvh',
             }}
             role="navigation"
             aria-label="Mobile navigation"
@@ -316,21 +323,14 @@ export default function NavBar() {
               }
             `}</style>
             <div className="p-6 space-y-2">
-              <button
-                onClick={closeMenu}
-                className="iconBtn"
-                style={{
-                  position: 'absolute',
-                  top: '24px',
-                  right: '24px',
-                  color: 'var(--ink2)',
-                }}
-                aria-label="Close menu"
-              >
-                <X size={24} />
-              </button>
+              {/* Drawer header */}
+              <div style={{ paddingBottom: 16, borderBottom: '1px solid var(--bdr)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                <AtlasLogo size={18} />
+                <span style={{ fontWeight: 950, letterSpacing: '-0.02em', color: 'var(--ink)' }}>Atlas</span>
+              </div>
 
-              <div style={{ paddingTop: '32px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
+              {/* Nav items */}
+              <div style={{ paddingTop: '8px', display: 'flex', flexDirection: 'column', gap: '4px' }}>
                 {navItems.map((item, index) => (
                   <button
                     key={item.href}
@@ -359,6 +359,7 @@ export default function NavBar() {
                 ))}
               </div>
 
+              {/* Start CTA */}
               <div style={{ paddingTop: '16px', borderTop: '1px solid var(--bdr)' }}>
                 <button
                   onClick={() => {

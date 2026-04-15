@@ -86,7 +86,7 @@ textarea:focus-visible{
 .container{max-width:1120px;margin:0 auto;padding:0 var(--padX)}
 .page{padding:48px 0 84px}
 
-.atlasHeader{position:sticky;top:0;z-index:20;background:var(--header-bg);backdrop-filter:var(--header-backdrop);border-bottom:var(--header-border)}
+.atlasHeader{position:sticky;top:0;z-index:50;background:var(--header-bg);backdrop-filter:var(--header-backdrop);border-bottom:var(--header-border)}
 .atlasHeaderInner{padding:var(--topbarPadY) var(--topbarPadX);display:flex;align-items:center;justify-content:space-between;gap:12;flex-wrap:wrap}
 
 .h1{font-size:56px;line-height:1.02;letter-spacing:-0.05em;margin:0}
@@ -112,7 +112,7 @@ textarea:focus-visible{
 .btnPrimary{color:#fff;background:linear-gradient(135deg,var(--teal),color-mix(in srgb, var(--teal) 40%, var(--sky)))}
 .btnSecondary{color:var(--ink2);border:1px solid var(--bdr2);background:color-mix(in srgb, var(--card) 85%, transparent);box-shadow:var(--sh1);font-weight:900}
 
-.iconBtn{width:40px;min-width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:0;line-height:0}
+.iconBtn{width:40px;min-width:40px;height:40px;display:inline-flex;align-items:center;justify-content:center;border-radius:999px;padding:0;line-height:0;background:transparent;border:none;cursor:pointer}
 
 .btn:disabled{cursor:not-allowed;opacity:0.55;filter:saturate(0.9)}
 .btn:disabled:hover{transform:none;box-shadow:var(--sh2)}
@@ -142,7 +142,7 @@ textarea:focus-visible{
 .atlasBubbleInteractive{outline:none}
 .atlasBubbleInteractive:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
 
-.atlasTabBar{justify-content:space-around;gap:6px;padding:8px max(12px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-right));background:var(--header-bg);backdrop-filter:var(--header-backdrop);border-top:var(--header-border)}
+.atlasTabBar{display:flex;justify-content:space-around;gap:6px;padding:8px max(12px, env(safe-area-inset-left)) max(8px, env(safe-area-inset-bottom)) max(12px, env(safe-area-inset-right));background:var(--header-bg);backdrop-filter:var(--header-backdrop);border-top:var(--header-border)}
 .atlasTabBtn{flex:1;min-height:48px;border:none;background:transparent;display:flex;flex-direction:column;align-items:center;justify-content:center;gap:4px;border-radius:14px;color:var(--ink2);font-weight:800;font-size:11px;letter-spacing:0.06em;transition:background var(--dur-ui) var(--ease-standard), color var(--dur-ui) var(--ease-standard), transform var(--dur-ui) var(--ease-standard)}
 .atlasTabBtn:focus-visible{outline:var(--focus-ring);outline-offset:var(--focus-offset)}
 .atlasTabBtnActive{background:color-mix(in srgb, var(--card) 85%, transparent);color:var(--ink);transform:translateY(-1px)}
