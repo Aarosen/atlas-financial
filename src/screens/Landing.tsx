@@ -86,7 +86,7 @@ export function LandingScreen({
                 </div>
               </div>
               <div style={{ padding: '10px 12px', borderRadius: 10, background: 'var(--teal-lt)', border: '1px solid var(--teal)' }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--teal)' }}>Next step: Build emergency fund to $4,500</div>
+                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--ink)' }}>Next step: Build emergency fund to $4,500</div>
               </div>
             </div>
           </motion.div>
