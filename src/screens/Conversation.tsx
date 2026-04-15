@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
 import type { ChatMessage, Strategy } from '@/lib/state/types';
 import type { SupportedLanguage } from '@/lib/ai/slangMapper';
+import { motion } from 'framer-motion';
 import { t } from '@/lib/i18n/translations';
 import { TopBar } from '@/components/TopBar';
 import { IconButton } from '@/components/IconButton';
@@ -432,8 +433,11 @@ export function ConversationScreen({
             const displayText = parsed.text || '';
 
             return (
-              <div
+              <motion.div
                 key={i}
+                initial={{ opacity: 0, scale: 0.95, y: 10 }}
+                animate={{ opacity: 1, scale: 1, y: 0 }}
+                transition={{ duration: 0.3, ease: 'easeOut' }}
                 style={{
                   display: 'flex',
                   justifyContent: m.r === 'u' ? 'flex-end' : 'flex-start',
@@ -519,7 +523,7 @@ export function ConversationScreen({
                     </div>
                   )}
                 </div>
-              </div>
+              </motion.div>
             );
           })}
           {busy && (

@@ -1,4 +1,5 @@
 import { useState } from 'react';
+import { motion } from 'framer-motion';
 import { ScreenWrap } from '@/components/TopBar';
 import { Button } from '@/components/Buttons';
 import { Lock, MessageSquare, Smartphone, Target, X } from 'lucide-react';
@@ -31,27 +32,55 @@ export function LandingScreen({
         }}
       >
         {/* TASK 2.1: Fix hero vertical spacing - reduce gaps between sections */}
+        {/* TASK 3.19: Hero stagger animation */}
         <Stack gap={0}>
           <h1 className="srOnly">Atlas landing</h1>
-          <h1 style={{ fontSize: 'var(--fsHero)', lineHeight: 1.06, margin: 0, letterSpacing: '-0.03em' }}>The clarity you've always wanted about your money.</h1>
-          <p style={{ margin: '14px auto 0', maxWidth: 560, color: 'var(--ink2)', lineHeight: 1.7, fontSize: 16 }}>
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, ease: 'easeOut' }}
+            style={{ fontSize: 'var(--fsHero)', lineHeight: 1.06, margin: 0, letterSpacing: '-0.03em' }}
+          >
+            The clarity you've always wanted about your money.
+          </motion.h1>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.1, ease: 'easeOut' }}
+            style={{ margin: '14px auto 0', maxWidth: 560, color: 'var(--ink2)', lineHeight: 1.7, fontSize: 16 }}
+          >
             Atlas talks with you, understands your real situation, and gives you one clear step forward — like a brilliant friend who genuinely cares about your future.
-          </p>
+          </motion.p>
 
-          <div style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.2, ease: 'easeOut' }}
+            style={{ marginTop: 20, display: 'flex', justifyContent: 'center', gap: 12, flexWrap: 'wrap' }}
+          >
             <Button onClick={onStart} variant="primary" size="md">
               Start a conversation →
             </Button>
             <Button onClick={() => setShowAuth(true)} variant="secondary" size="md">
               Log in
             </Button>
-          </div>
+          </motion.div>
           
-          <p style={{ marginTop: 12, fontSize: 13, color: 'var(--ink3)' }}>
+          <motion.p
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.3, ease: 'easeOut' }}
+            style={{ marginTop: 12, fontSize: 13, color: 'var(--ink3)' }}
+          >
             New to Atlas? Just start a conversation — no account needed.
-          </p>
+          </motion.p>
 
-          <div style={{ marginTop: 20, color: 'var(--ink3)', fontSize: 13, fontWeight: 600, display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}>
+          <motion.div
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.6, delay: 0.4, ease: 'easeOut' }}
+            style={{ marginTop: 20, color: 'var(--ink3)', fontSize: 13, fontWeight: 600, display: 'flex', justifyContent: 'center', gap: 18, flexWrap: 'wrap' }}
+          >
             <div style={{ display: 'inline-flex', alignItems: 'center', gap: 8 }}>
               <Lock size={16} aria-hidden />
               No bank sync
@@ -68,7 +97,7 @@ export function LandingScreen({
               <MessageSquare size={16} aria-hidden />
               Real conversation
             </div>
-          </div>
+          </motion.div>
         </Stack>
       </PageContainer>
 
