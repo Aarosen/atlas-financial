@@ -8,8 +8,12 @@ export default function Page() {
   const [theme, setTheme] = useState<'light' | 'dark'>(() => {
     if (typeof window === 'undefined') return 'light';
     try {
-      const stored = window.localStorage.getItem('atlas:theme');
+      // Use same key as layout.tsx and NavBar.tsx for consistency
+      const stored = window.localStorage.getItem('atlas_theme');
       if (stored === 'light' || stored === 'dark') return stored;
+      // If no stored preference, check system preference (same as layout.tsx)
+      const prefersDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+      return prefersDark ? 'dark' : 'light';
     } catch {
       // ignore
     }
@@ -20,7 +24,8 @@ export default function Page() {
   useEffect(() => {
     document.documentElement.setAttribute('data-theme', theme);
     try {
-      window.localStorage.setItem('atlas:theme', theme);
+      // Use same key as layout.tsx and NavBar.tsx for consistency
+      window.localStorage.setItem('atlas_theme', theme);
     } catch {
       // ignore
     }
