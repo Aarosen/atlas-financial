@@ -824,6 +824,47 @@ export function ConversationScreen({
               <div style={{ fontWeight: 950, color: 'var(--ink2)' }}>→</div>
             </button>
           )}
+          {msgs.length <= 1 && !busy && (
+            <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', marginBottom: 10 }}>
+              {[
+                'I have $50k in debt',
+                'How do I save for retirement?',
+                'What\'s my emergency fund target?',
+                'Should I invest or pay off debt?',
+              ].map((prompt, idx) => (
+                <button
+                  key={idx}
+                  onClick={() => onQuickReply?.(prompt)}
+                  disabled={busy}
+                  style={{
+                    padding: '8px 14px',
+                    borderRadius: 999,
+                    border: '1px solid var(--bdr)',
+                    background: 'var(--bg2)',
+                    color: 'var(--ink)',
+                    cursor: busy ? 'not-allowed' : 'pointer',
+                    fontSize: 13,
+                    fontWeight: 600,
+                    transition: 'all 0.15s ease',
+                    whiteSpace: 'nowrap',
+                  }}
+                  onMouseEnter={(e) => {
+                    if (!busy) {
+                      (e.currentTarget as HTMLButtonElement).style.background = 'var(--teal-lt)';
+                      (e.currentTarget as HTMLButtonElement).style.color = 'var(--teal)';
+                    }
+                  }}
+                  onMouseLeave={(e) => {
+                    (e.currentTarget as HTMLButtonElement).style.background = 'var(--bg2)';
+                    (e.currentTarget as HTMLButtonElement).style.color = 'var(--ink)';
+                  }}
+                  aria-label={`Quick prompt: ${prompt}`}
+                >
+                  {prompt}
+                </button>
+              ))}
+            </div>
+          )}
           <div style={{ display: 'flex', gap: 10, alignItems: 'stretch' }}>
             <div style={{ position: 'relative', flex: 1 }}>
               {inputEnabled ? (
