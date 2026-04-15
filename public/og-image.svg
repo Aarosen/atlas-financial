@@ -1,0 +1,40 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <!-- Background gradient -->
+  <defs>
+    <linearGradient id="bgGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#f5f1ed;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#f0ebe6;stop-opacity:1" />
+    </linearGradient>
+    <linearGradient id="accentGradient" x1="0%" y1="0%" x2="100%" y2="100%">
+      <stop offset="0%" style="stop-color:#0ea5a5;stop-opacity:1" />
+      <stop offset="100%" style="stop-color:#06b6d4;stop-opacity:1" />
+    </linearGradient>
+  </defs>
+  
+  <!-- Background -->
+  <rect width="1200" height="630" fill="url(#bgGradient)"/>
+  
+  <!-- Accent shape -->
+  <circle cx="1100" cy="100" r="150" fill="url(#accentGradient)" opacity="0.1"/>
+  <circle cx="100" cy="550" r="120" fill="url(#accentGradient)" opacity="0.1"/>
+  
+  <!-- Main text -->
+  <text x="600" y="200" font-family="system-ui, -apple-system, sans-serif" font-size="72" font-weight="700" text-anchor="middle" fill="#1a1714">
+    Atlas
+  </text>
+  
+  <!-- Tagline -->
+  <text x="600" y="280" font-family="system-ui, -apple-system, sans-serif" font-size="48" text-anchor="middle" fill="#0ea5a5">
+    Your Financial Companion
+  </text>
+  
+  <!-- Description -->
+  <text x="600" y="380" font-family="system-ui, -apple-system, sans-serif" font-size="32" text-anchor="middle" fill="#666">
+    One clear next step with your money
+  </text>
+  
+  <!-- Bottom text -->
+  <text x="600" y="520" font-family="system-ui, -apple-system, sans-serif" font-size="24" text-anchor="middle" fill="#999">
+    No bank sync. No shame. Just clarity.
+  </text>
+</svg>

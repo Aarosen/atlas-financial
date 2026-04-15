@@ -2,6 +2,7 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
 import type { ChatMessage, Strategy } from '@/lib/state/types';
 import type { SupportedLanguage } from '@/lib/ai/slangMapper';
+import { t } from '@/lib/i18n/translations';
 import { TopBar } from '@/components/TopBar';
 import { IconButton } from '@/components/IconButton';
 import { Textarea } from '@/components/TextInput';
@@ -839,7 +840,7 @@ export function ConversationScreen({
                     onKeyDown={onKeyDown}
                     onFocus={() => setInpFocused(true)}
                     onBlur={handleInputBlur}
-                    placeholder="Tell Atlas anything…"
+                    placeholder={t('conversation.placeholder', language)}
                     rows={1}
                     style={{ padding: '8px 10px', resize: 'none', maxHeight: 80, overflowY: 'auto', width: '100%', borderRadius: 14 }}
                   />
