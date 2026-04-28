@@ -98,48 +98,29 @@ export function MagicLinkAuth({
           disabled={loading}
           style={{
             width: '100%',
-            padding: '12px 16px',
-            border: error ? '2px solid #ef4444' : '1px solid #ddd',
-            borderRadius: 8,
-            fontSize: 14,
-            fontFamily: 'inherit',
-            boxSizing: 'border-box',
-            backgroundColor: '#fff',
+            padding: '12px 14px',
+            borderRadius: '8px',
+            border: '1.5px solid #ccc',
+            background: '#fff',
             color: '#000',
+            fontSize: 14,
+            outline: 'none',
           }}
         />
+        {error && (
+          <p style={{ marginTop: 8, color: '#d32f2f', fontSize: 12 }}>
+            {error}
+          </p>
+        )}
       </div>
-
-      {error && (
-        <div
-          style={{
-            marginBottom: 16,
-            padding: 12,
-            backgroundColor: '#fee2e2',
-            border: '1px solid #fecaca',
-            borderRadius: 6,
-            color: '#991b1b',
-            fontSize: 14,
-          }}
-        >
-          {error}
-        </div>
-      )}
 
       <Button
         onClick={handleSendLink}
-        disabled={loading || !email.trim()}
-        style={{
-          width: '100%',
-          opacity: loading || !email.trim() ? 0.6 : 1,
-        }}
+        disabled={loading}
+        style={{ width: '100%' }}
       >
         {loading ? 'Sending...' : 'Send magic link'}
       </Button>
-
-      <p style={{ marginTop: 16, fontSize: 12, color: '#999', textAlign: 'center' }}>
-        Your financial data is encrypted and secure.
-      </p>
     </Card>
   );
 }

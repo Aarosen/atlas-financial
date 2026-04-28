@@ -2076,25 +2076,30 @@ INSTRUCTION: Acknowledge this progress explicitly in your response. Say somethin
             // Apply postprocessing to clean formatting
             let cleanedResponse = cleanAtlasResponse(fullResponse);
             
-            // REM-31-A: Wire self-check quality assurance layer
+            // REM-31-A: Wire self-check quality assurance layer (non-blocking)
             // runSelfCheck was implemented but never called — this wires it in
             // Only run self-check if response exceeds a minimum length (skip for very short responses)
+            // CRITICAL FIX BUG-33-007: Move self-check to fire-and-forget (non-blocking)
+            // The self-check adds 2-4 seconds. On Vercel Hobby (10s timeout), blocking self-check
+            // causes 502 errors. By running async, the response streams immediately and self-check
+            // runs in the background without blocking the client response.
             if (cleanedResponse.length > 100) {
-              try {
-                const selfCheckResult = await runSelfCheck({
-                  apiKey,
-                  model: usedModel,
-                  userMessage: lastUserMsg,
-                  atlasResponse: cleanedResponse,
-                });
+              // Fire-and-forget: do NOT await this
+              runSelfCheck({
+                apiKey,
+                model: usedModel,
+                userMessage: lastUserMsg,
+                atlasResponse: cleanedResponse,
+              }).then(selfCheckResult => {
                 if (selfCheckResult.revised && selfCheckResult.text) {
-                  cleanedResponse = selfCheckResult.text;
-                  console.log('[self-check] Response revised by quality check');
+                  console.log('[self-check] Response revision identified (async) — consider flagging for review');
+                  // Note: Cannot re-stream to client at this point — response already sent
+                  // In a future enhancement, store the revision for next session or analytics
                 }
-              } catch (e) {
-                console.warn('[self-check] Self-check failed, using original response:', e);
-                // Non-fatal: proceed with original cleanedResponse
-              }
+              }).catch(e => {
+                console.warn('[self-check] Self-check failed (async):', e);
+                // Non-fatal: original response already sent to client
+              });
             }
             
             // AUDIT 21 FIX REM-21-D: Force triage opening via post-processing deterministic check
