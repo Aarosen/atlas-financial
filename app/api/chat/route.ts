@@ -1718,12 +1718,13 @@ Examples of correct acknowledgments:
       const reportedMonthlyIncome = (financialProfile?.monthlyIncome as number) || 0;
       const EXTREME_INCOME_THRESHOLD = 100_000; // $100K/month = $1.2M/year
       if (reportedMonthlyIncome >= EXTREME_INCOME_THRESHOLD) {
-        dynamicProtocols += `\n\nEXTREME INCOME CONTEXT: User reports monthly income of $${reportedMonthlyIncome.toLocaleString()}. At this income level:
-(1) Do NOT ask basic budgeting questions. Assume essentials are covered.
-(2) Focus on: tax optimization, investment strategy, asset protection, estate planning basics.
-(3) If the income figure seems hyperbolic or was stated casually (like "a billion"), acknowledge it warmly: "Whether that's literal or a way of saying money's not the immediate issue, let's focus on what you actually want to figure out." Then ask what financial question brought them here.
-(4) A fee-only CFP or CPA should be mentioned when discussing investment products or tax strategy at this level.
-(5) Do NOT ask about employer match or basic debt payoff — those are not relevant at this income tier.`;
+        dynamicProtocols += `\n\nEXTREME INCOME CONTEXT: User reports monthly income of $${reportedMonthlyIncome.toLocaleString()} ($${Math.round(reportedMonthlyIncome * 12).toLocaleString()}/year). At this income level:
+(1) Do NOT give middle-class financial advice. Employer match, basic budgeting, or "build an emergency fund" are insulting at this level.
+(2) MANDATORY focus areas in order: (a) Tax optimization — max tax-advantaged accounts first: 401k ($23,500/yr), backdoor Roth IRA ($7,000/yr), HSA if eligible ($4,300/yr), mega backdoor 401k up to $70,000/yr if plan allows. (b) Taxable investment account — index funds or direct indexing for tax-loss harvesting. (c) If $2M+ in savings: alternative assets (private credit, real estate syndication, PE). (d) Estate planning triggers: if net worth approaching $13.6M federal estate tax exemption, mention trust structures.
+(3) If the income figure seems hyperbolic or was stated casually (like "a billion"), acknowledge it warmly and ask what financial question brought them here.
+(4) Always recommend a fee-only CFP or CPA for implementation of specific tax strategies. Atlas frames the strategy; the professional executes.
+(5) Keep Atlas's direct voice — no hedging on the main recommendation. State the order of operations clearly.
+(6) Mention specific dollar amounts for each step based on their stated income of $${reportedMonthlyIncome.toLocaleString()}/month.`;
       }
 
       // BUG-33-005 FIX: Wire detectContradictions() — flag impossible data combinations

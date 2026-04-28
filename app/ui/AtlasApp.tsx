@@ -1072,19 +1072,25 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         const isAuthenticated = userId !== 'guest';
 
         if (kind === 'meta') {
-          const ans = metaResponse(ut, isAuthenticated);
-          const out = resumeQ ? `${ans} ${resumeQ.text}` : ans;
-          logReplay(
-            createReplayEntry({
-              role: 'assistant',
-              text: out,
-              kind: 'meta',
-              questionKey: resumeQ?.key,
-              emotionTag: detectReplayEmotion(out),
-            })
-          );
-          dispatch({ type: 'SEND_ASKED', text: out, questionKey: resumeQ?.key });
-          return;
+          // Privacy queries: handle client-side, no LLM needed
+          const isPrivacyQuery = /(data|privacy|store|stored|send|transmit)/i.test(ut);
+          if (isPrivacyQuery) {
+            const ans = metaResponse(ut, isAuthenticated);
+            const out = resumeQ ? `${ans} ${resumeQ.text}` : ans;
+            logReplay(
+              createReplayEntry({
+                role: 'assistant',
+                text: out,
+                kind: 'meta',
+                questionKey: resumeQ?.key,
+                emotionTag: detectReplayEmotion(out),
+              })
+            );
+            dispatch({ type: 'SEND_ASKED', text: out, questionKey: resumeQ?.key });
+            return;
+          }
+          // Non-informative openers ("ok", "hi", "sure", etc.) — fall through to LLM
+          // so the opener protocol in route.ts fires and Atlas responds warmly
         }
 
         // BUG-33-003 FIX: Handle user frustration at repeated questions
@@ -1133,6 +1139,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
           if (!res.ok) {
             dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
+            return;
           } else {
             dispatch({ type: 'STREAM_DONE' });
           }
@@ -1411,6 +1418,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         if (!res.ok) {
           // AUDIT 19 FIX P0: Change SEND_ASKED to SEND_ERROR_WITH_RETRY for proper error handling
           dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
+          return;
         } else {
           dispatch({ type: 'STREAM_DONE' });
         }
@@ -1470,6 +1478,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         if (!res.ok) {
           // AUDIT 19 FIX P0: Change SEND_ASKED to SEND_ERROR_WITH_RETRY for proper error handling
           dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
+          return;
         } else {
           dispatch({ type: 'STREAM_DONE' });
         }

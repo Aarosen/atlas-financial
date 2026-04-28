@@ -16,6 +16,8 @@ export function containsFinancialData(message: string): boolean {
 
   // Patterns that indicate financial data
   const financialPatterns = [
+    /\b(a\s+)?(billion|million|thousand|hundred|grand)\b/i, // Word-form numbers: "a billion", "5 million"
+    /\b\d[\d,]*(\.\d+)?\s*(k|m|b)?\b/,                     // Any standalone number (bare answers like "3500", "50k")
     /\$[\d,]+/,                    // Dollar amounts: $1000, $1,500
     /\b\d+k\b/,                    // Thousands: 5k, 50k
     /\bincome\b/,                  // Income-related

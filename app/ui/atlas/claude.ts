@@ -8,12 +8,17 @@ export class Claude {
   private _hadSuccess = false;
   private _lastErrorStatus: number | null = null;
 
-  async extract(msg: string, _ctx: Partial<FinancialState> = {}) {
+  async extract(msg: string, _ctx: Partial<FinancialState> = {}, opts: { language?: string; lastQuestion?: string } = {}) {
     try {
       const r = await fetch(this.ep, {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ type: 'extract', messages: [{ role: 'user', content: msg }] }),
+        body: JSON.stringify({
+          type: 'extract',
+          messages: [{ role: 'user', content: msg }],
+          lastQuestion: opts.lastQuestion,
+          language: opts.language,
+        }),
       });
       if (!r.ok) {
         this._lastErrorStatus = r.status;
