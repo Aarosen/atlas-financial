@@ -1087,6 +1087,14 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           return;
         }
 
+        // BUG-33-003 FIX: Handle user frustration at repeated questions
+        if (kind === 'user_frustrated') {
+          // Always route to LLM — never use static question dispatch for frustrated users
+          // Also reset the failed extraction count (don't double-penalize)
+          failedExtractionRef.current = {};
+          // Fall through to normal LLM call path below
+        }
+
         if (kind === 'followup_question') {
           const am = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
 

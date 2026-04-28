@@ -63,7 +63,7 @@ export function computeMissing(collected: FinancialState, answered: AtlasConvers
 export type ScriptTurn = {
   userText: string;
   extractedFields?: Partial<Record<keyof FinancialState, unknown>>;
-  kind?: 'meta' | 'followup_question' | 'correction' | 'answer_to_question' | 'goal_pivot';
+  kind?: 'meta' | 'followup_question' | 'correction' | 'answer_to_question' | 'goal_pivot' | 'user_frustrated';
   now?: number;
 };
 
@@ -285,10 +285,20 @@ export function nextQuestionForMissing(
   return { key: k, text: v[idx] };
 }
 
-export type InterruptionType = 'answer_to_question' | 'followup_question' | 'correction' | 'meta' | 'goal_pivot';
+export type InterruptionType = 'answer_to_question' | 'followup_question' | 'correction' | 'meta' | 'goal_pivot' | 'user_frustrated';
 
 export function classifyInterruption(userText: string): InterruptionType {
   const t = userText.trim().toLowerCase();
+
+  // BUG-33-003 FIX: Detect user frustration at repeated questions
+  if (/(i\s+(just\s+)?told\s+you|i\s+already\s+(said|told)|you\s+(already\s+)?asked|stop\s+asking|i\s+said\s+that|you're\s+not\s+listening|you\s+already\s+know|i\s+gave\s+you|you\s+have\s+that|as\s+i\s+said)/i.test(t)) {
+    return 'user_frustrated';
+  }
+
+  // BUG-33-006 FIX: Non-informative opener — user acknowledged but hasn't asked anything yet
+  if (/^(ok(ay)?|sure|go ahead|yes|yeah|fine|hi|hey|hello|alright|sounds good|let'?s\s+(go|do\s+it|start))\.?$/i.test(t)) {
+    return 'meta'; // Use meta type — routes to a different response
+  }
 
   if (/(what.*do.*(data|store|send)|privacy|private|stored|transmit)/i.test(t)) return 'meta';
   if (/\b(store|send)\b/i.test(t) && /\bwhat|why|how\b/i.test(t)) return 'meta';

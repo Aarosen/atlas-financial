@@ -1702,6 +1702,42 @@ Examples of correct acknowledgments:
 - "Feeling overwhelmed about money is one of the most common experiences there is, and it doesn't mean you're stuck."
 - "The fact that you're looking at this directly, even though it feels overwhelming, puts you ahead of most people in the same spot."`;
       }
+
+      // BUG-33-003 FIX: Frustration detection protocol
+      const frustrationPhrases = /(i\s+(just\s+)?told\s+you|i\s+already\s+(said|told)|you\s+(already\s+)?asked|stop\s+asking)/i;
+      if (frustrationPhrases.test(lastUserMsg)) {
+        dynamicProtocols += `\n\nUSER FRUSTRATION DETECTED: The user expressed frustration with repeated questions. CRITICAL RULE: Do NOT ask for the same information again. Instead: (1) Acknowledge what they said in their previous message. (2) If their previous message contained a financial figure you couldn't interpret (like "a billion"), take it at face value or ask ONE clarifying question in a completely different way. (3) If they're truly withholding information, offer to proceed with what you have. Example: "I hear you — you mentioned a billion earlier. Whether that's literal or you're telling me money isn't the issue, let's work with what you've shared. What's actually bringing you here?"`;
+      }
+
+      // BUG-33-006 FIX: Non-informative opener handling
+      if (conversationHistory.length === 1 && /^(ok(ay)?|sure|go ahead|yes|yeah|fine|hi|hey|hello|alright|sounds good|let'?s\s+(go|do\s+it|start))\.?$/i.test(lastUserMsg)) {
+        dynamicProtocols += `\n\nFIRST MESSAGE NON-INFORMATIVE: User responded with a simple acknowledgment. Do NOT jump to collecting financial data. Instead, invite them to share what's on their mind: "What's going on with your money right now? You can start anywhere — a problem you're trying to solve, a goal you're working toward, or just 'I don't know where to start.'"`;
+      }
+
+      // BUG-33-004 FIX: Extreme income detection and HNW protocol
+      const reportedMonthlyIncome = (financialProfile?.monthlyIncome as number) || 0;
+      const EXTREME_INCOME_THRESHOLD = 100_000; // $100K/month = $1.2M/year
+      if (reportedMonthlyIncome >= EXTREME_INCOME_THRESHOLD) {
+        dynamicProtocols += `\n\nEXTREME INCOME CONTEXT: User reports monthly income of $${reportedMonthlyIncome.toLocaleString()}. At this income level:
+(1) Do NOT ask basic budgeting questions. Assume essentials are covered.
+(2) Focus on: tax optimization, investment strategy, asset protection, estate planning basics.
+(3) If the income figure seems hyperbolic or was stated casually (like "a billion"), acknowledge it warmly: "Whether that's literal or a way of saying money's not the immediate issue, let's focus on what you actually want to figure out." Then ask what financial question brought them here.
+(4) A fee-only CFP or CPA should be mentioned when discussing investment products or tax strategy at this level.
+(5) Do NOT ask about employer match or basic debt payoff — those are not relevant at this income tier.`;
+      }
+
+      // BUG-33-005 FIX: Wire detectContradictions() — flag impossible data combinations
+      if (extractedFields && Object.keys(extractedFields).length >= 2) {
+        try {
+          const { ImprovedDataExtractor } = await import('@/lib/ai/improvedDataExtraction');
+          const contradictions = new ImprovedDataExtractor().detectContradictions(extractedFields as Record<string, number>);
+          if (contradictions && contradictions.length > 0) {
+            dynamicProtocols += `\n\nDATA CONTRADICTION DETECTED: ${contradictions.join(' ')} Before proceeding with any advice, gently surface this discrepancy. Say something like: "Before we go further — I want to make sure I have the right numbers. [contradiction description]. Can we double-check those?" Do not assume either number is wrong. Ask the user to clarify.`;
+          }
+        } catch (e) {
+          console.warn('[BUG-33-005] Contradiction detection failed:', e);
+        }
+      }
       
       // AUDIT 24 FIX REM-24-B: Move income lever to chat path (was dead code in buildAnswerPrompt)
       // Surface income-side option for tight-surplus users with high-interest debt
