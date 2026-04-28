@@ -16,8 +16,9 @@ export function createFeedbackEntry(args: Omit<FeedbackEntry, 'ts'> & { ts?: num
 }
 
 export function shouldPromptFeedback(args: { lastPromptAt?: number | null; now?: number; minSessions?: number }) {
+  const last = args.lastPromptAt;
+  if (!last) return false;  // Never prompt new users who have no feedback history
   const now = args.now ?? Date.now();
-  const last = args.lastPromptAt ?? 0;
   const minSessions = args.minSessions ?? 5;
   return now - last >= minSessions * 24 * 60 * 60 * 1000;
 }

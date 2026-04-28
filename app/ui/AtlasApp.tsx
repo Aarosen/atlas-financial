@@ -1347,6 +1347,54 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       }
 
       const action = decideNextAction({ kind, missing: miss, turnIndex: prevMsgs.length });
+      
+      // AUDIT 35 FIX: Handle 'hold' — meta openers need a warm LLM response, not silence
+      if (action.type === 'hold') {
+        streamAbortRef.current?.abort();
+        const ctrl = new AbortController();
+        streamAbortRef.current = ctrl;
+        const myStreamId = ++streamIdRef.current;
+        dispatch({ type: 'STREAM_START' });
+
+        let streamed = '';
+        const chatMsgs = prevMsgs.slice(-10).map((m) => ({
+          role: m.r === 'u' ? ('user' as const) : ('assistant' as const),
+          content: m.t,
+        }));
+
+        const res = await claude.answerStream({
+          msgs: chatMsgs,
+          question: ut,
+          onDelta: (t) => {
+            if (streamIdRef.current !== myStreamId) return;
+            if (ctrl.signal.aborted) return;
+            streamed += t;
+            dispatch({ type: 'STREAM_DELTA', delta: t });
+          },
+          signal: ctrl.signal,
+          memorySummary: st.memorySummary,
+          fin: finRef.current,
+        });
+
+        if (streamIdRef.current !== myStreamId) return;
+        streamAbortRef.current = null;
+
+        if (!res.ok && res.canceled) {
+          dispatch({ type: 'STREAM_CANCELED' });
+          return;
+        }
+        if (!res.ok) {
+          dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
+          return;
+        }
+        dispatch({ type: 'STREAM_DONE' });
+
+        if (res.rateLimitRemaining !== undefined) {
+          setRateLimitRemaining(res.rateLimitRemaining);
+        }
+        return;
+      }
+      
       if (action.type === 'complete') {
         if (actionFeedback) {
           logReplay(
