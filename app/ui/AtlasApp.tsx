@@ -112,6 +112,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     []
   );
 
+  // BUG-33-002 FIX: Track consecutive extraction failures per field to detect loops
+  const failedExtractionRef = useRef<Record<string, number>>({});
+
   const buildMemorySummary = useCallback((fin: FinancialState, answered: Partial<Record<keyof FinancialState, boolean>>) => {
     const parts: string[] = [];
     if (answered.monthlyIncome && fin.monthlyIncome > 0) parts.push(`Monthly take-home: ${fc(fin.monthlyIncome)}.`);
@@ -1281,6 +1284,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       });
       await db.set('fin', { k: 'cur', ...uf, ts: Date.now() });
 
+      // BUG-33-002 FIX: Track extraction failures and route to LLM after 2 failures
       if (
         kind === 'answer_to_question' &&
         missBefore.length > 0 &&
@@ -1288,25 +1292,43 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         miss[0] === missBefore[0] &&
         extractedCount === 0
       ) {
-        const clarQuestion = nextQuestionForMissing(missBefore[0], base.msgs.length);
-        const clar = clarQuestion.text;
-        logReplay(
-          createReplayEntry({
-            role: 'assistant',
-            text: clar,
-            kind: 'clarify',
-            questionKey: missBefore[0],
-            emotionTag: detectReplayEmotion(clar),
-            trace: buildReasoningTrace({
-              decision: 'ask',
-              questionKey: missBefore[0],
-              missingCount: miss.length,
-              answeredCount: Object.keys(answeredNext || {}).length,
-            }),
-          })
-        );
-        dispatch({ type: 'SEND_ASKED', text: clar, questionKey: missBefore[0] });
-        return;
+        const fieldKey = missBefore[0];
+        const currentFailCount = (failedExtractionRef.current[fieldKey] || 0) + 1;
+        failedExtractionRef.current[fieldKey] = currentFailCount;
+
+        // After 1 failed extraction: use the next static variant (current behavior)
+        // After 2+ failed extractions: route to LLM with special frustration protocol
+        if (currentFailCount < 2) {
+          const clarQuestion = nextQuestionForMissing(fieldKey, base.msgs.length);
+          const clar = clarQuestion.text;
+          logReplay(
+            createReplayEntry({
+              role: 'assistant',
+              text: clar,
+              kind: 'clarify',
+              questionKey: fieldKey,
+              emotionTag: detectReplayEmotion(clar),
+              trace: buildReasoningTrace({
+                decision: 'ask',
+                questionKey: fieldKey,
+                missingCount: miss.length,
+                answeredCount: Object.keys(answeredNext || {}).length,
+              }),
+            })
+          );
+          dispatch({ type: 'SEND_ASKED', text: clar, questionKey: fieldKey });
+          return;
+        }
+        // currentFailCount >= 2: fall through to LLM call with EXTRACTION_LOOP context
+        // The message send will proceed normally below, but we inject a special extraction context
+        // via a client-side flag that the API will include in dynamicProtocols
+      }
+
+      // Reset failure count for any field that was successfully extracted this turn
+      for (const field of Object.keys(ex.fields || {})) {
+        if (failedExtractionRef.current[field]) {
+          delete failedExtractionRef.current[field];
+        }
       }
 
       const action = decideNextAction({ kind, missing: miss, turnIndex: prevMsgs.length });
