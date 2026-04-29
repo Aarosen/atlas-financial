@@ -1765,14 +1765,53 @@ Surface these specifically, not generically."`;
         }
       }
       
+      // AUDIT 35 FIX GAP-003: Income lever follow-up — surface when user asks "what else can I do?"
+      const followUpPatterns = /(what else|how else|any other|other lever|accelerate|speed up|faster|more aggressive|do more)/i;
+      if (followUpPatterns.test(lastUserMsg) && ilSurplus > 0 && ilDebt > 0) {
+        const ilPotentialIncome = Math.round(ilExpenses * INCOME_LEVER_POTENTIAL_PCT);
+        const ilCurrentMonths = ilSurplus > 0 ? Math.ceil(ilDebt / ilSurplus) : 999;
+        const ilBoostedMonths = (ilSurplus + ilPotentialIncome) > 0 ? Math.ceil(ilDebt / (ilSurplus + ilPotentialIncome)) : 999;
+        const ilMonthsSaved = ilCurrentMonths - ilBoostedMonths;
+        if (ilMonthsSaved > 0) {
+          dynamicProtocols += `\n\nINCOME LEVER FOLLOW-UP: User is asking how to accelerate their progress. Surface the income lever explicitly: "One more lever most people miss: adding $${ilPotentialIncome}/month in income would accelerate your debt-free date by ${ilMonthsSaved} months. Three realistic paths: (1) Negotiate a raise — prepare a case based on market rate for your role, (2) Freelance 1-2 hours/week in your professional skill — most people can generate $${Math.round(ilPotentialIncome / 2)}–$${ilPotentialIncome} per month, (3) Reduce tax withholding if you got a large refund last year — adjust your W-4 to get $${Math.round(ilPotentialIncome * 0.7)}–$${ilPotentialIncome} per month back immediately. Which of these feels most doable?"`;
+        }
+      }
+      
       // AUDIT 27 FIX REM-27-A Part 2: Removed redundant APR prohibition from dynamicProtocols
       // REM-27-A Part 1 now injects authoritative "APR: NOT PROVIDED" into calculationBlock
       // This is more effective than text-based prohibition in dynamicProtocols
       // The model respects authoritative data blocks (T8 confirms) over prompt instructions
       
+      // AUDIT 35 FIX GAP-004: Partial info estimation guidance — help users estimate when they don't know exact numbers
+      if (missing && missing.includes('essentialExpenses') && !missing.includes('monthlyIncome')) {
+        dynamicProtocols += `\n\nPARTIAL INFO GUIDANCE: User doesn't know their exact expenses. Guide them to ESTIMATE, not recall exactly. Ask: "Let's build it from the big categories — do you know roughly what rent/mortgage costs you each month? That's usually the biggest piece." Then add utilities ($100-300), groceries ($300-600), transportation ($200-500), and other recurring bills. Help them arrive at a number rather than waiting for them to already know it. Never repeat the same question twice.`;
+      }
+      if (missing && missing.includes('totalSavings') && !missing.includes('monthlyIncome')) {
+        dynamicProtocols += `\n\nPARTIAL INFO GUIDANCE: User doesn't know their exact savings. Guide them: "You don't need to be precise — rough is fine. Do you have anything in a savings account, checking, or investment account? Even $500 or $5,000 helps me understand your runway." Help them estimate rather than waiting for exact numbers.`;
+      }
+      
+      // AUDIT 35 FIX GAP-006: 401k employer match ask — ask when user has debt and mentions employer
+      const mentionsEmployer = /(employer|company|work|job|boss|manager|401k|401\(k\)|retirement)/i.test(lastUserMsg);
+      const hasDebt = (financialProfile?.highInterestDebt as number) > 5000 || (financialProfile?.lowInterestDebt as number) > 5000;
+      if (mentionsEmployer && hasDebt && !lastUserMsg.toLowerCase().includes('match')) {
+        dynamicProtocols += `\n\nEMPLOYER MATCH CHECK: User has significant debt AND appears to be employed. You MUST ask: "Does your employer offer a 401k match? If they match even 50 cents on the dollar, capturing that match should come before aggressive debt paydown — it's a guaranteed 50-100% return." Ask this once, directly, before finalizing any debt vs. retirement recommendation.`;
+      }
+      
       // AUDIT 27 FIX REM-27-B Part 2: Removed redundant employer match from dynamicProtocols
       // REM-27-B Part 1 now injects employer match into calculationBlock as authoritative data
       // This is more effective than text-based guidance in dynamicProtocols
+      
+      // AUDIT 35 FIX GAP-008: Variable income handling — detect gig/freelance workers
+      const variableIncomePatterns = /(varies|depends|gig|freelance|contract|variable|between|sometimes|fluctuates|inconsistent)/i;
+      if (variableIncomePatterns.test(lastUserMsg)) {
+        dynamicProtocols += `\n\nVARIABLE INCOME CONTEXT: User has irregular income. Do NOT treat their income as fixed. Instead: (1) Ask for their LOW month estimate and HIGH month estimate. (2) Plan using the LOW month as the baseline budget. (3) Suggest an "income spike" rule: any month above baseline, allocate the extra to [debt / savings] before lifestyle inflation can absorb it. This is the key to financial stability for gig workers.`;
+      }
+      
+      // AUDIT 35 FIX GAP-009: Multi-debt prioritization — detect when user mentions multiple debts
+      const multipleDebtPatterns = /(multiple debts|several debts|different debts|credit card|student loan|car loan|auto loan|mortgage|personal loan)/i;
+      if (multipleDebtPatterns.test(lastUserMsg) && ((financialProfile?.highInterestDebt as number) > 0 || (financialProfile?.lowInterestDebt as number) > 0)) {
+        dynamicProtocols += `\n\nMULTI-DEBT CONTEXT: User has multiple debts. Apply avalanche method (highest APR first). Name each debt, its balance, its monthly interest cost, and the payoff sequence explicitly. Calculate total interest cost if they pay minimum vs. avalanche. Show the difference. Example: "Credit card at 22% ($8k) costs $147/month in interest. Student loan at 5% ($15k) costs $63/month. Pay the credit card first while making minimums on the student loan — that saves $84/month in interest immediately."`;
+      }
       
       // AUDIT 26 FIX REM-26-D: Surface profile savings data in chat path
       // Savings injection at line 880 (buildAnswerPrompt) is unreachable by chat users
