@@ -1883,6 +1883,22 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         ? `\n━━━ AUTHORITATIVE CALCULATION DATA ━━━\nYOU MUST USE ONLY THE NUMBERS BELOW. DO NOT ESTIMATE OR CALCULATE INDEPENDENTLY.\n${calculationBlock}\n━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━\n` 
         : '';
       
+      // AUDIT 35 FIX GAP-007: Zero-input validation — don't generate strategy if all fields are zero
+      const allZero = (!fin?.monthlyIncome || fin.monthlyIncome === 0) 
+        && (!fin?.essentialExpenses || fin.essentialExpenses === 0) 
+        && (!fin?.totalSavings || fin.totalSavings === 0) 
+        && ((!fin?.highInterestDebt || fin.highInterestDebt === 0) && (!fin?.lowInterestDebt || fin.lowInterestDebt === 0));
+      
+      if (allZero && type === 'chat') {
+        // Don't generate strategy — ask clarifying question instead
+        const clarifyingResponse = "I want to make sure I have the right numbers. Can you share your monthly income — even a rough ballpark is fine to start?";
+        return jsonOk({
+          response: clarifyingResponse,
+          sessionId,
+          rateLimitRemaining,
+        });
+      }
+      
       // Build strategy context block from baseline
       const strategyContextBlock = buildStrategyContextBlock(baseline);
 
