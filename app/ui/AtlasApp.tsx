@@ -1348,8 +1348,15 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
       const action = decideNextAction({ kind, missing: miss, turnIndex: prevMsgs.length });
       
+      // AUDIT 35 FIX GAP-001: Force 'complete' when all core fields are present
+      const totalDebt = (uf.highInterestDebt || 0) + (uf.lowInterestDebt || 0);
+      const coreFieldsFilled = uf.monthlyIncome > 0 && uf.essentialExpenses > 0 
+        && (uf.totalSavings !== null && uf.totalSavings !== undefined) 
+        && (totalDebt !== null && totalDebt !== undefined);
+      const effectiveAction = coreFieldsFilled ? { type: 'complete' as const } : action;
+      
       // AUDIT 35 FIX: Handle 'hold' — meta openers need a warm LLM response, not silence
-      if (action.type === 'hold') {
+      if (effectiveAction.type === 'hold') {
         streamAbortRef.current?.abort();
         const ctrl = new AbortController();
         streamAbortRef.current = ctrl;
@@ -1395,7 +1402,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         return;
       }
       
-      if (action.type === 'complete') {
+      if (effectiveAction.type === 'complete') {
         if (actionFeedback) {
           logReplay(
             createReplayEntry({
@@ -1408,14 +1415,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           dispatch({ type: 'SEND_ASKED', text: actionFeedback });
         }
         
-        // AUDIT 10 FIX P2-A: Allow negative cashflow scenarios through structured flow
-        // Negative cashflow (expenses > income) is a valid financial state that should trigger CONFIRM card
-        // The strategy engine handles it correctly with stabilize_cashflow lever
-        // PRIORITY 2: Gate extraction - don't show CONFIRM card if extraction was gated
-        // If source is 'extraction_gated' or fields is empty, skip confirmation flow
-        const isExtractionGated = ex.src === 'extraction_gated' || Object.keys((ex.fields as Record<string, unknown>) || {}).length === 0;
+        // AUDIT 35 FIX GAP-001: Weaken extraction gate — show CONFIRM card if any financial data exists
+        // Only gate if user literally gave no data at all (not just no NEW data this turn)
+        const hasAnyFinancialData = uf.monthlyIncome > 0 || uf.essentialExpenses > 0 || totalDebt > 0;
         
-        if (!isExtractionGated) {
+        if (hasAnyFinancialData) {
           dispatch({ type: 'SET_PENDING_FIN', fin: uf });
           dispatch({ type: 'SET_PENDING_BLOCK', block: 'confirm' });
           return;
@@ -1476,7 +1480,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         }
         return;
       }
-      if (action.type === 'ask') {
+      if (effectiveAction.type === 'ask') {
         const preface = [actionFeedback, nudgeText, learningPrompt].filter(Boolean).join('\n\n');
         const chatMsgs = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
         
@@ -1557,47 +1561,51 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           monthlyIncome: finRef.current.monthlyIncome,
           essentialExpenses: finRef.current.essentialExpenses,
         } : undefined;
-        await processResponseForGoals(adaptiveAsk || action.text, addNewGoal, userId !== 'guest' ? userId : undefined, token, undefined, financialProfile);
-        
-        // Only dispatch SEND_ASKED if streaming produced nothing
-        // The streamed content is already in the UI via STREAM_DELTA
-        if (!adaptiveAsk.trim()) {
-          const askBody = action.text;
-          const askText = preface ? `${preface}\n\n${askBody}` : askBody;
-          logReplay(
-            createReplayEntry({
-              role: 'assistant',
-              text: askText,
-              kind: 'ask',
-              questionKey: action.questionKey,
-              emotionTag: detectReplayEmotion(askText),
-              trace: buildReasoningTrace({
-                decision: 'ask',
-                questionKey: action.questionKey,
-                missingCount: miss.length,
-                answeredCount: Object.keys(answeredNext || {}).length,
-              }),
-            })
-          );
-          dispatch({ type: 'SEND_ASKED', text: askText, questionKey: action.questionKey });
-        } else {
-          // Stream produced content, just log the replay with what was streamed
-          const askText = preface ? `${preface}\n\n${adaptiveAsk.trim()}` : adaptiveAsk.trim();
-          logReplay(
-            createReplayEntry({
-              role: 'assistant',
-              text: askText,
-              kind: 'ask',
-              questionKey: action.questionKey,
-              emotionTag: detectReplayEmotion(askText),
-              trace: buildReasoningTrace({
-                decision: 'ask',
-                questionKey: action.questionKey,
-                missingCount: miss.length,
-                answeredCount: Object.keys(answeredNext || {}).length,
-              }),
-            })
-          );
+        // For 'ask' actions, use the original action which has text and questionKey
+        const askAction = effectiveAction.type === 'ask' ? action : null;
+        if (askAction && askAction.type === 'ask') {
+          await processResponseForGoals(adaptiveAsk || askAction.text, addNewGoal, userId !== 'guest' ? userId : undefined, token, undefined, financialProfile);
+          
+          // Only dispatch SEND_ASKED if streaming produced nothing
+          // The streamed content is already in the UI via STREAM_DELTA
+          if (!adaptiveAsk.trim()) {
+            const askBody = askAction.text;
+            const askText = preface ? `${preface}\n\n${askBody}` : askBody;
+            logReplay(
+              createReplayEntry({
+                role: 'assistant',
+                text: askText,
+                kind: 'ask',
+                questionKey: askAction.questionKey,
+                emotionTag: detectReplayEmotion(askText),
+                trace: buildReasoningTrace({
+                  decision: 'ask',
+                  questionKey: askAction.questionKey,
+                  missingCount: miss.length,
+                  answeredCount: Object.keys(answeredNext || {}).length,
+                }),
+              })
+            );
+            dispatch({ type: 'SEND_ASKED', text: askText, questionKey: askAction.questionKey });
+          } else {
+            // Stream produced content, just log the replay with what was streamed
+            const askText = preface ? `${preface}\n\n${adaptiveAsk.trim()}` : adaptiveAsk.trim();
+            logReplay(
+              createReplayEntry({
+                role: 'assistant',
+                text: askText,
+                kind: 'ask',
+                questionKey: askAction.questionKey,
+                emotionTag: detectReplayEmotion(askText),
+                trace: buildReasoningTrace({
+                  decision: 'ask',
+                  questionKey: askAction.questionKey,
+                  missingCount: miss.length,
+                  answeredCount: Object.keys(answeredNext || {}).length,
+                }),
+              })
+            );
+          }
         }
       }
     } catch (e: any) {
