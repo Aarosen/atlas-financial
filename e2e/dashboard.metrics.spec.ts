@@ -132,6 +132,9 @@ test('R6: goal capture quick replies show and store', async ({ page }) => {
   // Wait for the confirmation button to appear (indicates extraction is complete)
   await page.getByRole('button', { name: 'Yes, looks right' }).waitFor({ timeout: 5000 });
 
+  // Click "Yes, looks right" to dismiss the CONFIRM card and reveal the goal buttons
+  await page.getByRole('button', { name: 'Yes, looks right' }).click();
+
   // Now the goal buttons should be visible because lastQuestionKey === 'primaryGoal'
   await expect(page.getByRole('button', { name: 'Stability' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Growth' })).toBeVisible();
