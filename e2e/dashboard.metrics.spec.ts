@@ -120,23 +120,17 @@ test('R3: profile clarity indicator shows tooltip and early-session callout', as
 });
 
 test('R6: goal capture quick replies show and store', async ({ page }) => {
-  // Use withGoal=false so the extraction does NOT include primaryGoal
-  // This forces lastQuestionKey to be 'primaryGoal', which triggers the goal buttons
+  // withGoal=false → extraction returns no primaryGoal → coreFieldsFilled stays false
+  // → orchestrator decides action=ask(primaryGoal) → SEND_ASKED fires → goal buttons render
   await installApiMocks(page, false);
   await page.goto('/conversation');
   await waitForAppReady(page);
   const input = page.locator('textarea');
   await input.fill('Income $8000/month. Essentials $3000/month. Savings $24000.');
   await input.press('Enter');
-
-  // Wait for the confirmation button to appear (indicates extraction is complete)
-  await page.getByRole('button', { name: 'Yes, looks right' }).waitFor({ timeout: 5000 });
-
-  // Click "Yes, looks right" to dismiss the CONFIRM card and reveal the goal buttons
-  await page.getByRole('button', { name: 'Yes, looks right' }).click();
-
-  // Now the goal buttons should be visible because lastQuestionKey === 'primaryGoal'
-  await expect(page.getByRole('button', { name: 'Stability' })).toBeVisible();
+  // After extraction completes with no primaryGoal, the app asks for the goal
+  // and renders the four quick-reply buttons
+  await expect(page.getByRole('button', { name: 'Stability' })).toBeVisible({ timeout: 10000 });
   await expect(page.getByRole('button', { name: 'Growth' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Flexibility' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Wealth building' })).toBeVisible();

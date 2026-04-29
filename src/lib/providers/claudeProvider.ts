@@ -27,7 +27,7 @@ export class ClaudeProvider extends BaseProvider {
   private client: any;
 
   constructor(config: ProviderConfig) {
-    super(config, 'claude-3-5-sonnet-20241022');
+    super(config, 'claude-sonnet-4-6');
     this.client = new Anthropic({
       apiKey: config.apiKey,
     });

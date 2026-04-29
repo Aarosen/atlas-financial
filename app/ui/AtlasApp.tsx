@@ -1398,7 +1398,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       const totalDebt = (uf.highInterestDebt || 0) + (uf.lowInterestDebt || 0);
       const coreFieldsFilled = uf.monthlyIncome > 0 && uf.essentialExpenses > 0 
         && (uf.totalSavings !== null && uf.totalSavings !== undefined) 
-        && (totalDebt !== null && totalDebt !== undefined);
+        && (totalDebt !== null && totalDebt !== undefined)
+        && Boolean(answeredNext.primaryGoal || uf.primaryGoal);
       const effectiveAction = coreFieldsFilled ? { type: 'complete' as const } : action;
       
       // AUDIT 35 FIX: Handle 'hold' — meta openers need a warm LLM response, not silence
