@@ -120,8 +120,9 @@ test('R3: profile clarity indicator shows tooltip and early-session callout', as
 });
 
 test('R6: goal capture quick replies show and store', async ({ page }) => {
-  await installApiMocks(page, false);
+  await installApiMocks(page, true);
   await page.goto('/conversation');
+  await waitForAppReady(page);
   const input = page.locator('textarea');
   await input.fill('Income $8000/month. Essentials $3000/month. Savings $24000.');
   await input.press('Enter');
