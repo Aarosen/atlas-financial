@@ -350,6 +350,11 @@ export function ConversationScreen({
   const showGoalReplies = !pendingBlock && lastQuestionKey === 'primaryGoal' && !!onQuickReply;
   const showActionSuggestions = !pendingBlock && !!actionSuggestions?.length && !!onQuickReply;
 
+  // AUDIT 35 FIX GAP-005: Detect triage mode (income < expenses)
+  const isTriageMode = pendingFin 
+    ? pendingFin.monthlyIncome > 0 && pendingFin.essentialExpenses > 0 && pendingFin.monthlyIncome < pendingFin.essentialExpenses
+    : false;
+
   useEffect(() => {
     setShowExplain(false);
   }, [pendingBlock, recommendedLever]);
@@ -369,7 +374,7 @@ export function ConversationScreen({
   };
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: 'var(--bg)', position: 'relative' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: isTriageMode ? 'var(--bg-triage, #fef8f0)' : 'var(--bg)', position: 'relative' }}>
       {/* Single unified header - no duplicate navbar */}
       <TopBar
         title="Conversation"
@@ -380,6 +385,21 @@ export function ConversationScreen({
         language={language}
         onLanguageChange={onLanguageChange}
       />
+
+      {/* AUDIT 35 FIX GAP-005: Triage mode banner */}
+      {isTriageMode && (
+        <div style={{
+          background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)',
+          color: 'white',
+          padding: '12px 16px',
+          fontSize: '13px',
+          fontWeight: 600,
+          textAlign: 'center',
+          borderBottom: '2px solid #ff5722',
+        }}>
+          ⚠️ TRIAGE MODE: Your expenses exceed income. Let's stabilize your cashflow first.
+        </div>
+      )}
 
       {/* AUDIT 3 FIX: Guest conversation reset button */}
       {isGuest && msgs.length > 0 && (

@@ -410,6 +410,21 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const handleConfirmNextStep = useCallback(async () => {
     if (st.pendingBlock === 'lever') {
       if (!st.baseline) return;
+      // AUDIT 35 FIX GAP-002: Save baseline snapshot when user confirms strategy
+      try {
+        await db.set('prefs', {
+          k: 'baselineSnapshot',
+          v: JSON.stringify({
+            debt: st.fin.highInterestDebt || 0,
+            savings: st.fin.totalSavings || 0,
+            income: st.fin.monthlyIncome || 0,
+            expenses: st.fin.essentialExpenses || 0,
+            ts: Date.now(),
+          }),
+        });
+      } catch (e) {
+        console.warn('[GAP-002] Failed to save baseline snapshot:', e);
+      }
       dispatch({ type: 'SET_PENDING_BLOCK', block: 'next' });
       return;
     }
@@ -418,7 +433,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       dispatch({ type: 'SET_PENDING_FIN', fin: null });
       dispatch({ type: 'NAVIGATE', scr: 'summary' });
     }
-  }, [db, st.pendingBlock, st.baseline, st.selectedLever, dispatch]);
+  }, [db, st.pendingBlock, st.baseline, st.selectedLever, st.fin, dispatch]);
 
   const metricExplainerText = useCallback(
     (metric: string, fin: FinancialState, baseline: Strategy) => buildMetricExplainer(metric, fin, baseline, { fc, fp }),
@@ -622,33 +637,64 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   // PROGRESS DISPLAY: Fetch progress data for returning authenticated users on session start
   useEffect(() => {
     if (authLoading) return;
-    if (userId === 'guest') return; // Only for authenticated users
     if (st.msgs.length > 0) return; // Only on session start (no messages yet)
 
-    // Fetch progress data from backend
-    const fetchProgress = async () => {
+    // AUDIT 35 FIX GAP-002 & Cross-session greeting: Load baseline snapshot and display progress/greeting
+    const loadProgressData = async () => {
       try {
-        const response = await fetch('/api/progress/summary', {
-          method: 'POST',
-          headers: { 'Content-Type': 'application/json' },
-          body: JSON.stringify({ userId, sessionId }),
-        });
-
-        if (response.ok) {
-          const data = await response.json();
-          if (data.snapshots && data.snapshots.length > 0) {
-            setProgressSnapshots(data.snapshots);
-            setDaysSinceLast(data.daysSinceLast || 0);
-            setShowProgress(true);
+        const baselineData = await db.get<{ v: string }>('prefs', 'baselineSnapshot');
+        if (baselineData?.v) {
+          const baseline = JSON.parse(baselineData.v);
+          // AUDIT 35 FIX: Cross-session "I remember" greeting
+          const greetingMsg = `I remember you. Last time you had $${baseline.debt.toLocaleString()} in debt and $${baseline.income.toLocaleString()} monthly income. What's changed?`;
+          dispatch({
+            type: 'SEND_ASKED',
+            text: greetingMsg,
+          });
+          
+          // Compute progress when user returns
+          if (st.fin.highInterestDebt !== undefined && baseline.debt !== undefined) {
+            const debtPaidDown = baseline.debt - (st.fin.highInterestDebt || 0);
+            if (debtPaidDown > 0 && baseline.debt > 0) {
+              const pctPaid = Math.round((debtPaidDown / baseline.debt) * 100);
+              const progressMsg = `Since last time, you've paid down $${debtPaidDown.toLocaleString()} — that's ${pctPaid}% of your original balance. Real progress.`;
+              // Inject progress message as second assistant message
+              dispatch({
+                type: 'SEND_ASKED',
+                text: progressMsg,
+              });
+            }
           }
         }
-      } catch (error) {
-        console.error('Error fetching progress data:', error);
+      } catch (e) {
+        console.warn('[GAP-002] Failed to load baseline snapshot:', e);
+      }
+
+      // Also fetch backend progress data for authenticated users
+      if (userId && userId !== 'guest') {
+        try {
+          const response = await fetch('/api/progress/summary', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ userId, sessionId }),
+          });
+
+          if (response.ok) {
+            const data = await response.json();
+            if (data.snapshots && data.snapshots.length > 0) {
+              setProgressSnapshots(data.snapshots);
+              setDaysSinceLast(data.daysSinceLast || 0);
+              setShowProgress(true);
+            }
+          }
+        } catch (error) {
+          console.error('Error fetching progress data:', error);
+        }
       }
     };
 
-    void fetchProgress();
-  }, [authLoading, userId, st.scr, st.msgs.length, sessionId]);
+    void loadProgressData();
+  }, [authLoading, userId, st.scr, st.msgs.length, sessionId, db, st.fin, dispatch]);
 
   // ACTION COMPLETION: Fetch pending action check-in for returning authenticated users on session start
   useEffect(() => {
