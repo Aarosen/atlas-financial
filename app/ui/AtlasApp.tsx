@@ -1399,7 +1399,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       const coreFieldsFilled = uf.monthlyIncome > 0 && uf.essentialExpenses > 0 
         && (uf.totalSavings !== null && uf.totalSavings !== undefined) 
         && (totalDebt !== null && totalDebt !== undefined)
-        && Boolean(answeredNext.primaryGoal || uf.primaryGoal);
+        && Boolean(answeredNext.primaryGoal);
       const effectiveAction = coreFieldsFilled ? { type: 'complete' as const } : action;
       
       // AUDIT 35 FIX: Handle 'hold' — meta openers need a warm LLM response, not silence
