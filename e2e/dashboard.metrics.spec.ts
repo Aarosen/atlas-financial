@@ -120,16 +120,19 @@ test('R3: profile clarity indicator shows tooltip and early-session callout', as
 });
 
 test('R6: goal capture quick replies show and store', async ({ page }) => {
-  await installApiMocks(page, true);
+  // Use withGoal=false so the extraction does NOT include primaryGoal
+  // This forces lastQuestionKey to be 'primaryGoal', which triggers the goal buttons
+  await installApiMocks(page, false);
   await page.goto('/conversation');
   await waitForAppReady(page);
   const input = page.locator('textarea');
   await input.fill('Income $8000/month. Essentials $3000/month. Savings $24000.');
   await input.press('Enter');
 
-  // Wait for the assistant response to appear (indicates extraction is complete)
+  // Wait for the confirmation button to appear (indicates extraction is complete)
   await page.getByRole('button', { name: 'Yes, looks right' }).waitFor({ timeout: 5000 });
 
+  // Now the goal buttons should be visible because lastQuestionKey === 'primaryGoal'
   await expect(page.getByRole('button', { name: 'Stability' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Growth' })).toBeVisible();
   await expect(page.getByRole('button', { name: 'Flexibility' })).toBeVisible();
