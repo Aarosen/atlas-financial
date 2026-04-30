@@ -1,4 +1,5 @@
 import type { FinancialProfile, Debt } from '@/lib/types/profile';
+import { monthsToPayoff, totalInterestPaid } from './amortization';
 
 export interface DebtPayoffResult {
   hasDebts: boolean;
@@ -54,7 +55,13 @@ export function calculateDebtPayoff(p: FinancialProfile): DebtPayoffResult | nul
     quickWin: {
       name: snowball[0].name,
       balance: Math.round(snowball[0].balance),
-      monthsToPayoff: Math.ceil(snowball[0].balance / (totalMinPayments + extraPayment)),
+      monthsToPayoff: Math.ceil(
+        monthsToPayoff(
+          snowball[0].balance,
+          snowball[0].rate / 100,
+          (snowball[0].min_payment ?? 0) + extraPayment
+        )
+      ),
     },
     extraPaymentAvailable: Math.round(extraPayment),
     recommendation: avalanche[0].rate > 10 ? 'avalanche' : 'snowball',
@@ -62,19 +69,30 @@ export function calculateDebtPayoff(p: FinancialProfile): DebtPayoffResult | nul
 }
 
 function simulatePayoff(debts: Debt[], minPayments: number, extra: number): number {
-  let balances = debts.map(d => d.balance);
-  let months = 0;
-  while (balances.some(b => b > 0) && months < 600) {
-    months++;
-    for (let i = 0; i < debts.length; i++) {
-      if (balances[i] <= 0) continue;
-      const interest = balances[i] * debts[i].rate / 100 / 12;
-      const payment = Math.min(
-        balances[i] + interest,
-        (debts[i].min_payment ?? 0) + (i === 0 ? extra : 0)
-      );
-      balances[i] = Math.max(0, balances[i] + interest - payment);
+  // Use exact amortization formula for each debt in order
+  // For avalanche/snowball, we pay minimums on all debts except the focus debt
+  // which gets minimum + extra payment
+  
+  let totalMonths = 0;
+  let remainingExtra = extra;
+
+  for (let i = 0; i < debts.length; i++) {
+    const debt = debts[i];
+    const payment = (debt.min_payment ?? 0) + remainingExtra;
+    const aprDecimal = debt.rate / 100;
+    
+    const months = monthsToPayoff(debt.balance, aprDecimal, payment);
+    
+    if (months === Infinity) {
+      // Payment insufficient — this shouldn't happen with proper validation
+      return 600; // Cap at 50 years
     }
+    
+    totalMonths = Math.max(totalMonths, months);
+    
+    // After this debt is paid, its payment becomes available for next debt
+    remainingExtra += debt.min_payment ?? 0;
   }
-  return months;
+  
+  return Math.ceil(totalMonths);
 }
