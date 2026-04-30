@@ -94,7 +94,9 @@ export interface FinancialCalculationsResult {
 function calculateAffordability(
   monthlyIncome: number | undefined,
   essentialExpenses: number | undefined,
-  proposedPayment: number | undefined
+  proposedPayment: number | undefined,
+  discretionarySpending?: number,
+  retirementContribution?: number
 ): AffordabilityCalculation | undefined {
   if (
     monthlyIncome === undefined ||
@@ -107,11 +109,15 @@ function calculateAffordability(
     return undefined;
   }
 
-  const discretionary = monthlyIncome - essentialExpenses;
-  if (discretionary <= 0) return undefined;
+  // TASK 1.1: Surplus calculation must include discretionary spending and retirement contributions
+  const actualDiscretionary = discretionarySpending ?? 0;
+  const actualRetirementContribution = retirementContribution ?? 0;
+  const surplus = monthlyIncome - essentialExpenses - actualDiscretionary - actualRetirementContribution;
+  
+  if (surplus <= 0) return undefined;
 
-  const ratio = proposedPayment / discretionary;
-  const remaining = discretionary - proposedPayment;
+  const ratio = proposedPayment / surplus;
+  const remaining = surplus - proposedPayment;
 
   let assessment: 'comfortable' | 'manageable' | 'tight';
   if (ratio < 0.15) {
@@ -128,7 +134,7 @@ function calculateAffordability(
       : `Comfortable. Leaves $${Math.round(remaining)}/month for savings and other goals.`;
 
   return {
-    discretionary: Math.round(discretionary),
+    discretionary: Math.round(surplus),
     remaining: Math.round(remaining),
     ratio: Math.round(ratio * 10000) / 10000, // 4 decimal places
     assessment,
@@ -217,18 +223,21 @@ function calculateEmergencyFund(
 
 /**
  * Calculate budget metrics using 50/30/20 rule
+ * TASK 1.1: Now includes retirement contributions in surplus calculation
  */
 function calculateBudget(
   monthlyIncome: number | undefined,
   essentialExpenses: number | undefined,
-  discretionaryExpenses: number | undefined
+  discretionaryExpenses: number | undefined,
+  retirementContribution?: number
 ): BudgetCalculation | undefined {
   if (!monthlyIncome || monthlyIncome <= 0 || !essentialExpenses) {
     return undefined;
   }
 
   const discretionary = discretionaryExpenses ?? 0;
-  const savings = Math.max(0, monthlyIncome - essentialExpenses - discretionary);
+  const retirement = retirementContribution ?? 0;
+  const savings = Math.max(0, monthlyIncome - essentialExpenses - discretionary - retirement);
 
   const essentialRatio = essentialExpenses / monthlyIncome;
   const discretionaryRatio = discretionary / monthlyIncome;
@@ -294,7 +303,9 @@ export function calculateFinancials(
     result.affordability = calculateAffordability(
       profile.monthlyIncome,
       profile.essentialExpenses,
-      proposedPayment
+      proposedPayment,
+      profile.discretionaryExpenses,
+      profile.monthlyDebtPayments  // Use debt payments as proxy for retirement contributions if not available
     );
   }
 
@@ -312,7 +323,8 @@ export function calculateFinancials(
     result.budget = calculateBudget(
       profile.monthlyIncome,
       profile.essentialExpenses,
-      profile.discretionaryExpenses
+      profile.discretionaryExpenses,
+      profile.monthlyDebtPayments  // Proxy for retirement contributions
     );
   }
 
@@ -320,9 +332,12 @@ export function calculateFinancials(
   if (goal === 'debt_payoff') {
     const debts = buildDebtsArray(profile);
     if (debts.length > 0 && profile.monthlyIncome && profile.essentialExpenses) {
-      const discretionary = profile.monthlyIncome - profile.essentialExpenses;
-      if (discretionary > 0) {
-        result.debtPayoff = compareDebtStrategies(debts, discretionary);
+      // TASK 1.1: Correct surplus calculation includes discretionary spending and retirement contributions
+      const discretionarySpending = profile.discretionaryExpenses ?? 0;
+      const retirementContribution = profile.monthlyDebtPayments ?? 0;  // Proxy
+      const surplus = profile.monthlyIncome - profile.essentialExpenses - discretionarySpending - retirementContribution;
+      if (surplus > 0) {
+        result.debtPayoff = compareDebtStrategies(debts, surplus);
       }
     }
   }
@@ -330,20 +345,24 @@ export function calculateFinancials(
   // SAD-5: Investment start - calculate allocation and monthly contribution
   if (goal === 'investment_start') {
     if (profile.monthlyIncome && profile.essentialExpenses && profile.totalSavings !== undefined) {
-      const discretionary = profile.monthlyIncome - profile.essentialExpenses;
+      // TASK 1.1: Correct surplus calculation
+      const discretionarySpending = profile.discretionaryExpenses ?? 0;
+      const retirementContribution = profile.monthlyDebtPayments ?? 0;  // Proxy
+      const surplus = profile.monthlyIncome - profile.essentialExpenses - discretionarySpending - retirementContribution;
+      
       const emergencyFundTarget = profile.essentialExpenses * EMERGENCY_FUND_TARGET_MONTHS; // REM-O: Use standardized constant
       const emergencyFundGap = Math.max(0, emergencyFundTarget - (profile.totalSavings || 0));
       
       // REM-S: Guard against negative discretionary income (expenses > income)
-      const timelineMonths = emergencyFundGap > 0 && discretionary > 0 
-        ? Math.ceil(emergencyFundGap / (discretionary * 0.5)) 
+      const timelineMonths = emergencyFundGap > 0 && surplus > 0 
+        ? Math.ceil(emergencyFundGap / (surplus * 0.5)) 
         : (emergencyFundGap > 0 ? null : 0);
       
       result.investment = {
-        monthlyDiscretionary: discretionary,
+        monthlyDiscretionary: surplus,
         emergencyFundTarget,
         emergencyFundGap,
-        recommendedMonthlyInvestment: Math.max(0, discretionary * 0.15), // 15% of discretionary
+        recommendedMonthlyInvestment: Math.max(0, surplus * 0.15), // 15% of surplus
         timelineMonths,
         allocationStrategy: profile.riskTolerance === 'cautious' ? '60/40 stocks/bonds' : profile.riskTolerance === 'growth' ? '90/10 stocks/bonds' : '70/30 stocks/bonds',
       };
@@ -353,13 +372,17 @@ export function calculateFinancials(
   // SAD-5: Retirement planning - calculate FIRE number and years to retirement
   if (goal === 'retirement_planning') {
     if (profile.monthlyIncome && profile.essentialExpenses && profile.totalSavings !== undefined && profile.timeHorizonYears) {
-      const discretionary = profile.monthlyIncome - profile.essentialExpenses;
+      // TASK 1.1: Correct surplus calculation
+      const discretionarySpending = profile.discretionaryExpenses ?? 0;
+      const retirementContribution = profile.monthlyDebtPayments ?? 0;  // Proxy
+      const surplus = profile.monthlyIncome - profile.essentialExpenses - discretionarySpending - retirementContribution;
+      
       // REM-Q: Include discretionary expenses in FIRE number (full lifestyle FIRE, not lean FIRE)
-      const annualExpenses = (profile.essentialExpenses + (profile.discretionaryExpenses ?? 0)) * 12;
+      const annualExpenses = (profile.essentialExpenses + discretionarySpending) * 12;
       const fireNumber = annualExpenses * 25; // 4% rule
       const currentNetWorth = (profile.totalSavings || 0) - ((profile.highInterestDebt || 0) + (profile.lowInterestDebt || 0));
       const gap = Math.max(0, fireNumber - currentNetWorth);
-      const recommendedMonthly = discretionary * 0.20; // 20% of discretionary
+      const recommendedMonthly = surplus * 0.20; // 20% of surplus
       
       // REM-N: Use compound future value instead of linear math
       const ASSUMED_ANNUAL_RETURN = 0.07; // 7% nominal growth — standard conservative planning assumption
