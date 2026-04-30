@@ -1,3 +1,34 @@
+/**
+ * TASK 2.2: Detect unauthorized financial estimates in LLM responses.
+ * The LLM must never generate financial figures — only use CALCULATION_RESULTS.
+ */
+function detectUnauthorizedEstimate(text: string): { detected: boolean; examples: string[] } {
+  const approximationPatterns = [
+    /about \$[\d,]+/gi,
+    /roughly \$[\d,]+/gi,
+    /approximately \$[\d,]+/gi,
+    /around \$[\d,]+/gi,
+    /maybe \$[\d,]+/gi,
+    /about \d+ months/gi,
+    /roughly \d+ months/gi,
+    /approximately \d+ months/gi,
+    /around \d+ months/gi,
+  ];
+
+  const examples: string[] = [];
+  for (const pattern of approximationPatterns) {
+    const matches = text.match(pattern);
+    if (matches) {
+      examples.push(...matches.slice(0, 2)); // Capture up to 2 examples per pattern
+    }
+  }
+
+  return {
+    detected: examples.length > 0,
+    examples: [...new Set(examples)], // Deduplicate
+  };
+}
+
 export function cleanAtlasResponse(raw: string): string {
   let cleaned = raw
     // Remove any leading control tags like [EMPATHY], [CALCULATION_RESULTS], etc.
@@ -23,6 +54,15 @@ export function cleanAtlasResponse(raw: string): string {
     // Collapse multiple blank lines
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+
+  // TASK 2.2: Detect and log unauthorized financial estimates
+  const estimate = detectUnauthorizedEstimate(cleaned);
+  if (estimate.detected) {
+    console.warn(
+      '[atlas] TASK 2.2 VIOLATION: LLM generated unauthorized financial estimates:',
+      estimate.examples.join(', ')
+    );
+  }
 
   // AUDIT 20 FIX BUG-20-004: Enforce ONE NEXT ACTION rule
   // AUDIT 21 FIX BUG-21-001: Fix Math.min logic with proper null-checks
