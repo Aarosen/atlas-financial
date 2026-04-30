@@ -55,6 +55,11 @@ export interface FinancialProfile {
   riskTolerance?: 'cautious' | 'balanced' | 'growth';
   biggestConcern?: string;
   proposedPayment?: number; // For affordability checks: the payment amount being evaluated
+  // TASK 3.2: Life stage routing
+  age?: number;
+  lifeStage?: 'early_career' | 'mid_career' | 'late_career' | 'pre_retirement' | 'retirement';
+  retirementSavings?: number; // 401k, IRA, etc.
+  retirementAge?: number; // Target retirement age
 }
 
 export interface SessionState {
@@ -317,6 +322,10 @@ const FIELD_LABELS: Record<keyof FinancialProfile, string> = {
   riskTolerance: 'risk tolerance',
   biggestConcern: 'biggest financial concern',
   proposedPayment: 'proposed payment amount',
+  age: 'age',  // TASK 3.2
+  lifeStage: 'life stage',  // TASK 3.2
+  retirementSavings: 'retirement savings',  // TASK 3.2
+  retirementAge: 'target retirement age',  // TASK 3.2
 };
 
 export function getMissingFields(goal: ConversationGoal, profile: FinancialProfile, answered?: Record<string, boolean>): string[] {
