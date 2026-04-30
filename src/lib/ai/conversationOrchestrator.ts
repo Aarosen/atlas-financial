@@ -27,6 +27,17 @@ export type ConversationGoal =
   | 'general_guidance'
   | 'unknown';
 
+/**
+ * TASK 1.2: Itemized debt structure with individual APRs
+ */
+export interface DebtItem {
+  label: string;          // e.g., "Chase Sapphire", "Student loan", "Car loan"
+  balance: number;        // current balance in dollars
+  apr: number;            // annual percentage rate as decimal (0.22 for 22%)
+  minimumPayment?: number; // monthly minimum payment
+  type: 'credit_card' | 'student_loan' | 'auto' | 'personal' | 'medical' | 'other';
+}
+
 export interface FinancialProfile {
   monthlyIncome?: number;
   essentialExpenses?: number;
@@ -37,6 +48,8 @@ export interface FinancialProfile {
   monthlyDebtPayments?: number;
   highInterestRate?: number; // APR for high-interest debt (e.g., credit cards)
   lowInterestRate?: number; // APR for low-interest debt (e.g., student loans, mortgages)
+  // TASK 1.2: Itemized debts with individual APRs
+  debts?: DebtItem[];
   primaryGoal?: 'stability' | 'growth' | 'flexibility' | 'wealth_building';
   timeHorizonYears?: number;
   riskTolerance?: 'cautious' | 'balanced' | 'growth';
@@ -58,7 +71,61 @@ export interface SessionState {
   unknown?: Record<string, boolean>;
 }
 
-// ─── Goal Detection ───────────────────────────────────────────────────────────
+// ─── Debt Itemization Utilities (TASK 1.2) ───────────────────────────────
+
+/**
+ * Convert old high/low interest debt structure to itemized debts array
+ * Maintains backward compatibility while supporting new itemized format
+ */
+export function normalizeDebts(profile: FinancialProfile): DebtItem[] {
+  // If debts array already exists, use it
+  if (profile.debts && profile.debts.length > 0) {
+    return profile.debts;
+  }
+
+  // Otherwise, convert from old high/low structure
+  const debts: DebtItem[] = [];
+
+  if ((profile.highInterestDebt ?? 0) > 0) {
+    debts.push({
+      label: 'High-Interest Debt',
+      balance: profile.highInterestDebt!,
+      apr: (profile.highInterestRate ?? 0.22) / 100, // Default to 22% if not specified
+      type: 'credit_card',
+    });
+  }
+
+  if ((profile.lowInterestDebt ?? 0) > 0) {
+    debts.push({
+      label: 'Low-Interest Debt',
+      balance: profile.lowInterestDebt!,
+      apr: (profile.lowInterestRate ?? 0.05) / 100, // Default to 5% if not specified
+      type: 'student_loan',
+    });
+  }
+
+  return debts;
+}
+
+/**
+ * Calculate total debt from itemized debts array
+ */
+export function calculateTotalDebt(debts: DebtItem[]): number {
+  return debts.reduce((sum, debt) => sum + debt.balance, 0);
+}
+
+/**
+ * Calculate weighted average APR across all debts
+ */
+export function calculateWeightedApr(debts: DebtItem[]): number {
+  const totalDebt = calculateTotalDebt(debts);
+  if (totalDebt === 0) return 0;
+
+  const weightedSum = debts.reduce((sum, debt) => sum + debt.balance * debt.apr, 0);
+  return weightedSum / totalDebt;
+}
+
+// ─── Goal Detection ───────────────────────────────────────────────────────
 
 const GOAL_PATTERNS: Array<{ goal: ConversationGoal; patterns: RegExp[] }> = [
   {
@@ -244,6 +311,7 @@ const FIELD_LABELS: Record<keyof FinancialProfile, string> = {
   monthlyDebtPayments: 'monthly debt payments',
   highInterestRate: 'high-interest debt APR',
   lowInterestRate: 'low-interest debt APR',
+  debts: 'itemized debts with APRs',  // TASK 1.2
   primaryGoal: 'primary financial goal',
   timeHorizonYears: 'time horizon',
   riskTolerance: 'risk tolerance',
