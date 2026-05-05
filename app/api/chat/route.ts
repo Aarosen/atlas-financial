@@ -1871,6 +1871,14 @@ Surface these specifically, not generically."`;
       // REM-27-B Part 1 now injects employer match into calculationBlock as authoritative data
       // This is more effective than text-based guidance in dynamicProtocols
       
+      // AUDIT FIX: Ask about financial goals if not yet captured
+      // This enables goal-specific guidance instead of generic advice
+      const hasGoalMention = /\b(goal|goals|want|hoping|dream|plan|target|save for|work toward|achieve)\b/i.test(lastUserMsg);
+      const hasExtractedGoal = (extractedFields as any)?.primaryGoal || (extractedFields as any)?.savingsGoals;
+      if (hasGoalMention && !hasExtractedGoal && conversationHistory.length < 10) {
+        dynamicProtocols += `\n\nGOAL DISCOVERY: User mentioned having goals but hasn't specified what they are. Ask: "What's the main financial goal you're working toward? For example: paying off debt, building an emergency fund, saving for a home, early retirement, or something else?"`;
+      }
+
       // AUDIT 35 FIX GAP-008: Variable income handling — detect gig/freelance workers
       // Use proper irregular income module for deterministic calculations
       try {
