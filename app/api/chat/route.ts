@@ -2158,6 +2158,37 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         }
       }
 
+      // ENHANCEMENT: Wire Credit Score Impact Analysis
+      // Detect credit score context and provide impact analysis
+      const creditPatterns = /\b(credit|score|credit score|credit card|utilization|inquiry|payment|history|credit report)\b/i;
+      
+      if (creditPatterns.test(lastUserMsg) && ((financialProfile?.highInterestDebt as number) > 0 || (financialProfile?.lowInterestDebt as number) > 0)) {
+        try {
+          const { analyzeCreditScoreImpact, buildCreditScoreContext } = await import('@/lib/ai/creditScoreImpact');
+          
+          // Estimate credit score factors from financial profile
+          const estimatedScore = (extractedFields as any)?.creditScore || 700; // Default estimate
+          const creditUtilization = (extractedFields as any)?.creditUtilization || 50; // Estimate
+          const paymentHistory = (extractedFields as any)?.paymentHistory || 85; // Estimate
+          const debtCount = ((financialProfile?.highInterestDebt as number) > 0 ? 1 : 0) + ((financialProfile?.lowInterestDebt as number) > 0 ? 1 : 0);
+          const hardInquiries = (extractedFields as any)?.hardInquiries || 0;
+          const accountAge = (extractedFields as any)?.accountAge || 5;
+          
+          const analysis = analyzeCreditScoreImpact(
+            estimatedScore,
+            creditUtilization,
+            paymentHistory,
+            debtCount,
+            hardInquiries,
+            accountAge
+          );
+          
+          dynamicProtocols += `\n\n${buildCreditScoreContext(analysis)}\nINSTRUCTION: When discussing credit or debt decisions, reference the credit score impact. Explain how specific actions (paying down debt, reducing utilization, etc.) affect their score. Provide concrete timeline expectations.`;
+        } catch (e) {
+          console.warn('[ENHANCEMENT] Credit score impact failed:', e);
+        }
+      }
+
       // REM-36-004: Wire Debt Avalanche for Multi-Debt
       // Detect multi-debt context and inject avalanche payoff strategy
       const hasMultipleDebts = ((financialProfile?.highInterestDebt as number) || 0) > 0 && ((financialProfile?.lowInterestDebt as number) || 0) > 0;
