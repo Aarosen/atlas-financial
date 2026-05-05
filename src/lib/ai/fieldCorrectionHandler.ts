@@ -27,6 +27,7 @@ const FIELD_LABELS: Record<keyof FinancialState, string> = {
   riskTolerance: 'risk tolerance',
   timeHorizonYears: 'time horizon',
   proposedPayment: 'proposed payment',
+  age: 'age',
 };
 
 export function buildCorrectionConfirmation(correction: FieldCorrection): string {
@@ -70,6 +71,9 @@ export function isValidFieldCorrection(
 
     case 'timeHorizonYears':
       return typeof newValue === 'number' && newValue > 0 && newValue <= 100;
+
+    case 'age':
+      return typeof newValue === 'number' && newValue > 0 && newValue < 150;
 
     default:
       return true;

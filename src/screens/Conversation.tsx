@@ -551,22 +551,42 @@ export function ConversationScreen({
                     </div>
                   )}
                   {/* REM-36-009: Render GoalTimelineCard when goal timeline data is present */}
-                  {m.r === 'a' && m.t.includes('[GOAL_TIMELINE]') && (
-                    <div style={{ marginTop: 10 }}>
-                      <GoalTimelineCard
-                        goalName="Financial Goal"
-                        goalType="savings"
-                        currentAmount={0}
-                        targetAmount={10000}
-                        monthlyContribution={500}
-                        phases={[
-                          { name: 'Phase 1: Foundation', months: 6, milestone: 'Build emergency fund', status: 'in_progress' },
-                          { name: 'Phase 2: Growth', months: 12, milestone: 'Reach savings target', status: 'upcoming' },
-                        ]}
-                        completionPercent={25}
-                      />
-                    </div>
-                  )}
+                  {/* REM-37-005 FIX: Parse real data from [GOAL_TIMELINE] block instead of using hardcoded values */}
+                  {m.r === 'a' && m.t.includes('[GOAL_TIMELINE]') && (() => {
+                    try {
+                      // Extract JSON from [GOAL_TIMELINE]...[END_GOAL_TIMELINE] block
+                      const timelineMatch = m.t.match(/\[GOAL_TIMELINE\]([\s\S]*?)\[END_GOAL_TIMELINE\]/);
+                      if (!timelineMatch) return null;
+                      
+                      const timelineData = JSON.parse(timelineMatch[1]);
+                      const {
+                        goalName = 'Financial Goal',
+                        goalType = 'savings',
+                        currentAmount = 0,
+                        targetAmount = 10000,
+                        monthlyContribution = 500,
+                        phases = [],
+                        completionPercent = 0,
+                      } = timelineData;
+                      
+                      return (
+                        <div style={{ marginTop: 10 }}>
+                          <GoalTimelineCard
+                            goalName={goalName}
+                            goalType={goalType}
+                            currentAmount={currentAmount}
+                            targetAmount={targetAmount}
+                            monthlyContribution={monthlyContribution}
+                            phases={phases}
+                            completionPercent={completionPercent}
+                          />
+                        </div>
+                      );
+                    } catch (e) {
+                      console.warn('[GoalTimelineCard] Failed to parse timeline data:', e);
+                      return null;
+                    }
+                  })()}
                 </div>
               </motion.div>
             );

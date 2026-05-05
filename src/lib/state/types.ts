@@ -21,6 +21,7 @@ export type FinancialState = {
   riskTolerance: 'cautious' | 'balanced' | 'growth';
   timeHorizonYears: number;
   proposedPayment?: number;
+  age?: number; // REM-37-002: User's current age for life stage routing and investment allocation
 };
 
 // Multi-goal support

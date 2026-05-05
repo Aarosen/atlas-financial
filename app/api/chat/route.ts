@@ -680,6 +680,7 @@ FIELDS TO EXTRACT (omit any you cannot confidently extract):
 - primaryGoal: one of "stability" | "growth" | "flexibility" | "wealth_building"
   (stability/security → "stability", investing/returns → "growth",
    freedom/liquid → "flexibility", FIRE/retire early/wealth → "wealth_building")
+- age: number (REM-37-002: user's current age in years; extract from phrases like "I'm 35", "I'm 42 years old", "at 45", "I just turned 30"; omit if not stated)
 - timeHorizonYears: number (how many years out the user is planning)
 - riskTolerance: one of "cautious" | "balanced" | "growth"
   (conservative/careful → "cautious", moderate/middle → "balanced", aggressive/bold → "growth")
@@ -1733,8 +1734,13 @@ Output ONLY that question. No prefix. No suffix. No other text.`;
       
       // DISCRETIONARY SPENDING PROTOCOL: When essentials are known but discretionary is missing
       // AUDIT FIX: Capture discretionary spending to provide accurate surplus calculations
-      if (extractedFields?.monthlyIncome && extractedFields?.essentialExpenses && !extractedFields?.discretionaryExpenses && 
-          (extractedFields.essentialExpenses as number) < (extractedFields.monthlyIncome as number)) {
+      // REM-37-001 FIX: Check accumulated financialProfile (not per-message extractedFields) to prevent repetitive loop
+      // Only ask in early onboarding (first 6 messages) to avoid interrupting post-onboarding financial planning
+      if ((financialProfile?.monthlyIncome as number) > 0 && 
+          (financialProfile?.essentialExpenses as number) > 0 && 
+          !(financialProfile as any)?.discretionaryExpenses &&
+          conversationHistory.length < 6 && // only ask in early onboarding
+          (financialProfile.essentialExpenses as number) < (financialProfile.monthlyIncome as number)) {
         dynamicProtocols += `\n\nDISCRETIONARY SPENDING PROTOCOL (POSITION 0 — OVERRIDES OTHER INSTRUCTIONS):
 User has provided income and essentials, but NOT discretionary spending. The ONLY acceptable output is this EXACT question:
 "Beyond essentials, roughly how much do you spend monthly on things like dining out, subscriptions, entertainment, shopping — the lifestyle stuff? A ballpark is fine."
@@ -1890,6 +1896,21 @@ Surface these specifically, not generically."`;
         console.warn('[GAP-008] Irregular income detection failed:', e);
       }
       
+      // REM-37-006 FIX: Goal Discovery Protocol
+      // Detect explicit goal mentions and ask for specifics if not yet captured
+      // Check accumulated financialProfile (not per-message extractedFields) to prevent re-asking
+      // Only ask in early onboarding (first 10 messages) to avoid interrupting post-onboarding planning
+      const hasExplicitGoalMention = /\b(goal|save for|saving for|work toward|planning to|hoping to|want to|dream of|retire|financial independence|fire)\b/i.test(lastUserMsg);
+      const hasGoalAlreadyAnswered = (financialProfile as any)?.primaryGoal || (sessionState as any)?.answered?.primaryGoal;
+      
+      if (hasExplicitGoalMention && !hasGoalAlreadyAnswered && conversationHistory.length < 10) {
+        dynamicProtocols += `\n\nGOAL DISCOVERY PROTOCOL (POSITION 0 — OVERRIDES OTHER INSTRUCTIONS):
+User mentioned a financial goal but hasn't specified what it is. Ask EXACTLY:
+"What's the main financial goal you're working toward? For example: paying off debt, building an emergency fund, saving for a home, early retirement, or something else?"
+Do NOT ask about other topics. Do NOT explain why you need this.
+Output ONLY that question. No prefix. No suffix. No other text.`;
+      }
+      
       // AUDIT 35 FIX GAP-009: Multi-debt prioritization — detect when user mentions multiple debts
       const multipleDebtPatterns = /(multiple debts|several debts|different debts|credit card|student loan|car loan|auto loan|mortgage|personal loan)/i;
       if (multipleDebtPatterns.test(lastUserMsg) && ((financialProfile?.highInterestDebt as number) > 0 || (financialProfile?.lowInterestDebt as number) > 0)) {
@@ -1941,9 +1962,24 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         try {
           const { calculateHomePurchasePlan, buildHomePurchaseContext } = await import('@/lib/ai/goalPlanning/homePurchasePlanner');
           
-          // Extract home price from message
-          const priceMatch = lastUserMsg.match(/\$?\s*([\d,]+)\s*k?\b/i);
-          const homePrice = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) * (lastUserMsg.toLowerCase().includes('k') ? 1000 : 1) : 0;
+          // REM-37-007 FIX: Parse home price with support for million-dollar homes
+          // Handle: $1.5M, $1.5 million, $1500000, $1.5m, $400k, $400000
+          function parseHomePrice(msg: string): number {
+            // Try million pattern first: $1.2M, $1.2 million, 1.2M
+            const mMatch = msg.match(/\$?\s*([\d.]+)\s*(?:M\b|million)/i);
+            if (mMatch) return parseFloat(mMatch[1]) * 1_000_000;
+            
+            // Try k pattern: $400k, $400K, $400 thousand
+            const kMatch = msg.match(/\$?\s*([\d,]+)\s*(?:k\b|thousand)/i);
+            if (kMatch) return parseFloat(kMatch[1].replace(/,/g, '')) * 1_000;
+            
+            // Try plain number: $400,000 or $400000
+            const plainMatch = msg.match(/\$\s*([\d,]+)(?:\.\d+)?\b/);
+            if (plainMatch) return parseFloat(plainMatch[1].replace(/,/g, ''));
+            
+            return 0;
+          }
+          const homePrice = parseHomePrice(lastUserMsg);
           
           if (homePrice > 50000) {
             const plan = calculateHomePurchasePlan(
@@ -1964,6 +2000,7 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
 
       // REM-36-002: Wire Retirement Planner
       // Detect retirement/FIRE context and inject deterministic calculation
+      // REM-37-003 FIX: Use session age from financialProfile if available, not just current message
       if (/\b(retire|retirement|fire|financial independence)\b/i.test(lastUserMsg) && (financialProfile?.monthlyIncome as number) > 0) {
         try {
           const { calculateRetirementPlan, buildRetirementContext } = await import('@/lib/ai/goalPlanning/retirementPlanner');
@@ -1971,7 +2008,10 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
           const currentAgeMatch = lastUserMsg.match(/\b(?:i'?m|age|i am)\s+(\d{2})\b/i) || lastUserMsg.match(/\b(\d{2})\s+(?:years?\s+old)\b/i);
           const targetAgeMatch = lastUserMsg.match(/\b(?:retire\s+at|retire\s+by|retire\s+when\s+i'?m?)\s+(\d{2})\b/i);
           
-          const currentAge = currentAgeMatch ? parseInt(currentAgeMatch[1]) : null;
+          // REM-37-003: Check current message first, then fall back to session age from financialProfile
+          const currentAge = currentAgeMatch 
+            ? parseInt(currentAgeMatch[1]) 
+            : ((financialProfile as any)?.age || null);
           const targetAge = targetAgeMatch ? parseInt(targetAgeMatch[1]) : null;
           
           if (currentAge && targetAge && currentAge < targetAge && (financialProfile.essentialExpenses as number) > 0) {
@@ -2037,8 +2077,9 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
 
       // P2 FIX: Wire Investment Allocation Guidance
       // Detect investment/allocation context and inject age-based asset allocation + tax-advantaged accounts
+      // REM-37-002 FIX: Use age from financialProfile (accumulated) not just extractedFields (per-message)
       const investmentPatterns = /\b(invest|investment|allocation|asset allocation|401k|ira|roth|hsa|brokerage|stocks|bonds|diversif)\b/i;
-      const userAge = (extractedFields as any)?.age || null;
+      const userAge = (extractedFields as any)?.age || (financialProfile as any)?.age || null;
       
       if (investmentPatterns.test(lastUserMsg) && userAge && userAge > 18 && userAge < 100) {
         try {
