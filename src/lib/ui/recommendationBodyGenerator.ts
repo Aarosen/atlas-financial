@@ -4,6 +4,8 @@
  * and calculated targets from the user's financial profile.
  */
 
+import { assessTimeline, buildTimelineWarningText, suggestIncomeAlternatives } from './timelineWarnings';
+
 // AUDIT 12 FIX DEFECT-07: Shared debt payoff calculation utility
 // Ensures consistent payoff timelines across recommendation card and lever comparison
 export function calculateDebtPayoff(debt: number, monthlyPayment: number): { months: number } {
@@ -78,10 +80,46 @@ export function generateRecommendationBody(
   // Scenario 1: Emergency Fund (stabilize_cashflow or build_emergency_buffer)
   if (lever === 'stabilize_cashflow' || lever === 'build_emergency_buffer') {
     const goalBridge = buildGoalBridge(lever, fin.primaryGoal);
-    const mainBody = surplus > 0
-      ? `Your ${formatCurrency(surplus)} monthly surplus is the asset here. To hit a 3-month emergency fund (${formatCurrency(emergencyFundTarget)}), transfer ${formatCurrency(Math.max(100, Math.round(emergencyFundGap / Math.max(monthsToEmergencyFund, 1))))}/month — you're there in ${monthsToEmergencyFund} months.`
-      : `With ${formatCurrency(Math.abs(surplus))} monthly shortfall, the first move is to find ${formatCurrency(Math.abs(surplus))} in cuts or income. Once you're cash-flow positive, build the emergency fund.`;
-    return goalBridge ? `${goalBridge}\n\n${mainBody}` : mainBody;
+    const monthlyAllocation = Math.max(100, Math.round(emergencyFundGap / Math.max(monthsToEmergencyFund, 1)));
+    
+    let mainBody = '';
+    let timelineWarning = '';
+    
+    if (surplus > 0) {
+      mainBody = `Your ${formatCurrency(surplus)} monthly surplus is the asset here. To hit a 3-month emergency fund (${formatCurrency(emergencyFundTarget)}), transfer ${formatCurrency(monthlyAllocation)}/month — you're there in ${monthsToEmergencyFund} months.`;
+      
+      // P2 FIX: Add timeline warning for unrealistic timelines
+      const timeline = assessTimeline(
+        monthsToEmergencyFund,
+        'emergency_fund',
+        fin.totalSavings,
+        emergencyFundTarget,
+        monthlyAllocation,
+        fin.monthlyIncome,
+        fin.essentialExpenses
+      );
+      
+      if (timeline.isUnrealistic) {
+        const incomeAlts = suggestIncomeAlternatives(
+          fin.monthlyIncome,
+          fin.essentialExpenses,
+          surplus,
+          emergencyFundTarget,
+          fin.totalSavings
+        );
+        const allAlts = [...timeline.alternatives, ...incomeAlts];
+        const warningWithAlts = {
+          ...timeline,
+          alternatives: allAlts,
+        };
+        timelineWarning = buildTimelineWarningText(warningWithAlts);
+      }
+    } else {
+      mainBody = `With ${formatCurrency(Math.abs(surplus))} monthly shortfall, the first move is to find ${formatCurrency(Math.abs(surplus))} in cuts or income. Once you're cash-flow positive, build the emergency fund.`;
+    }
+    
+    const fullBody = mainBody + timelineWarning;
+    return goalBridge ? `${goalBridge}\n\n${fullBody}` : fullBody;
   }
 
   // Scenario 2: High-Interest Debt
@@ -97,8 +135,39 @@ export function generateRecommendationBody(
     const totalInterestPaid = Math.round(monthlyInterest * monthsToPayoff);
     const goalBridge = buildGoalBridge(lever, fin.primaryGoal);
     const aprDisplay = aprPct !== null ? Math.round(aprPct) : 23;
-    const mainBody = `At ${formatCurrency(fin.highInterestDebt)} and ~${aprDisplay}% APR, you're paying ~${formatCurrency(monthlyInterest)}/month just in interest. Put ${formatCurrency(monthlyPayment)}/month toward this — you're debt-free in ${monthsToPayoff} months and save ${formatCurrency(totalInterestPaid)} in interest.`;
-    return goalBridge ? `${goalBridge}\n\n${mainBody}` : mainBody;
+    
+    let mainBody = `At ${formatCurrency(fin.highInterestDebt)} and ~${aprDisplay}% APR, you're paying ~${formatCurrency(monthlyInterest)}/month just in interest. Put ${formatCurrency(monthlyPayment)}/month toward this — you're debt-free in ${monthsToPayoff} months and save ${formatCurrency(totalInterestPaid)} in interest.`;
+    let timelineWarning = '';
+    
+    // P2 FIX: Add timeline warning for unrealistic debt payoff timelines
+    const timeline = assessTimeline(
+      monthsToPayoff,
+      'debt_payoff',
+      0,
+      fin.highInterestDebt,
+      monthlyPayment,
+      fin.monthlyIncome,
+      fin.essentialExpenses
+    );
+    
+    if (timeline.isUnrealistic) {
+      const incomeAlts = suggestIncomeAlternatives(
+        fin.monthlyIncome,
+        fin.essentialExpenses,
+        surplus,
+        fin.highInterestDebt,
+        0
+      );
+      const allAlts = [...timeline.alternatives, ...incomeAlts];
+      const warningWithAlts = {
+        ...timeline,
+        alternatives: allAlts,
+      };
+      timelineWarning = buildTimelineWarningText(warningWithAlts);
+    }
+    
+    const fullBody = mainBody + timelineWarning;
+    return goalBridge ? `${goalBridge}\n\n${fullBody}` : fullBody;
   }
 
   // Scenario 3: Increase Future Allocation (grow future savings)
