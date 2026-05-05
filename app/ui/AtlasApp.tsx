@@ -119,6 +119,19 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   // GAP-38-001 FIX: Store pending extracted fields when ambiguities are detected
   // When user confirms an ambiguous value, apply these fields to the conversation state
   const pendingExtractionFieldsRef = useRef<Record<string, unknown> | null>(null);
+  
+  // GAP-38-004 FIX: Track captured fields for single-field editing
+  const [capturedFields, setCapturedFields] = useState<Partial<Record<keyof FinancialState, number | string | null>> | null>(null);
+  
+  const handleEditField = useCallback((field: keyof FinancialState, value: number | string) => {
+    // Apply the field correction to financial state
+    dispatch({
+      type: 'HYDRATE_FIN',
+      fin: { [field]: value },
+    });
+    // Clear captured fields after applying
+    setCapturedFields(null);
+  }, []);
 
   const buildMemorySummary = useCallback((fin: FinancialState, answered: Partial<Record<keyof FinancialState, boolean>>) => {
     const parts: string[] = [];
@@ -1996,6 +2009,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               busy={st.busy}
               isMobile={isMobile}
               isTriageMode={isInTriage}
+              capturedFields={capturedFields}
+              onEditField={handleEditField}
               pendingBlock={st.pendingBlock}
               pendingFin={st.pendingFin}
           selectedLever={st.selectedLever}

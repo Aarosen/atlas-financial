@@ -1,6 +1,6 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 import type { KeyboardEvent as ReactKeyboardEvent, ReactNode, RefObject } from 'react';
-import type { ChatMessage, Strategy } from '@/lib/state/types';
+import type { ChatMessage, Strategy, FinancialState } from '@/lib/state/types';
 import type { SupportedLanguage } from '@/lib/ai/slangMapper';
 import { motion } from 'framer-motion';
 import { t } from '@/lib/i18n/translations';
@@ -101,6 +101,8 @@ export function ConversationScreen({
   inputEnabled = true,
   isMobile = false,
   isTriageMode,
+  capturedFields,
+  onEditField,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -146,6 +148,8 @@ export function ConversationScreen({
   onCorrectField?: (field: string, value: number | string) => void;
   onSelectAlternativeLever?: (leverName: string) => void;
   isTriageMode?: boolean;
+  capturedFields?: Partial<Record<keyof FinancialState, number | string | null>> | null;
+  onEditField?: (field: keyof FinancialState, value: number | string) => void;
 }) {
   const lastUserIdx = (() => {
     for (let i = msgs.length - 1; i >= 0; i--) {
@@ -592,6 +596,40 @@ export function ConversationScreen({
                       console.warn('[GoalTimelineCard] Failed to parse timeline data:', e);
                       return null;
                     }
+                  })()}
+                  
+                  {/* GAP-38-004 FIX: Render FieldCorrectionCard for single-field editing */}
+                  {capturedFields && Object.keys(capturedFields).length > 0 && onEditField && i === msgs.length - 1 && m.r === 'a' && (() => {
+                    const fieldKey = Object.keys(capturedFields)[0] as keyof FinancialState;
+                    const fieldValue = capturedFields[fieldKey] ?? null;
+                    const fieldLabels: Record<string, string> = {
+                      monthlyIncome: 'Monthly income',
+                      essentialExpenses: 'Essential expenses',
+                      totalSavings: 'Total savings',
+                      highInterestDebt: 'High-interest debt',
+                      lowInterestDebt: 'Low-interest debt',
+                      monthlyDebtPayments: 'Monthly debt payments',
+                      discretionaryExpenses: 'Discretionary expenses',
+                      primaryGoal: 'Primary goal',
+                      highInterestDebtAPR: 'High-interest APR',
+                      lowInterestDebtAPR: 'Low-interest APR',
+                      retirementSavings: 'Retirement savings',
+                    };
+                    
+                    return (
+                      <div style={{ marginTop: 10 }}>
+                        <FieldCorrectionCard
+                          field={fieldKey}
+                          currentValue={fieldValue}
+                          fieldLabel={fieldLabels[fieldKey] || fieldKey}
+                          onCorrect={onEditField}
+                          onCancel={() => {
+                            // Clear captured fields by passing empty object
+                            // This is handled by parent component
+                          }}
+                        />
+                      </div>
+                    );
                   })()}
                 </div>
               </motion.div>
