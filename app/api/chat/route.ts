@@ -1991,6 +1991,13 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         }
       }
 
+      // AUDIT FIX: Ask about windfalls explicitly if user mentions them but amount not captured
+      // This prevents ignoring inheritances, bonuses, and other one-time money
+      const hasWindfallMention = /\b(bonus|windfall|inheritance|tax refund|settlement|gift|came into|received|got|expecting|inherited)\b/i.test(lastUserMsg);
+      if (hasWindfallMention && !(extractedFields as any)?.windfallAmount && (financialProfile?.monthlyIncome as number) > 0) {
+        dynamicProtocols += `\n\nWINDFALL AMOUNT NEEDED: User mentioned receiving or expecting money (bonus, inheritance, tax refund, etc.) but didn't state the amount. Ask: "How much are we talking about? Even a rough number helps me show you the best allocation strategy."`;
+      }
+
       // REM-36-003: Wire Windfall Planner
       // Detect windfall context and inject allocation strategy
       // Priority: use extracted windfall amount, fall back to parsing from message
