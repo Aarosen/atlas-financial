@@ -649,7 +649,7 @@ EXTRACTION RULES:
 - CRITICAL: Extract debt amounts from ANY mention of debt. "$8,000 credit card debt" → highInterestDebt: 8000. "$15k student loans" → lowInterestDebt: 15000.
 - CRITICAL: Only set debt to 0 if user EXPLICITLY says "no" or "I don't have" in response to a debt question. If user doesn't mention debt at all, OMIT the field entirely (don't default to 0).
 - CRITICAL: "I have $X left over" or "I have $X surplus" or "after essentials I have $X" → this is SURPLUS, NOT income. Extract as essentialExpenses = (monthlyIncome - surplus). Do NOT extract as monthlyIncome.
-- Annual salary → divide by 12 for monthlyIncome.
+- Annual salary → divide by 12 for monthlyIncome. BUT: If the last question explicitly asked about "monthly income" or "monthly take-home", treat the user's answer as already monthly (do NOT divide by 12).
 - "Take-home" / "after tax" / "net" → use as monthlyIncome.
 - Value ranges ("$3,000–$3,500") → use the midpoint.
 - "k" or "thousand" suffix → multiply by 1000.
@@ -1871,14 +1871,6 @@ Surface these specifically, not generically."`;
       // REM-27-B Part 1 now injects employer match into calculationBlock as authoritative data
       // This is more effective than text-based guidance in dynamicProtocols
       
-      // AUDIT FIX: Ask about financial goals if not yet captured
-      // This enables goal-specific guidance instead of generic advice
-      const hasGoalMention = /\b(goal|goals|want|hoping|dream|plan|target|save for|work toward|achieve)\b/i.test(lastUserMsg);
-      const hasExtractedGoal = (extractedFields as any)?.primaryGoal || (extractedFields as any)?.savingsGoals;
-      if (hasGoalMention && !hasExtractedGoal && conversationHistory.length < 10) {
-        dynamicProtocols += `\n\nGOAL DISCOVERY: User mentioned having goals but hasn't specified what they are. Ask: "What's the main financial goal you're working toward? For example: paying off debt, building an emergency fund, saving for a home, early retirement, or something else?"`;
-      }
-
       // AUDIT 35 FIX GAP-008: Variable income handling — detect gig/freelance workers
       // Use proper irregular income module for deterministic calculations
       try {

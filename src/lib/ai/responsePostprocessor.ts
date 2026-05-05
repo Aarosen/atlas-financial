@@ -54,6 +54,11 @@ export function cleanAtlasResponse(raw: string): string {
     // Collapse multiple blank lines
     .replace(/\n{3,}/g, '\n\n')
     .trim();
+  
+  // Ensure response starts with a capital letter
+  if (cleaned.length > 0 && cleaned[0] !== cleaned[0].toUpperCase()) {
+    cleaned = cleaned[0].toUpperCase() + cleaned.slice(1);
+  }
 
   // TASK 2.2: Detect and log unauthorized financial estimates
   const estimate = detectUnauthorizedEstimate(cleaned);
