@@ -2039,6 +2039,27 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         }
       }
 
+      // P3 FIX: Wire Tax Optimization Guidance
+      // Detect tax/optimization context and inject income-level-specific tax strategies
+      const taxPatterns = /\b(tax|taxes|deduction|deductions|credit|credits|401k|ira|roth|hsa|optimize|optimization|strategy|planning)\b/i;
+      const annualIncome = ((financialProfile?.monthlyIncome as number) || 0) * 12;
+      
+      if (taxPatterns.test(lastUserMsg) && annualIncome > 30000) {
+        try {
+          const { buildTaxOptimizationPlan, buildTaxContext } = await import('@/lib/ai/taxOptimization');
+          
+          const plan = buildTaxOptimizationPlan(
+            Math.round(annualIncome),
+            (extractedFields as any)?.hasBusinessIncome || false,
+            (extractedFields as any)?.hasCapitalGains || false
+          );
+          
+          dynamicProtocols += `\n\n${buildTaxContext(plan)}\nINSTRUCTION: When discussing taxes or financial planning, reference the estimated tax savings ($${plan.estimatedTaxSavings.toLocaleString()}/year) and prioritize strategies by difficulty. Always recommend consulting a fee-only CPA for implementation of complex strategies. Be specific about which strategies apply to their income level.`;
+        } catch (e) {
+          console.warn('[P3-FIX] Tax optimization failed:', e);
+        }
+      }
+
       // REM-36-004: Wire Debt Avalanche for Multi-Debt
       // Detect multi-debt context and inject avalanche payoff strategy
       const hasMultipleDebts = ((financialProfile?.highInterestDebt as number) || 0) > 0 && ((financialProfile?.lowInterestDebt as number) || 0) > 0;
