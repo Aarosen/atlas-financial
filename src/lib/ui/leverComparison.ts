@@ -103,14 +103,17 @@ export function generateLeverComparison(fin: Partial<FinancialState>): LeverComp
       keyValue: `$${emergencyTarget3mo.toLocaleString()} (${emergencyMonths} months to build)`,
       timelineMonths: emergencyMonths,
     }] : []),
-    {
+    // ASSESSMENT FIX: Only show discretionary optimization if no high-interest debt at high APR
+    // When APR > 15%, debt payoff is always better than discretionary optimization
+    // This fixes the discretionary bias issue where users with 20% APR debt were told to cut spending
+    ...(highDebt === 0 || (aprPct && aprPct <= 15) ? [{
       lever: 'optimize_discretionary_spend',
       name: 'Optimize Discretionary Spend',
       explanation: `You likely have ~$${Math.round(discretionaryEstimate).toLocaleString()}/month in discretionary spending. Optimizing this creates fuel for other goals.`,
       keyMetric: 'Potential monthly fuel',
       keyValue: `$${Math.round(discretionaryEstimate).toLocaleString()}`,
       timelineMonths: 1,
-    },
+    }] : []),
     {
       lever: 'increase_future_allocation',
       name: 'Grow Future Savings',
