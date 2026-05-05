@@ -2122,6 +2122,42 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         }
       }
 
+      // ENHANCEMENT: Wire Savings Goal Tracking
+      // Detect savings goal context and provide progress tracking and motivation
+      const savingsGoalPatterns = /\b(goal|goals|save|saving|target|milestone|progress|track|vacation|down payment|education|emergency fund)\b/i;
+      const userSurplus = (financialProfile?.monthlyIncome as number) - (financialProfile?.essentialExpenses as number) - ((extractedFields as any)?.discretionaryExpenses || 0);
+      
+      if (savingsGoalPatterns.test(lastUserMsg) && userSurplus > 0) {
+        try {
+          const { buildSavingsGoalPlan, buildSavingsGoalContext } = await import('@/lib/ai/savingsGoalTracking');
+          
+          // Create sample goals from extracted data if available
+          const goals: any[] = [];
+          if ((extractedFields as any)?.savingsGoals) {
+            goals.push(...(extractedFields as any).savingsGoals);
+          } else {
+            // Create default goals based on financial profile
+            if ((financialProfile?.totalSavings as number) < (financialProfile?.essentialExpenses as number) * 3) {
+              goals.push({
+                name: 'Emergency Fund',
+                targetAmount: (financialProfile?.essentialExpenses as number) * 6,
+                currentAmount: (financialProfile?.totalSavings as number) || 0,
+                deadline: 12,
+                category: 'emergency_fund',
+                priority: 'critical',
+              });
+            }
+          }
+          
+          if (goals.length > 0) {
+            const plan = buildSavingsGoalPlan(goals, Math.round(userSurplus * 0.5)); // Allocate 50% of surplus to goals
+            dynamicProtocols += `\n\n${buildSavingsGoalContext(plan)}\nINSTRUCTION: When discussing savings goals, reference the progress toward each goal and provide motivational feedback. Celebrate milestones and offer specific suggestions for staying on track.`;
+          }
+        } catch (e) {
+          console.warn('[ENHANCEMENT] Savings goal tracking failed:', e);
+        }
+      }
+
       // REM-36-004: Wire Debt Avalanche for Multi-Debt
       // Detect multi-debt context and inject avalanche payoff strategy
       const hasMultipleDebts = ((financialProfile?.highInterestDebt as number) || 0) > 0 && ((financialProfile?.lowInterestDebt as number) || 0) > 0;
