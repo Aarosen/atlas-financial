@@ -1988,7 +1988,21 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
               (financialProfile.monthlyIncome as number) || 0,
               (financialProfile.essentialExpenses as number) || 0,
             );
-            dynamicProtocols += `\n\n${buildHomePurchaseContext(plan)}\nINSTRUCTION: Lead with the HOME PURCHASE PLAN numbers above. These are authoritative — do not substitute different values. Reference the timeline, monthly contribution needed, and affordability check specifically.`;
+            
+            // GAP-38-002 FIX: Inject [GOAL_TIMELINE] marker for UI visualization
+            const goalTimelineData = {
+              goalName: 'Home Purchase',
+              goalType: 'savings',
+              currentAmount: (financialProfile.totalSavings as number) || 0,
+              targetAmount: plan.totalCashNeeded,
+              monthlyContribution: plan.monthlyContributionNeeded,
+              completionPercent: Math.min(100, Math.round(((financialProfile.totalSavings as number) || 0) / plan.totalCashNeeded * 100)),
+              phases: [
+                { name: 'Save for down payment + closing costs', months: plan.monthsToSave, milestone: `Reach $${plan.totalCashNeeded.toLocaleString()}`, status: 'in_progress' }
+              ]
+            };
+            
+            dynamicProtocols += `\n\n${buildHomePurchaseContext(plan)}\nINSTRUCTION: Lead with the HOME PURCHASE PLAN numbers above. These are authoritative — do not substitute different values. Reference the timeline, monthly contribution needed, and affordability check specifically.\n\nAfter your analysis, include this EXACT block at the very end of your response:\n[GOAL_TIMELINE]${JSON.stringify(goalTimelineData)}[END_GOAL_TIMELINE]\nDo not modify the JSON. Include it verbatim at the end.`;
           } else {
             // Price not given — ask for it
             dynamicProtocols += `\n\nHOME PURCHASE GOAL: User wants to buy a home but has not stated a target price. Ask: "What price range are you looking at for the home? Even a rough number — $300k, $500k — helps me calculate what monthly savings you'd need."`;
@@ -2022,7 +2036,21 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
               (financialProfile.essentialExpenses as number) || 0,
               (financialProfile as any).monthlyRetirementContribution || 0,
             );
-            dynamicProtocols += `\n\n${buildRetirementContext(plan)}\nINSTRUCTION: Lead with the RETIREMENT PLAN numbers. State the FIRE number, whether they're on track, and specifically how much more per month they need to contribute if behind. Do not say "maximize contributions" without stating the exact number required.`;
+            
+            // GAP-38-002 FIX: Inject [GOAL_TIMELINE] marker for UI visualization
+            const goalTimelineData = {
+              goalName: 'Retirement',
+              goalType: 'retirement',
+              currentAmount: (financialProfile.retirementSavings as number) || 0,
+              targetAmount: plan.fireNumber,
+              monthlyContribution: plan.monthlyContributionNeeded || ((financialProfile as any).monthlyRetirementContribution || 0),
+              completionPercent: plan.readinessPercent,
+              phases: [
+                { name: `Save to FIRE number (${plan.yearsToRetirement} years)`, months: plan.yearsToRetirement * 12, milestone: `Reach $${plan.fireNumber.toLocaleString()}`, status: plan.isOnTrack ? 'on_track' : 'in_progress' }
+              ]
+            };
+            
+            dynamicProtocols += `\n\n${buildRetirementContext(plan)}\nINSTRUCTION: Lead with the RETIREMENT PLAN numbers. State the FIRE number, whether they're on track, and specifically how much more per month they need to contribute if behind. Do not say "maximize contributions" without stating the exact number required.\n\nAfter your analysis, include this EXACT block at the very end of your response:\n[GOAL_TIMELINE]${JSON.stringify(goalTimelineData)}[END_GOAL_TIMELINE]\nDo not modify the JSON. Include it verbatim at the end.`;
           } else if (!currentAge || !targetAge) {
             dynamicProtocols += `\n\nRETIREMENT PLANNING: User wants to plan for retirement but hasn't provided current age and target retirement age. Ask: "How old are you now, and what age are you hoping to retire?"`;
           }
@@ -2566,6 +2594,10 @@ INSTRUCTION: Acknowledge this progress explicitly in your response. Say somethin
 
             // Apply postprocessing to clean formatting
             let cleanedResponse = cleanAtlasResponse(fullResponse);
+            
+            // GAP-38-002 FIX: Strip [GOAL_TIMELINE] marker from response text
+            // The marker is only for UI parsing, not for user display
+            cleanedResponse = cleanedResponse.replace(/\n?\[GOAL_TIMELINE\][\s\S]*?\[END_GOAL_TIMELINE\]\n?/g, '').trim();
             
             // REM-31-A: Wire self-check quality assurance layer (non-blocking)
             // runSelfCheck was implemented but never called — this wires it in
