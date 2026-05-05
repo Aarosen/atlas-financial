@@ -1,4 +1,7 @@
+'use client';
+
 import type { AnchorHTMLAttributes, ButtonHTMLAttributes, ReactNode } from 'react';
+import { useState } from 'react';
 import Link from 'next/link';
 
 export type ButtonVariant = 'primary' | 'secondary';
@@ -9,6 +12,8 @@ export function Button({
   size = 'md',
   className,
   children,
+  onClick,
+  disabled,
   ...rest
 }: {
   variant?: ButtonVariant;
@@ -16,11 +21,37 @@ export function Button({
   className?: string;
   children: ReactNode;
 } & ButtonHTMLAttributes<HTMLButtonElement>) {
+  // REM-37-008 FIX: Button double-click protection
+  // Prevent accidental double-clicks from triggering multiple submissions
+  const [isClicking, setIsClicking] = useState(false);
+  
+  const handleClick = (e: React.MouseEvent<HTMLButtonElement>) => {
+    if (isClicking) {
+      e.preventDefault();
+      return;
+    }
+    
+    setIsClicking(true);
+    
+    // Call the original onClick if provided
+    if (onClick) {
+      onClick(e);
+    }
+    
+    // Re-enable after 500ms to prevent accidental double-clicks
+    setTimeout(() => setIsClicking(false), 500);
+  };
+  
   const variantClass = variant === 'secondary' ? 'btnSecondary' : 'btnPrimary';
   const sizeClass = size === 'sm' ? 'btnSm' : 'btnMd';
   const cn = ['btn', variantClass, sizeClass, className].filter(Boolean).join(' ');
   return (
-    <button className={cn} {...rest}>
+    <button 
+      className={cn} 
+      onClick={handleClick}
+      disabled={disabled || isClicking}
+      {...rest}
+    >
       {children}
     </button>
   );
