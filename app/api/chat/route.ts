@@ -2080,6 +2080,24 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         }
       }
 
+      // P3 FIX: Wire Estate Planning Triggers
+      // Detect estate planning context or high net worth and inject estate planning guidance
+      const estatePlanningPatterns = /\b(estate|inheritance|will|trust|heir|beneficiary|legacy|generation|tax planning|succession)\b/i;
+      
+      if ((estatePlanningPatterns.test(lastUserMsg) || userNetWorth >= 5000000) && userNetWorth > 0) {
+        try {
+          const { assessEstatePlanningNeeds, buildEstatePlanningContext } = await import('@/lib/ai/estatePlanning');
+          
+          const assessment = assessEstatePlanningNeeds(Math.round(userNetWorth));
+          
+          if (assessment.needsEstatePlanning) {
+            dynamicProtocols += `\n\n${buildEstatePlanningContext(assessment)}\nINSTRUCTION: When discussing wealth, legacy, or long-term planning, reference the federal estate tax exemption and their current exemption usage. Recommend consulting with an estate planning attorney and CPA. Be specific about critical items that need immediate attention.`;
+          }
+        } catch (e) {
+          console.warn('[P3-FIX] Estate planning assessment failed:', e);
+        }
+      }
+
       // REM-36-004: Wire Debt Avalanche for Multi-Debt
       // Detect multi-debt context and inject avalanche payoff strategy
       const hasMultipleDebts = ((financialProfile?.highInterestDebt as number) || 0) > 0 && ((financialProfile?.lowInterestDebt as number) || 0) > 0;
