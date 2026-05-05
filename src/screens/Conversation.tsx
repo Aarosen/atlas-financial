@@ -322,7 +322,8 @@ export function ConversationScreen({
     }
     return String(v);
   };
-  const recommendedLever = baseline?.lever || selectedLever || 'stabilize_cashflow';
+  // AUDIT FIX: Use selectedLever if set (user clicked "Use this lever instead"), otherwise use baseline
+  const recommendedLever = selectedLever || baseline?.lever || 'stabilize_cashflow';
   const leverLabel = leverLabels[recommendedLever] || recommendedLever;
   const leverBasedOn = baseline?.explainability?.inputsUsed
     ? humanizeFieldList(Object.keys(baseline.explainability.inputsUsed).filter(Boolean))

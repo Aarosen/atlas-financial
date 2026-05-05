@@ -1731,6 +1731,17 @@ Do NOT ask about triage level. Do NOT ask about goals. Do NOT ask about debt. Do
 Output ONLY that question. No prefix. No suffix. No other text.`;
       }
       
+      // DISCRETIONARY SPENDING PROTOCOL: When essentials are known but discretionary is missing
+      // AUDIT FIX: Capture discretionary spending to provide accurate surplus calculations
+      if (extractedFields?.monthlyIncome && extractedFields?.essentialExpenses && !extractedFields?.discretionaryExpenses && 
+          (extractedFields.essentialExpenses as number) < (extractedFields.monthlyIncome as number)) {
+        dynamicProtocols += `\n\nDISCRETIONARY SPENDING PROTOCOL (POSITION 0 — OVERRIDES OTHER INSTRUCTIONS):
+User has provided income and essentials, but NOT discretionary spending. The ONLY acceptable output is this EXACT question:
+"Beyond essentials, roughly how much do you spend monthly on things like dining out, subscriptions, entertainment, shopping — the lifestyle stuff? A ballpark is fine."
+Do NOT ask about debt, goals, or savings yet. Do NOT explain why you need this.
+Output ONLY that question. No prefix. No suffix. No other text.`;
+      }
+      
       // TRIAGE PROTOCOL: When spending exceeds income (financial crisis)
       if (extractedFields?.monthlyIncome && extractedFields?.essentialExpenses &&
           (extractedFields.essentialExpenses as number) > (extractedFields.monthlyIncome as number)) {
