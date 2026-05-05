@@ -2017,6 +2017,28 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         }
       }
 
+      // P2 FIX: Wire Investment Allocation Guidance
+      // Detect investment/allocation context and inject age-based asset allocation + tax-advantaged accounts
+      const investmentPatterns = /\b(invest|investment|allocation|asset allocation|401k|ira|roth|hsa|brokerage|stocks|bonds|diversif)\b/i;
+      const userAge = (extractedFields as any)?.age || null;
+      
+      if (investmentPatterns.test(lastUserMsg) && userAge && userAge > 18 && userAge < 100) {
+        try {
+          const { buildInvestmentAllocationPlan, buildInvestmentContext } = await import('@/lib/ai/investmentAllocation');
+          
+          const plan = buildInvestmentAllocationPlan(
+            userAge,
+            (financialProfile?.monthlyIncome as number) || 0,
+            (extractedFields as any)?.hasEmployer401k || false,
+            (extractedFields as any)?.hasHSAEligibility || false
+          );
+          
+          dynamicProtocols += `\n\n${buildInvestmentContext(plan)}\nINSTRUCTION: When discussing investments or asset allocation, reference the age-based allocation (${plan.assetAllocation.stocks}% stocks, ${plan.assetAllocation.bonds}% bonds). Prioritize tax-advantaged accounts in this order: ${plan.taxAdvantagedAccounts.filter(a => a.priority === 'critical' || a.priority === 'high').map(a => a.name).join(', ')}. Explain why each account matters for their situation.`;
+        } catch (e) {
+          console.warn('[P2-FIX] Investment allocation failed:', e);
+        }
+      }
+
       // REM-36-004: Wire Debt Avalanche for Multi-Debt
       // Detect multi-debt context and inject avalanche payoff strategy
       const hasMultipleDebts = ((financialProfile?.highInterestDebt as number) || 0) > 0 && ((financialProfile?.lowInterestDebt as number) || 0) > 0;
