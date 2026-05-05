@@ -115,6 +115,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   // BUG-33-002 FIX: Track consecutive extraction failures per field to detect loops
   const failedExtractionRef = useRef<Record<string, number>>({});
+  
+  // GAP-38-001 FIX: Store pending extracted fields when ambiguities are detected
+  // When user confirms an ambiguous value, apply these fields to the conversation state
+  const pendingExtractionFieldsRef = useRef<Record<string, unknown> | null>(null);
 
   const buildMemorySummary = useCallback((fin: FinancialState, answered: Partial<Record<keyof FinancialState, boolean>>) => {
     const parts: string[] = [];
@@ -1356,8 +1360,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       });
       
       // REM-36-005: Wire ambiguities from extraction response to frontend state
+      // GAP-38-001 FIX: Also store the extracted fields so they can be applied when user confirms
       if ((ex as any).ambiguities && Object.keys((ex as any).ambiguities).length > 0) {
         setPendingAmbiguities((ex as any).ambiguities);
+        pendingExtractionFieldsRef.current = ex.fields ?? null;
       }
       
       await db.set('fin', { k: 'cur', ...uf, ts: Date.now() });
@@ -1910,14 +1916,42 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
                       <div className="flex gap-2 pt-2">
                         <button
                           onClick={() => {
-                            const keys = Object.keys(pendingAmbiguities);
-                            const newAmbiguities = { ...pendingAmbiguities };
-                            delete newAmbiguities[keys[0]];
-                            if (Object.keys(newAmbiguities).length === 0) {
-                              setPendingAmbiguities(null);
-                            } else {
-                              setPendingAmbiguities(newAmbiguities);
+                            // GAP-38-001 FIX: Apply the pending extracted fields to conversation state
+                            if (pendingExtractionFieldsRef.current) {
+                              const st1 = applyUserTurn(
+                                {
+                                  sessionId: 'ui',
+                                  phase: st.missing.length ? ('onboarding' as const) : ('baseline_ready' as const),
+                                  collected: st.fin,
+                                  missing: st.missing,
+                                  lastQuestionKey: st.lastQuestionKey,
+                                  lastTurnAt: Date.now(),
+                                  mode: st.mode,
+                                  answered: st.answered,
+                                  unknown: st.unknown,
+                                },
+                                {
+                                  userText: '',
+                                  extractedFields: pendingExtractionFieldsRef.current as any,
+                                  kind: 'answer_to_question',
+                                  now: Date.now(),
+                                }
+                              );
+                              dispatch({
+                                type: 'SEND_EXTRACTED',
+                                finNext: st1.collected,
+                                missingNext: st1.missing,
+                                answeredNext: st1.answered,
+                                unknownNext: st1.unknown,
+                                apiOk: true,
+                              });
+                              pendingExtractionFieldsRef.current = null;
                             }
+                            // Dismiss the ambiguity modal
+                            const keys = Object.keys(pendingAmbiguities);
+                            const next = { ...pendingAmbiguities };
+                            delete next[keys[0]];
+                            setPendingAmbiguities(Object.keys(next).length === 0 ? null : next);
                           }}
                           className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
                         >
