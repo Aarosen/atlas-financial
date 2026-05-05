@@ -100,6 +100,7 @@ export function ConversationScreen({
   onResetConversation,
   inputEnabled = true,
   isMobile = false,
+  isTriageMode,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -144,6 +145,7 @@ export function ConversationScreen({
   inputEnabled?: boolean;
   onCorrectField?: (field: string, value: number | string) => void;
   onSelectAlternativeLever?: (leverName: string) => void;
+  isTriageMode?: boolean;
 }) {
   const lastUserIdx = (() => {
     for (let i = msgs.length - 1; i >= 0; i--) {
@@ -357,9 +359,13 @@ export function ConversationScreen({
   const showActionSuggestions = !pendingBlock && !!actionSuggestions?.length && !!onQuickReply;
 
   // AUDIT 35 FIX GAP-005: Detect triage mode (income < expenses)
-  const isTriageMode = pendingFin 
-    ? pendingFin.monthlyIncome > 0 && pendingFin.essentialExpenses > 0 && pendingFin.monthlyIncome < pendingFin.essentialExpenses
-    : false;
+  // GAP-38-003 FIX: Use prop value from parent (computed from accumulated st.fin) for early detection during onboarding
+  // Falls back to pendingFin computation for backward compatibility
+  const computedTriageMode = isTriageMode !== undefined 
+    ? isTriageMode 
+    : (pendingFin 
+        ? pendingFin.monthlyIncome > 0 && pendingFin.essentialExpenses > 0 && pendingFin.monthlyIncome < pendingFin.essentialExpenses
+        : false);
 
   useEffect(() => {
     setShowExplain(false);
@@ -380,7 +386,7 @@ export function ConversationScreen({
   };
 
   return (
-    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: isTriageMode ? 'var(--bg-triage, #fef8f0)' : 'var(--bg)', position: 'relative' }}>
+    <div style={{ height: '100dvh', display: 'flex', flexDirection: 'column', background: computedTriageMode ? 'var(--bg-triage, #fef8f0)' : 'var(--bg)', position: 'relative' }}>
       {/* Single unified header - no duplicate navbar */}
       <TopBar
         title="Conversation"
@@ -393,7 +399,7 @@ export function ConversationScreen({
       />
 
       {/* AUDIT 35 FIX GAP-005: Triage mode banner */}
-      {isTriageMode && (
+      {computedTriageMode && (
         <div style={{
           background: 'linear-gradient(135deg, #ff6b35 0%, #f7931e 100%)',
           color: 'white',

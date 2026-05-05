@@ -1980,17 +1980,24 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             </div>
           </div>
         )}
-        <ConversationScreen
-          inputEnabled={mounted}
-          theme={theme ?? 'dark'}
-          onToggleTheme={toggleTheme}
-          apiErr={st.apiErr}
-          apiStatus={apiStatus}
-          msgs={st.msgs}
-          busy={st.busy}
-          isMobile={isMobile}
-          pendingBlock={st.pendingBlock}
-          pendingFin={st.pendingFin}
+        
+        {/* GAP-38-003 FIX: Compute triage mode from accumulated financial state */}
+        {/* This fires during onboarding when user provides income and expenses, not just on CONFIRM card */}
+        {(() => {
+          const isInTriage = st.fin.monthlyIncome > 0 && st.fin.essentialExpenses > 0 && st.fin.monthlyIncome < st.fin.essentialExpenses;
+          return (
+            <ConversationScreen
+              inputEnabled={mounted}
+              theme={theme ?? 'dark'}
+              onToggleTheme={toggleTheme}
+              apiErr={st.apiErr}
+              apiStatus={apiStatus}
+              msgs={st.msgs}
+              busy={st.busy}
+              isMobile={isMobile}
+              isTriageMode={isInTriage}
+              pendingBlock={st.pendingBlock}
+              pendingFin={st.pendingFin}
           selectedLever={st.selectedLever}
           baseline={st.baseline}
           onConfirmFin={handleConfirmFin}
@@ -2063,7 +2070,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             clearGuestFinancialData();
             dispatch({ type: 'NEW_CONVERSATION' });
           }}
-        />
+            />
+          );
+        })()}
         {rateLimitRemaining !== undefined && rateLimitRemaining <= 15 && (
           <div
             style={{
