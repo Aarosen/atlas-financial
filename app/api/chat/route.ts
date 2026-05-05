@@ -675,6 +675,8 @@ FIELDS TO EXTRACT (omit any you cannot confidently extract):
 - lowInterestDebtAPR: number (AUDIT 23 FIX REM-23-D: APR/interest rate of low-interest debt; extract ONLY if explicitly stated from phrases like "4.5% student loan", "2.9% car loan", "at 5%"; CRITICAL: do NOT infer or assume a rate; omit if not explicitly stated)
 - monthlyDebtPayments: number (total minimum monthly payments across all debt)
 - proposedPayment: number (monthly payment amount for a specific purchase being evaluated; extract ONLY when user is evaluating a specific purchase like 'I want to buy a house with a $2,500/month payment' or 'the car payment would be $450/month' or 'the apartment is $1,800/month'; omit if user is not evaluating a specific purchase)
+- windfallAmount: number (REM-36-003: One-time money received or expected: bonus, inheritance, tax refund, settlement, gift. Extract from phrases like "I got a $5k bonus", "I'm expecting a $10k tax refund", "I inherited $50k"; omit if not stated)
+- windfallType: string (REM-36-003: Type of windfall: "bonus", "inheritance", "tax_refund", "settlement", "gift", or "other"; omit if not stated)
 - primaryGoal: one of "stability" | "growth" | "flexibility" | "wealth_building"
   (stability/security → "stability", investing/returns → "growth",
    freedom/liquid → "flexibility", FIRE/retire early/wealth → "wealth_building")
@@ -1482,38 +1484,30 @@ Return ONLY the rewritten text.`;
         financialProfile as any  // Pass LLM-verified data to engine
       );
 
-      // Crisis response: return immediately if crisis detected
-      if (engineResult.crisis.detected) {
-        const cleanedCrisisResponse = cleanAtlasResponse(engineResult.crisis.response);
-        return jsonOk({
-          text: cleanedCrisisResponse,
-          source: 'atlas_crisis',
-          model: usedModel,
-          tier,
-          sessionState: sessionState ?? {},
-        });
-      }
+      // REM-36-011: Unify data gate to chat path
+      // Apply same minimum data gate as answer path: refuse advice if fewer than 2 core fields confirmed
+      const confirmedCoreFields = [
+        financialProfile?.monthlyIncome && financialProfile.monthlyIncome > 0,
+        financialProfile?.essentialExpenses && financialProfile.essentialExpenses > 0,
+        financialProfile?.totalSavings !== null && financialProfile?.totalSavings !== undefined,
+        (financialProfile?.highInterestDebt !== null && financialProfile?.highInterestDebt !== undefined) || 
+        (financialProfile?.lowInterestDebt !== null && financialProfile?.lowInterestDebt !== undefined),
+      ].filter(Boolean).length;
 
-      // Compliance response: return immediately if compliance violation detected
-      if (engineResult.compliance.detected) {
-        const cleanedComplianceResponse = cleanAtlasResponse(engineResult.compliance.response || 'This request violates our compliance policy.');
+      if (confirmedCoreFields < 2) {
         return jsonOk({
-          text: cleanedComplianceResponse,
-          source: 'compliance_guardrail',
+          text: `You're asking a financial question, but I don't have enough information yet to give you meaningful guidance. Let me start with the most important number: What's your monthly take-home pay — the amount that actually lands in your bank account each month?`,
+          source: 'data_gate',
           model: 'policy',
           tier,
         });
       }
 
-      // Use deterministic decision from engines as the session state
-      const financialDecision = engineResult.decision;
-      const nextQuestion = engineResult.nextQuestion;
-      const extractedData = engineResult.extraction.data;
-      
       // Map engine result to old orchestrator format for backward compatibility
       const sessionStateBlock = engineResult.contextBlocks
         .map(block => block.content)
         .join('\n\n');
+      const financialDecision = engineResult.decision;
       const missingFields = financialDecision.missingFields || [];
       const state = { 
         domain: financialDecision.domain, 
@@ -1910,6 +1904,123 @@ User's high-interest debt: $${chatKnownDebt.toLocaleString()}
 User's APR: ${chatKnownApr}% (confirmed from profile)
 Monthly interest cost: $${monthlyInterestCost.toLocaleString()}
 CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST use ${chatKnownApr}% in all calculations and discussions. Do NOT estimate, assume, or substitute any other rate. Do NOT say "typically 18%" or "usually 20%". The user's actual rate is ${chatKnownApr}%.`;
+      }
+
+      // REM-36-001: Wire Home Purchase Planner
+      // Detect home purchase context and inject deterministic calculation
+      if (/\b(home|house|down payment|mortgage|buy a home|buy a house|property)\b/i.test(lastUserMsg) && (financialProfile?.monthlyIncome as number) > 0) {
+        try {
+          const { calculateHomePurchasePlan, buildHomePurchaseContext } = await import('@/lib/ai/goalPlanning/homePurchasePlanner');
+          
+          // Extract home price from message
+          const priceMatch = lastUserMsg.match(/\$?\s*([\d,]+)\s*k?\b/i);
+          const homePrice = priceMatch ? parseFloat(priceMatch[1].replace(/,/g, '')) * (lastUserMsg.toLowerCase().includes('k') ? 1000 : 1) : 0;
+          
+          if (homePrice > 50000) {
+            const plan = calculateHomePurchasePlan(
+              homePrice,
+              (financialProfile.totalSavings as number) || 0,
+              (financialProfile.monthlyIncome as number) || 0,
+              (financialProfile.essentialExpenses as number) || 0,
+            );
+            dynamicProtocols += `\n\n${buildHomePurchaseContext(plan)}\nINSTRUCTION: Lead with the HOME PURCHASE PLAN numbers above. These are authoritative — do not substitute different values. Reference the timeline, monthly contribution needed, and affordability check specifically.`;
+          } else {
+            // Price not given — ask for it
+            dynamicProtocols += `\n\nHOME PURCHASE GOAL: User wants to buy a home but has not stated a target price. Ask: "What price range are you looking at for the home? Even a rough number — $300k, $500k — helps me calculate what monthly savings you'd need."`;
+          }
+        } catch (e) {
+          console.warn('[REM-36-001] Home purchase planner failed:', e);
+        }
+      }
+
+      // REM-36-002: Wire Retirement Planner
+      // Detect retirement/FIRE context and inject deterministic calculation
+      if (/\b(retire|retirement|fire|financial independence)\b/i.test(lastUserMsg) && (financialProfile?.monthlyIncome as number) > 0) {
+        try {
+          const { calculateRetirementPlan, buildRetirementContext } = await import('@/lib/ai/goalPlanning/retirementPlanner');
+          
+          const currentAgeMatch = lastUserMsg.match(/\b(?:i'?m|age|i am)\s+(\d{2})\b/i) || lastUserMsg.match(/\b(\d{2})\s+(?:years?\s+old)\b/i);
+          const targetAgeMatch = lastUserMsg.match(/\b(?:retire\s+at|retire\s+by|retire\s+when\s+i'?m?)\s+(\d{2})\b/i);
+          
+          const currentAge = currentAgeMatch ? parseInt(currentAgeMatch[1]) : null;
+          const targetAge = targetAgeMatch ? parseInt(targetAgeMatch[1]) : null;
+          
+          if (currentAge && targetAge && currentAge < targetAge && (financialProfile.essentialExpenses as number) > 0) {
+            const plan = calculateRetirementPlan(
+              currentAge,
+              targetAge,
+              (financialProfile.retirementSavings as number) || 0,
+              (financialProfile.essentialExpenses as number) || 0,
+              (financialProfile as any).monthlyRetirementContribution || 0,
+            );
+            dynamicProtocols += `\n\n${buildRetirementContext(plan)}\nINSTRUCTION: Lead with the RETIREMENT PLAN numbers. State the FIRE number, whether they're on track, and specifically how much more per month they need to contribute if behind. Do not say "maximize contributions" without stating the exact number required.`;
+          } else if (!currentAge || !targetAge) {
+            dynamicProtocols += `\n\nRETIREMENT PLANNING: User wants to plan for retirement but hasn't provided current age and target retirement age. Ask: "How old are you now, and what age are you hoping to retire?"`;
+          }
+        } catch (e) {
+          console.warn('[REM-36-002] Retirement planner failed:', e);
+        }
+      }
+
+      // REM-36-003: Wire Windfall Planner
+      // Detect windfall context and inject allocation strategy
+      if (/\b(bonus|windfall|inheritance|tax refund|settlement|gift|came into|received|got|expecting)\b/i.test(lastUserMsg) && (financialProfile?.monthlyIncome as number) > 0) {
+        try {
+          const { allocateWindfall, buildWindfallContext } = await import('@/lib/ai/goalPlanning/windfallPlanner');
+          
+          const amountMatch = lastUserMsg.match(/\$?\s*([\d,]+)\s*k?\b/i);
+          const windfallAmount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) * (lastUserMsg.toLowerCase().includes('k') ? 1000 : 1) : 0;
+          
+          if (windfallAmount > 500) {
+            const allocation = allocateWindfall(
+              windfallAmount,
+              (financialProfile.highInterestDebt as number) || 0,
+              (financialProfile.essentialExpenses as number) || 0,
+              (financialProfile.totalSavings as number) || 0,
+              (financialProfile.retirementSavings as number) || 0,
+              (financialProfile.monthlyIncome as number) || 0,
+            );
+            dynamicProtocols += `\n\n${buildWindfallContext(allocation)}\nINSTRUCTION: Lead with the WINDFALL ALLOCATION strategy. Explain the 5-tier priority (debt → emergency → retirement → investments → other) and show exactly how much goes to each tier. Do not suggest alternatives to this waterfall without explicit user request.`;
+          } else if (windfallAmount === 0) {
+            dynamicProtocols += `\n\nWINDFALL PLANNING: User mentioned a windfall but didn't state the amount. Ask: "How much are we working with? Even a rough number helps me show you the best allocation strategy."`;
+          }
+        } catch (e) {
+          console.warn('[REM-36-003] Windfall planner failed:', e);
+        }
+      }
+
+      // REM-36-004: Wire Debt Avalanche for Multi-Debt
+      // Detect multi-debt context and inject avalanche payoff strategy
+      const hasMultipleDebts = ((financialProfile?.highInterestDebt as number) || 0) > 0 && ((financialProfile?.lowInterestDebt as number) || 0) > 0;
+      if (hasMultipleDebts && /\b(debt|payoff|pay off|eliminate|get out of|owe|loan|credit card)\b/i.test(lastUserMsg) && (financialProfile?.monthlyIncome as number) > 0) {
+        try {
+          const { calculateDebtAvalanche, buildDebtAvalancheContext } = await import('@/lib/ai/goalPlanning/debtAvalancheCalculator');
+          
+          const hiAPR = (financialProfile as any)?.highInterestDebtAPR || 18;
+          const loAPR = (financialProfile as any)?.lowInterestDebtAPR || 5;
+          
+          const plan = calculateDebtAvalanche(
+            [
+              {
+                name: 'High-Interest Debt',
+                balance: (financialProfile.highInterestDebt as number) || 0,
+                apr: hiAPR,
+                minimumPayment: ((financialProfile.highInterestDebt as number) || 0) * 0.02,
+              },
+              {
+                name: 'Low-Interest Debt',
+                balance: (financialProfile.lowInterestDebt as number) || 0,
+                apr: loAPR,
+                minimumPayment: ((financialProfile.lowInterestDebt as number) || 0) * 0.01,
+              },
+            ],
+            (financialProfile as any)?.monthlyDebtPayments || ((financialProfile.highInterestDebt as number) || 0) * 0.02 + ((financialProfile.lowInterestDebt as number) || 0) * 0.01,
+          );
+          
+          dynamicProtocols += `\n\n${buildDebtAvalancheContext(plan)}\nINSTRUCTION: Lead with the DEBT AVALANCHE strategy. Show the payoff timeline, total interest saved vs minimum payments, and the exact monthly payment needed. Emphasize that highest-APR debt gets paid first while maintaining minimums on others.`;
+        } catch (e) {
+          console.warn('[REM-36-004] Debt avalanche planner failed:', e);
+        }
       }
 
       // REM-29-F: Proactive employer match question

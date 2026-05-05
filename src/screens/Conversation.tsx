@@ -14,6 +14,8 @@ import { ArrowUp, Mic, Pencil, Square } from 'lucide-react';
 import { humanizeFieldList } from '@/lib/ui/fieldLabels';
 import { MetricCardPayload } from '@/components/MetricCardPayload';
 import { extractMetricCardFromResponse } from '@/lib/ai/metricCardPrompt';
+import { GoalTimelineCard } from '@/components/GoalTimelineCard';
+import { FieldCorrectionCard } from '@/components/FieldCorrectionCard';
 import ReactMarkdown from 'react-markdown';
 import { generateRecommendationBody } from '@/lib/ui/recommendationBodyGenerator';
 import { humanizeReasonCodes } from '@/lib/ui/reasonCodeLabels';
@@ -68,6 +70,7 @@ export function ConversationScreen({
   baseline,
   onConfirmFin,
   onEditFin,
+  onSelectAlternativeLever,
   onConfirmNextStep,
   inp,
   onChangeInp,
@@ -139,6 +142,8 @@ export function ConversationScreen({
   isGuest?: boolean;
   onResetConversation?: () => void;
   inputEnabled?: boolean;
+  onCorrectField?: (field: string, value: number | string) => void;
+  onSelectAlternativeLever?: (leverName: string) => void;
 }) {
   const lastUserIdx = (() => {
     for (let i = msgs.length - 1; i >= 0; i--) {
@@ -544,6 +549,23 @@ export function ConversationScreen({
                       <MetricCardPayload card={parsed.card} />
                     </div>
                   )}
+                  {/* REM-36-009: Render GoalTimelineCard when goal timeline data is present */}
+                  {m.r === 'a' && m.t.includes('[GOAL_TIMELINE]') && (
+                    <div style={{ marginTop: 10 }}>
+                      <GoalTimelineCard
+                        goalName="Financial Goal"
+                        goalType="savings"
+                        currentAmount={0}
+                        targetAmount={10000}
+                        monthlyContribution={500}
+                        phases={[
+                          { name: 'Phase 1: Foundation', months: 6, milestone: 'Build emergency fund', status: 'in_progress' },
+                          { name: 'Phase 2: Growth', months: 12, milestone: 'Reach savings target', status: 'upcoming' },
+                        ]}
+                        completionPercent={25}
+                      />
+                    </div>
+                  )}
                 </div>
               </motion.div>
             );
@@ -674,7 +696,7 @@ export function ConversationScreen({
                             </div>
                           </div>
                           {comp.lever !== recommendedLever && (
-                            <Button onClick={() => { onEditFin?.(); }} variant="secondary" size="sm" style={{ marginTop: 8, width: '100%' }}>
+                            <Button onClick={() => { onSelectAlternativeLever?.(comp.lever); }} variant="secondary" size="sm" style={{ marginTop: 8, width: '100%' }}>
                               Use this lever instead
                             </Button>
                           )}

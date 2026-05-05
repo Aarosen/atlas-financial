@@ -130,7 +130,17 @@ export function buildProgressReport(
   let summary = '';
   if (improvements.length > 0) {
     const topImprovement = improvements[0];
-    summary = `Great progress! You've ${topImprovement.name.toLowerCase()} by ${Math.abs(topImprovement.percentChange).toFixed(1)}% since last visit.`;
+    let action = 'improved';
+    if (topImprovement.name.includes('Debt')) {
+      action = 'reduced debt';
+    } else if (topImprovement.name.includes('Savings')) {
+      action = 'grown savings';
+    } else if (topImprovement.name.includes('Income')) {
+      action = 'increased income';
+    } else if (topImprovement.name.includes('Surplus')) {
+      action = 'increased surplus';
+    }
+    summary = `Great progress! You've ${action} by ${Math.abs(topImprovement.percentChange).toFixed(1)}% since last visit.`;
   } else if (challenges.length > 0) {
     summary = `You're working on some challenges. Let's focus on the most impactful changes.`;
   } else {

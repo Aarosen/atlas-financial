@@ -100,6 +100,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const [milestonesToCelebrate, setMilestonesToCelebrate] = useState<any[]>([]);
   const [showSidebar, setShowSidebar] = useState(true);
   const [rateLimitRemaining, setRateLimitRemaining] = useState<number | undefined>(undefined);
+  const [pendingAmbiguities, setPendingAmbiguities] = useState<Record<string, any> | null>(null);
   const token = authSession?.accessToken || '';
   const { memory, loadMemory, saveMemory, isLoaded } = useConversationMemory(userId || 'guest', sessionId || '', token);
   const { progress, isLoaded: progressLoaded, saveProgress, clearProgress } = useProgressTracking();
@@ -406,6 +407,16 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     dispatch({ type: 'SET_PENDING_BLOCK', block: null });
     dispatch({ type: 'SET_PENDING_FIN', fin: null });
   }, [dispatch]);
+
+  const handleSelectAlternativeLever = useCallback(async (leverName: string) => {
+    if (!st.pendingFin || !st.baseline) return;
+    // Update the selected lever to the alternative
+    dispatch({ type: 'SET_SELECTED_LEVER', lever: leverName as Strategy['lever'] });
+    // Save progress with the new lever
+    saveProgress(st.pendingFin, leverName);
+    // Keep the lever block visible but with the new lever selected
+    // The UI will re-render with the new lever as the recommendation
+  }, [st.pendingFin, st.baseline, dispatch, saveProgress]);
 
   const handleConfirmNextStep = useCallback(async () => {
     if (st.pendingBlock === 'lever') {
@@ -1343,6 +1354,12 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         apiOk: ex.apiOk !== false,
         err: ex.apiOk === false ? normalizeApiErr(String((ex as any).err || '')) : null,
       });
+      
+      // REM-36-005: Wire ambiguities from extraction response to frontend state
+      if ((ex as any).ambiguities && Object.keys((ex as any).ambiguities).length > 0) {
+        setPendingAmbiguities((ex as any).ambiguities);
+      }
+      
       await db.set('fin', { k: 'cur', ...uf, ts: Date.now() });
 
       // BUG-33-002 FIX: Track extraction failures and route to LLM after 2 failures
@@ -1871,6 +1888,64 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             ))}
           </div>
         )}
+        {/* REM-36-005: Ambiguity Confirmation Card */}
+        {pendingAmbiguities && (
+          <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+            <div className="bg-white dark:bg-gray-900 rounded-lg shadow-xl max-w-md w-full">
+              <div className="p-6">
+                {(() => {
+                  const keys = Object.keys(pendingAmbiguities);
+                  if (keys.length === 0) return null;
+                  const current = pendingAmbiguities[keys[0]];
+                  return (
+                    <div className="space-y-4">
+                      <div className="flex items-start gap-3">
+                        <div className="text-2xl">❓</div>
+                        <div className="flex-1">
+                          <p className="text-sm font-medium text-gray-900 dark:text-gray-100">
+                            {current.confirmationPrompt}
+                          </p>
+                        </div>
+                      </div>
+                      <div className="flex gap-2 pt-2">
+                        <button
+                          onClick={() => {
+                            const keys = Object.keys(pendingAmbiguities);
+                            const newAmbiguities = { ...pendingAmbiguities };
+                            delete newAmbiguities[keys[0]];
+                            if (Object.keys(newAmbiguities).length === 0) {
+                              setPendingAmbiguities(null);
+                            } else {
+                              setPendingAmbiguities(newAmbiguities);
+                            }
+                          }}
+                          className="flex-1 px-4 py-2 bg-blue-600 text-white rounded-lg hover:bg-blue-700 text-sm font-medium"
+                        >
+                          {current.type === 'vague' ? 'Provide amount' : 'Yes, use this'}
+                        </button>
+                        <button
+                          onClick={() => {
+                            const keys = Object.keys(pendingAmbiguities);
+                            const newAmbiguities = { ...pendingAmbiguities };
+                            delete newAmbiguities[keys[0]];
+                            if (Object.keys(newAmbiguities).length === 0) {
+                              setPendingAmbiguities(null);
+                            } else {
+                              setPendingAmbiguities(newAmbiguities);
+                            }
+                          }}
+                          className="flex-1 px-4 py-2 bg-gray-200 dark:bg-gray-700 text-gray-900 dark:text-gray-100 rounded-lg hover:bg-gray-300 dark:hover:bg-gray-600 text-sm font-medium"
+                        >
+                          {current.type === 'vague' ? 'Cancel' : 'No, change it'}
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })()}
+              </div>
+            </div>
+          </div>
+        )}
         <ConversationScreen
           inputEnabled={mounted}
           theme={theme ?? 'dark'}
@@ -1886,6 +1961,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           baseline={st.baseline}
           onConfirmFin={handleConfirmFin}
           onEditFin={handleEditFin}
+          onSelectAlternativeLever={handleSelectAlternativeLever}
           onConfirmNextStep={handleConfirmNextStep}
           inp={st.inp}
           onChangeInp={updateInput}
