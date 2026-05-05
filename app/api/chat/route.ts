@@ -1735,11 +1735,16 @@ Output ONLY that question. No prefix. No suffix. No other text.`;
       if (extractedFields?.monthlyIncome && extractedFields?.essentialExpenses &&
           (extractedFields.essentialExpenses as number) > (extractedFields.monthlyIncome as number)) {
         const deficit = (extractedFields.essentialExpenses as number) - (extractedFields.monthlyIncome as number);
+        const savings = (extractedFields.totalSavings as number) || 0;
+        const monthsToExhaustion = savings > 0 ? Math.ceil(savings / deficit) : 0;
+        const burnRateText = monthsToExhaustion > 0 
+          ? `At $${deficit.toLocaleString()}/month deficit, you'll exhaust your $${savings.toLocaleString()} savings in ${monthsToExhaustion} month${monthsToExhaustion === 1 ? '' : 's'}.`
+          : `At $${deficit.toLocaleString()}/month deficit with $${savings.toLocaleString()} savings, you're in immediate crisis.`;
         dynamicProtocols += `\n\nTRIAGE PROTOCOL (POSITION 0 — CRITICAL):
-User is in financial triage (spending $${deficit} more than they earn monthly).
+User is in financial triage (spending $${deficit.toLocaleString()} more than they earn monthly).
 MANDATORY: Open your response with EXACTLY: "You're in financial triage."
-Then show the burn rate: "At $${deficit}/month deficit, you'll exhaust savings in X months."
-Then give ONE specific action with a dollar figure.
+Then show the burn rate: "${burnRateText}"
+Then give ONE specific action with a dollar figure to cut.
 Do NOT ask "where is the money coming from" (past question). Ask "What can you cut?" (action question).
 Do NOT provide false reassurance. Be direct about the crisis.`;
       }
