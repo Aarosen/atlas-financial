@@ -47,7 +47,7 @@ import { ErrorBoundary } from '@/components/ErrorBoundary';
 import { validateMessageLength } from '@/lib/api/messageLengthValidator';
 import { preserveUnsentMessage, retrieveUnsentMessage, clearUnsentMessage } from '@/lib/api/offlineHandler';
 import { useProgressTracking, generateProgressGreeting } from '@/lib/progress/useProgressTracking';
-import { saveGuestFinancialData, loadGuestFinancialData } from '@/lib/storage/guestFinancialStorage';
+import { saveGuestFinancialData, loadGuestFinancialData, clearGuestFinancialData } from '@/lib/storage/guestFinancialStorage';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -1949,6 +1949,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           onResetConversation={() => {
             // AUDIT 18 FIX P0: Clear progress on reset
             clearProgress();
+            // BUG-7 FIX: Clear stale guest financial data from localStorage to prevent hallucinations
+            clearGuestFinancialData();
             dispatch({ type: 'NEW_CONVERSATION' });
           }}
         />

@@ -144,11 +144,13 @@ function calculateAffordability(
 
 /**
  * Calculate emergency fund metrics
+ * BUG-2 FIX: Now accepts discretionaryExpenses to calculate actual available surplus
  */
 function calculateEmergencyFund(
   essentialExpenses: number | undefined,
   totalSavings: number | undefined,
-  monthlyIncome: number | undefined
+  monthlyIncome: number | undefined,
+  discretionaryExpenses?: number
 ): EmergencyFundCalculation | undefined {
   if (
     essentialExpenses === undefined ||
@@ -178,9 +180,12 @@ function calculateEmergencyFund(
     };
   }
 
-  // Calculate monthly contribution (20% of discretionary)
-  const discretionary = monthlyIncome - essentialExpenses;
-  if (discretionary <= 0) {
+  // Calculate monthly contribution (20% of actual discretionary after lifestyle spending)
+  // BUG-2 FIX: Use real discretionary expenses if provided, not synthetic calculation
+  const discretionaryForSaving = (discretionaryExpenses != null && discretionaryExpenses > 0)
+    ? monthlyIncome - essentialExpenses - discretionaryExpenses
+    : monthlyIncome - essentialExpenses;
+  if (discretionaryForSaving <= 0) {
     return {
       target: Math.round(target),
       gap: Math.round(gap),
@@ -193,7 +198,7 @@ function calculateEmergencyFund(
     };
   }
 
-  const monthlyContribution = discretionary * 0.2;
+  const monthlyContribution = discretionaryForSaving * 0.2;
   if (monthlyContribution <= 0) {
     return {
       target: Math.round(target),
@@ -305,7 +310,7 @@ export function calculateFinancials(
       profile.essentialExpenses,
       proposedPayment,
       profile.discretionaryExpenses,
-      profile.monthlyDebtPayments  // Use debt payments as proxy for retirement contributions if not available
+      (profile as any).monthlyRetirementContribution ?? 0  // BUG-1 FIX: Use real retirement contribution, not debt payments
     );
   }
 
@@ -314,7 +319,8 @@ export function calculateFinancials(
     result.emergencyFund = calculateEmergencyFund(
       profile.essentialExpenses,
       profile.totalSavings,
-      profile.monthlyIncome
+      profile.monthlyIncome,
+      profile.discretionaryExpenses  // BUG-2 FIX: Pass actual discretionary expenses
     );
   }
 
@@ -324,7 +330,7 @@ export function calculateFinancials(
       profile.monthlyIncome,
       profile.essentialExpenses,
       profile.discretionaryExpenses,
-      profile.monthlyDebtPayments  // Proxy for retirement contributions
+      (profile as any).monthlyRetirementContribution ?? 0  // BUG-1 FIX: Use real retirement contribution, not debt payments
     );
   }
 
@@ -334,7 +340,7 @@ export function calculateFinancials(
     if (debts.length > 0 && profile.monthlyIncome && profile.essentialExpenses) {
       // TASK 1.1: Correct surplus calculation includes discretionary spending and retirement contributions
       const discretionarySpending = profile.discretionaryExpenses ?? 0;
-      const retirementContribution = profile.monthlyDebtPayments ?? 0;  // Proxy
+      const retirementContribution = (profile as any).monthlyRetirementContribution ?? 0;  // BUG-1 FIX: Use real retirement contribution
       const surplus = profile.monthlyIncome - profile.essentialExpenses - discretionarySpending - retirementContribution;
       if (surplus > 0) {
         result.debtPayoff = compareDebtStrategies(debts, surplus);
@@ -347,7 +353,7 @@ export function calculateFinancials(
     if (profile.monthlyIncome && profile.essentialExpenses && profile.totalSavings !== undefined) {
       // TASK 1.1: Correct surplus calculation
       const discretionarySpending = profile.discretionaryExpenses ?? 0;
-      const retirementContribution = profile.monthlyDebtPayments ?? 0;  // Proxy
+      const retirementContribution = (profile as any).monthlyRetirementContribution ?? 0;  // BUG-1 FIX: Use real retirement contribution
       const surplus = profile.monthlyIncome - profile.essentialExpenses - discretionarySpending - retirementContribution;
       
       const emergencyFundTarget = profile.essentialExpenses * EMERGENCY_FUND_TARGET_MONTHS; // REM-O: Use standardized constant
@@ -374,7 +380,7 @@ export function calculateFinancials(
     if (profile.monthlyIncome && profile.essentialExpenses && profile.totalSavings !== undefined && profile.timeHorizonYears) {
       // TASK 1.1: Correct surplus calculation
       const discretionarySpending = profile.discretionaryExpenses ?? 0;
-      const retirementContribution = profile.monthlyDebtPayments ?? 0;  // Proxy
+      const retirementContribution = (profile as any).monthlyRetirementContribution ?? 0;  // BUG-1 FIX: Use real retirement contribution
       const surplus = profile.monthlyIncome - profile.essentialExpenses - discretionarySpending - retirementContribution;
       
       // REM-Q: Include discretionary expenses in FIRE number (full lifestyle FIRE, not lean FIRE)

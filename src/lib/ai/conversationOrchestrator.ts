@@ -46,8 +46,9 @@ export interface FinancialProfile {
   highInterestDebt?: number;
   lowInterestDebt?: number;
   monthlyDebtPayments?: number;
-  highInterestRate?: number; // APR for high-interest debt (e.g., credit cards)
-  lowInterestRate?: number; // APR for low-interest debt (e.g., student loans, mortgages)
+  monthlyRetirementContribution?: number; // BUG-1 FIX: Monthly 401k/IRA contribution (not debt payments)
+  highInterestDebtAPR?: number; // BUG-4 FIX: APR for high-interest debt (e.g., credit cards)
+  lowInterestDebtAPR?: number; // BUG-4 FIX: APR for low-interest debt (e.g., student loans, mortgages)
   // TASK 1.2: Itemized debts with individual APRs
   debts?: DebtItem[];
   primaryGoal?: 'stability' | 'growth' | 'flexibility' | 'wealth_building';
@@ -95,7 +96,7 @@ export function normalizeDebts(profile: FinancialProfile): DebtItem[] {
     debts.push({
       label: 'High-Interest Debt',
       balance: profile.highInterestDebt!,
-      apr: (profile.highInterestRate ?? 0.22) / 100, // Default to 22% if not specified
+      apr: (profile.highInterestDebtAPR ?? 0.22) / 100, // BUG-4 FIX: Use correct field name
       type: 'credit_card',
     });
   }
@@ -104,7 +105,7 @@ export function normalizeDebts(profile: FinancialProfile): DebtItem[] {
     debts.push({
       label: 'Low-Interest Debt',
       balance: profile.lowInterestDebt!,
-      apr: (profile.lowInterestRate ?? 0.05) / 100, // Default to 5% if not specified
+      apr: (profile.lowInterestDebtAPR ?? 0.05) / 100, // BUG-4 FIX: Use correct field name
       type: 'student_loan',
     });
   }
@@ -314,8 +315,9 @@ const FIELD_LABELS: Record<keyof FinancialProfile, string> = {
   highInterestDebt: 'high-interest debt balance',
   lowInterestDebt: 'low-interest debt balance',
   monthlyDebtPayments: 'monthly debt payments',
-  highInterestRate: 'high-interest debt APR',
-  lowInterestRate: 'low-interest debt APR',
+  monthlyRetirementContribution: 'monthly retirement contribution',  // BUG-1 FIX
+  highInterestDebtAPR: 'high-interest debt APR',  // BUG-4 FIX
+  lowInterestDebtAPR: 'low-interest debt APR',  // BUG-4 FIX
   debts: 'itemized debts with APRs',  // TASK 1.2
   primaryGoal: 'primary financial goal',
   timeHorizonYears: 'time horizon',

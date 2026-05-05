@@ -26,7 +26,6 @@ import { atlasEngineOrchestrator } from '@/lib/ai/engines';
 import { ATLAS_SYSTEM_PROMPT } from '@/lib/ai/atlasSystemPrompt';
 import { extractFinancialSnapshot } from '@/lib/ai/financialExtractor';
 import { shouldGateExtraction } from '@/lib/ai/extractionGate';
-import { runCalculations, formatCalculationBlock } from '@/lib/calculations/sprint1';
 import { calculateFinancials, formatAffordabilityBlock, formatBudgetBlock, formatEmergencyFundBlock, formatInvestmentBlock, formatRetirementBlock } from '@/lib/ai/financialCalculations';
 import { formatDebtPayoffBlock } from '@/lib/ai/debtPayoffCalculations';
 import { cleanAtlasResponse } from '@/lib/ai/responsePostprocessor';
@@ -35,6 +34,7 @@ import { compressConversationHistory, formatCompressedMemory } from '@/lib/ai/co
 import { sanitizeMemorySummary } from '@/lib/ai/memorySanitizer';
 import { classifyUserIntent } from '@/lib/ai/intentClassifier';
 import { buildSystemPrompt } from '@/lib/ai/systemPromptBuilder';
+import { detectAmbiguousInput, shouldConfirmBeforeApplying, buildAmbiguityConfirmationPrompt } from '@/lib/ai/ambiguousInputDetector';
 import { 
   buildCompanionSystemPromptContext, 
   processUserMessageForCompanion, 
@@ -664,6 +664,7 @@ FIELDS TO EXTRACT (omit any you cannot confidently extract):
 - discretionaryExpenses: number (monthly lifestyle spending: dining, subscriptions, entertainment, clothing)
 - totalSavings: number (total accessible savings and cash holdings)
 - retirementSavings: number (401k, IRA, Roth IRA, pension, or other retirement account balances; extract from phrases like "I have $50k in my 401k" or "$200k in retirement accounts"; omit if not stated)
+- monthlyRetirementContribution: number (BUG-1 FIX: Monthly amount user contributes to 401k/IRA/retirement account; extract from phrases like "I put $500/month into my 401k", "I contribute 6% of my salary to retirement", "my 401k contribution is $300/month"; omit if not stated)
 - employerMatchPercent: number (AUDIT 17 FIX: If user mentions employer 401k match, extract as percentage. Example: "employer matches up to 4%" → 4. Omit if not stated.)
 - currentlyContributing: boolean (AUDIT 17 FIX: If user states whether they're currently contributing to 401k/retirement plan. Omit if not stated.)
 - incomeGrowthSignal: boolean (AUDIT 17 FIX: Set to true if user mentions side income, freelancing, promotion, part-time work, or skills. Omit if not present.)
@@ -792,6 +793,26 @@ Output: {"monthlyIncome":5500,"essentialExpenses":2600,"totalSavings":6000,"high
 
   // Build context-aware answer prompt that includes confirmed financial profile
   const buildAnswerPrompt = (fin?: Partial<FinancialState> | null, baseline?: Strategy | null, activeLever?: string | null, activeTier?: string | null) => {
+    // TASK 1.1: Minimum data gate — refuse advice without sufficient input
+    const confirmedCoreFields = [
+      fin?.monthlyIncome && fin.monthlyIncome > 0,
+      fin?.essentialExpenses && fin.essentialExpenses > 0,
+      fin?.totalSavings !== null && fin?.totalSavings !== undefined,
+      (fin?.highInterestDebt !== null && fin?.highInterestDebt !== undefined) || 
+      (fin?.lowInterestDebt !== null && fin?.lowInterestDebt !== undefined),
+    ].filter(Boolean).length;
+
+    if (confirmedCoreFields < 2) {
+      return `You are Atlas. The user is asking a financial question but has not yet shared enough information for you to give meaningful guidance.
+
+ABSOLUTE RULE: Do NOT guess, estimate, or invent any dollar amounts. Do NOT say things like "based on typical budgets" or "for someone with your income." You do not know their income.
+
+Your ONLY job right now is to collect one piece of information. Ask ONLY this question:
+"What's your monthly take-home pay — the amount that actually lands in your bank account each month?"
+
+No advice. No estimates. No context. Just that one question.`;
+    }
+
     // AUDIT 19 FIX P1: Resolve HARD OUTPUT CONSTRAINTS conflict with protocols
     let prompt = `You are Atlas. Answer the user's question briefly and clearly.
 
@@ -835,11 +856,17 @@ RIGHT: "Roughly what do you spend on essentials — rent, food, transportation, 
       Object.assign(financialContext, extractedFields);
     }
 
-    // AUDIT 21 FIX BUG-21-002: Compute triageLevel AFTER extractedFields merge
-    // Previously computed at line 783 BEFORE merge, causing triageLevel to always be 'optimize' when fin is null
-    const triageLevel = Object.keys(financialContext).length > 0 ? getTriageLevel(financialContext as any) : 'optimize';
+    // TASK 1.2: Only compute triage level when real income AND expenses are known
+    const hasRealFinancialData = 
+      (financialContext.monthlyIncome || 0) > 0 && 
+      (financialContext.essentialExpenses || 0) > 0;
 
-    prompt += `\n\nAUDIT 20 FIX BUG-20-007 - TRIAGE MODE (STRENGTHENED):
+    const triageLevel = hasRealFinancialData 
+      ? getTriageLevel(financialContext as any) 
+      : null; // null = not enough data to triage
+
+    if (triageLevel !== null) {
+      prompt += `\n\nAUDIT 20 FIX BUG-20-007 - TRIAGE MODE (STRENGTHENED):
 If triageLevel is 'crisis': 
   MANDATORY: BEGIN with EXACTLY these 4 words: "You're in financial triage."
   Then give ONE specific action with a dollar figure and timeframe.
@@ -851,9 +878,17 @@ If triageLevel is 'stabilize':
   BEGIN with EXACTLY: "You're close to stable — one move gets you there:"
   Then give ONE specific action with a dollar figure.
 If triageLevel is 'growth' or 'optimize': Use standard response format.`;
+    }
 
-    if (financialContext && (financialContext.monthlyIncome || financialContext.essentialExpenses)) {
-      const surplus = (financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0);
+    if (triageLevel === null) {
+      prompt += `\n\nDATA STATUS: User has not yet provided sufficient financial information (income and expenses both needed). Do NOT make any financial recommendations. Do NOT use any assumed or estimated numbers. Ask for one missing data point only.`;
+    }
+
+    // TASK 1.2: Only show USER PROFILE when we have real income data
+    if ((financialContext.monthlyIncome || 0) > 0) {
+      // BUG-6 FIX: Include discretionary expenses in surplus calculation
+      const discretionaryForProfile = (financialContext as any).discretionaryExpenses ?? 0;
+      const surplus = (financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0) - discretionaryForProfile;
       // AUDIT 16 FIX DEFECT-15-NEG-CASHFLOW-502: Guard against negative surplus in string interpolation
       const safeSurplus = Math.max(-999999, Math.min(999999, surplus)); // Clamp to prevent extreme values
       const surplusDisplay = surplus < 0 ? `deficit of $${Math.abs(surplus)}` : `surplus $${safeSurplus}`;
@@ -968,7 +1003,9 @@ CONSTRAINT: Do not state any specific APR. Do not calculate interest costs. Do n
       prompt += `\n\nACTIVE RECOMMENDATION: ${leverToUse.replace(/_/g, ' ')}. Your response must reinforce this recommendation and not suggest contradictory strategies.`;
 
       if (baseline && financialContext) {
-        const surplus = (financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0);
+        // BUG-6 FIX: Include discretionary expenses in surplus calculation
+        const discretionaryForProfile = (financialContext as any).discretionaryExpenses ?? 0;
+        const surplus = (financialContext.monthlyIncome || 0) - (financialContext.essentialExpenses || 0) - discretionaryForProfile;
         // AUDIT 16 FIX DEFECT-15-NEG-CASHFLOW-502: Guard against negative surplus display
         const safeSurplus = Math.max(-999999, Math.min(999999, surplus));
         const surplusLine = surplus < 0 ? `- Monthly deficit: $${Math.abs(safeSurplus)}` : `- Monthly surplus: $${safeSurplus}`;
@@ -1250,7 +1287,30 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
         // Negative cashflow is a real scenario that needs extraction and display
         // The extraction prompt explicitly requires extracting both income and expenses for negative cashflow
         
-        return jsonOk({ fields, source: 'claude', model: usedModel, tier });
+        // TASK 1.3: Detect ambiguous inputs (ranges, approximations) and flag for confirmation
+        const ambiguities: Record<string, any> = {};
+        const fieldNames: Record<string, string> = {
+          monthlyIncome: 'monthly income',
+          essentialExpenses: 'essential expenses',
+          totalSavings: 'savings',
+          highInterestDebt: 'high-interest debt',
+          lowInterestDebt: 'low-interest debt',
+        };
+        
+        for (const [fieldKey, fieldValue] of Object.entries(fields)) {
+          if (fieldValue !== null && fieldValue !== undefined) {
+            const ambiguity = detectAmbiguousInput(lastUserText, fieldNames[fieldKey] || fieldKey);
+            if (shouldConfirmBeforeApplying(ambiguity)) {
+              ambiguities[fieldKey] = {
+                type: ambiguity.type,
+                extractedValue: ambiguity.extractedValue,
+                confirmationPrompt: ambiguity.confirmationPrompt,
+              };
+            }
+          }
+        }
+        
+        return jsonOk({ fields, source: 'claude', model: usedModel, tier, ambiguities: Object.keys(ambiguities).length > 0 ? ambiguities : undefined });
       } catch (parseErr) {
         console.error('[extract] parseError:', String(parseErr).substring(0, 200));
         console.log('[extract] failedText:', text.substring(0, 300));

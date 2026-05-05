@@ -102,13 +102,18 @@ export function applyUserTurn(st: AtlasConversationState, turn: ScriptTurn): Atl
     if (k === 'highInterestDebt' || k === 'lowInterestDebt') {
       answered[k] = true;
       if (unknown[k]) delete unknown[k];
-      // Only zero out if user explicitly said "no" and didn't mention debt amounts
-      if (!mentionsDebt) (collected as any)[k] = 0;
+      // TASK 4.2 FIX: Always set to 0 on explicit "no" — remove mentionsDebt guard
+      // The mentionsDebt guard was meant to avoid zeroing out debt when user said "no" to something else
+      // but when effectiveQuestionKey IS the debt field, user is directly answering about that debt
+      (collected as any)[k] = 0;
     }
   }
 
   const parseBareNumber = (s: string): number | null => {
     const t = s.trim();
+    // TASK 4.3 FIX: Only match EXACT bare numbers, not numbers embedded in sentences
+    // Regex: optional $, optional whitespace, digits with optional commas, optional decimal, optional k/thousand, end of string
+    // This prevents matching "I have 5 kids" or "room for 3 people" as financial amounts
     const m = t.match(/^\$?\s*(\d[\d,]*(?:\.\d+)?)\s*(k|thousand)?\s*$/i);
     if (!m) return null;
     let v = Number.parseFloat(m[1].replace(/,/g, ''));
