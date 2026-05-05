@@ -2060,6 +2060,26 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         }
       }
 
+      // P3 FIX: Wire Alternative Assets Guidance
+      // Detect alternative asset context and inject HNW-specific opportunities
+      const alternativeAssetPatterns = /\b(alternative|alternatives|private|equity|credit|real estate|syndication|hedge fund|collectible|art|wine|commodity|pe|vc|venture capital)\b/i;
+      const userNetWorth = (extractedFields as any)?.netWorth || (financialProfile?.totalSavings as number) || 0;
+      
+      if (alternativeAssetPatterns.test(lastUserMsg) && userNetWorth >= 1000000) {
+        try {
+          const { buildAlternativeAssetPlan, buildAlternativeAssetContext } = await import('@/lib/ai/alternativeAssets');
+          
+          const plan = buildAlternativeAssetPlan(
+            Math.round(userNetWorth),
+            (financialProfile?.totalSavings as number) || 0
+          );
+          
+          dynamicProtocols += `\n\n${buildAlternativeAssetContext(plan)}\nINSTRUCTION: When discussing alternative assets or wealth diversification, reference the available opportunities for their wealth level. Emphasize illiquidity, due diligence requirements, and the importance of working with experienced advisors. Never recommend specific investments — only explain categories and considerations.`;
+        } catch (e) {
+          console.warn('[P3-FIX] Alternative assets failed:', e);
+        }
+      }
+
       // REM-36-004: Wire Debt Avalanche for Multi-Debt
       // Detect multi-debt context and inject avalanche payoff strategy
       const hasMultipleDebts = ((financialProfile?.highInterestDebt as number) || 0) > 0 && ((financialProfile?.lowInterestDebt as number) || 0) > 0;
