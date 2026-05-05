@@ -1861,9 +1861,22 @@ Surface these specifically, not generically."`;
       // This is more effective than text-based guidance in dynamicProtocols
       
       // AUDIT 35 FIX GAP-008: Variable income handling — detect gig/freelance workers
-      const variableIncomePatterns = /(varies|depends|gig|freelance|contract|variable|between|sometimes|fluctuates|inconsistent)/i;
-      if (variableIncomePatterns.test(lastUserMsg)) {
-        dynamicProtocols += `\n\nVARIABLE INCOME CONTEXT: User has irregular income. Do NOT treat their income as fixed. Instead: (1) Ask for their LOW month estimate and HIGH month estimate. (2) Plan using the LOW month as the baseline budget. (3) Suggest an "income spike" rule: any month above baseline, allocate the extra to [debt / savings] before lifestyle inflation can absorb it. This is the key to financial stability for gig workers.`;
+      // Use proper irregular income module for deterministic calculations
+      try {
+        const { detectIrregularIncome, buildIrregularIncomeContext, shouldProvideIrregularIncomeGuidance } = await import('@/lib/ai/irregularIncomeHandling');
+        const irregularProfile = detectIrregularIncome(
+          lastUserMsg,
+          financialProfile?.monthlyIncome,
+          (extractedFields as any)?.monthlyIncomeMin,
+          (extractedFields as any)?.monthlyIncomeMax,
+          (extractedFields as any)?.incomeType
+        );
+        
+        if (irregularProfile && shouldProvideIrregularIncomeGuidance(irregularProfile)) {
+          dynamicProtocols += `\n\n${buildIrregularIncomeContext(irregularProfile)}\nINSTRUCTION: When discussing budget or financial planning, always reference the baseline income ($${irregularProfile.baselineIncome}) for planning, not the average. Explain the income spike allocation rule to prevent feast-or-famine cycles.`;
+        }
+      } catch (e) {
+        console.warn('[GAP-008] Irregular income detection failed:', e);
       }
       
       // AUDIT 35 FIX GAP-009: Multi-debt prioritization — detect when user mentions multiple debts
