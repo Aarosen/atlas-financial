@@ -1969,12 +1969,21 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
 
       // REM-36-003: Wire Windfall Planner
       // Detect windfall context and inject allocation strategy
-      if (/\b(bonus|windfall|inheritance|tax refund|settlement|gift|came into|received|got|expecting)\b/i.test(lastUserMsg) && (financialProfile?.monthlyIncome as number) > 0) {
+      // Priority: use extracted windfall amount, fall back to parsing from message
+      const extractedWindfallAmount = (extractedFields as any)?.windfallAmount || 0;
+      const extractedWindfallType = (extractedFields as any)?.windfallType || null;
+      const hasWindfallContext = /\b(bonus|windfall|inheritance|tax refund|settlement|gift|came into|received|got|expecting)\b/i.test(lastUserMsg);
+      
+      if ((extractedWindfallAmount > 500 || hasWindfallContext) && (financialProfile?.monthlyIncome as number) > 0) {
         try {
           const { allocateWindfall, buildWindfallContext } = await import('@/lib/ai/goalPlanning/windfallPlanner');
           
-          const amountMatch = lastUserMsg.match(/\$?\s*([\d,]+)\s*k?\b/i);
-          const windfallAmount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) * (lastUserMsg.toLowerCase().includes('k') ? 1000 : 1) : 0;
+          // Use extracted windfall amount if available, otherwise parse from message
+          let windfallAmount = extractedWindfallAmount;
+          if (windfallAmount === 0 && hasWindfallContext) {
+            const amountMatch = lastUserMsg.match(/\$?\s*([\d,]+)\s*k?\b/i);
+            windfallAmount = amountMatch ? parseFloat(amountMatch[1].replace(/,/g, '')) * (lastUserMsg.toLowerCase().includes('k') ? 1000 : 1) : 0;
+          }
           
           if (windfallAmount > 500) {
             const allocation = allocateWindfall(
@@ -1985,8 +1994,9 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
               (financialProfile.retirementSavings as number) || 0,
               (financialProfile.monthlyIncome as number) || 0,
             );
-            dynamicProtocols += `\n\n${buildWindfallContext(allocation)}\nINSTRUCTION: Lead with the WINDFALL ALLOCATION strategy. Explain the 5-tier priority (debt → emergency → retirement → investments → other) and show exactly how much goes to each tier. Do not suggest alternatives to this waterfall without explicit user request.`;
-          } else if (windfallAmount === 0) {
+            const windfallTypeContext = extractedWindfallType ? `\nWindfall type: ${extractedWindfallType}` : '';
+            dynamicProtocols += `\n\n${buildWindfallContext(allocation)}${windfallTypeContext}\nINSTRUCTION: Lead with the WINDFALL ALLOCATION strategy. Explain the 5-tier priority (debt → emergency → retirement → investments → other) and show exactly how much goes to each tier. Do not suggest alternatives to this waterfall without explicit user request.`;
+          } else if (hasWindfallContext && windfallAmount === 0) {
             dynamicProtocols += `\n\nWINDFALL PLANNING: User mentioned a windfall but didn't state the amount. Ask: "How much are we working with? Even a rough number helps me show you the best allocation strategy."`;
           }
         } catch (e) {
