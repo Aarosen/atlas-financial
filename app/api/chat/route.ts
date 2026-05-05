@@ -2098,6 +2098,30 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
         }
       }
 
+      // ENHANCEMENT: Wire Advanced Debt Optimization
+      // Detect debt optimization context and recommend consolidation, balance transfers, or refinancing
+      const debtOptimizationPatterns = /\b(consolidat|balance transfer|refinanc|payoff|eliminate|get out of|credit card|loan|apr|interest rate)\b/i;
+      
+      if (debtOptimizationPatterns.test(lastUserMsg) && ((financialProfile?.highInterestDebt as number) > 0 || (financialProfile?.lowInterestDebt as number) > 0)) {
+        try {
+          const { analyzeDebtOptimization, buildDebtOptimizationContext } = await import('@/lib/ai/debtOptimization');
+          
+          const analysis = analyzeDebtOptimization(
+            (financialProfile?.highInterestDebt as number) || 0,
+            (financialProfile?.lowInterestDebt as number) || 0,
+            (extractedFields as any)?.highInterestDebtAPR || 18,
+            (extractedFields as any)?.lowInterestDebtAPR || 5,
+            (financialProfile?.monthlyIncome as number) || 0
+          );
+          
+          if (analysis.optimizationStrategy !== 'none') {
+            dynamicProtocols += `\n\n${buildDebtOptimizationContext(analysis)}\nINSTRUCTION: When discussing debt payoff, reference the recommended strategy and estimated savings. Explain why this strategy works better than alternatives. Be specific about implementation steps and credit impact.`;
+          }
+        } catch (e) {
+          console.warn('[ENHANCEMENT] Debt optimization failed:', e);
+        }
+      }
+
       // REM-36-004: Wire Debt Avalanche for Multi-Debt
       // Detect multi-debt context and inject avalanche payoff strategy
       const hasMultipleDebts = ((financialProfile?.highInterestDebt as number) || 0) > 0 && ((financialProfile?.lowInterestDebt as number) || 0) > 0;
