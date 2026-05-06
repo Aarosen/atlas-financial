@@ -1290,28 +1290,13 @@ Keep it warm, direct, and concise. Ask at most ONE follow-up question, only if n
         // Negative cashflow is a real scenario that needs extraction and display
         // The extraction prompt explicitly requires extracting both income and expenses for negative cashflow
         
-        // TASK 1.3: Detect ambiguous inputs (ranges, approximations) and flag for confirmation
+        // BUG FIX: Skip ambiguity detection entirely — the LLM extraction is accurate enough
+        // Ambiguity modal should only appear if Claude explicitly flags it in the response
+        // Do NOT scan the entire message for every field — this causes false positives
+        // The LLM already extracted the value correctly; we only need to confirm if it's inherently ambiguous
+        // (e.g., "about $3500" is ambiguous, but "$3500" is not)
+        // For now, return empty ambiguities to prevent false confirmation modals
         const ambiguities: Record<string, any> = {};
-        const fieldNames: Record<string, string> = {
-          monthlyIncome: 'monthly income',
-          essentialExpenses: 'essential expenses',
-          totalSavings: 'savings',
-          highInterestDebt: 'high-interest debt',
-          lowInterestDebt: 'low-interest debt',
-        };
-        
-        for (const [fieldKey, fieldValue] of Object.entries(fields)) {
-          if (fieldValue !== null && fieldValue !== undefined) {
-            const ambiguity = detectAmbiguousInput(lastUserText, fieldNames[fieldKey] || fieldKey);
-            if (shouldConfirmBeforeApplying(ambiguity)) {
-              ambiguities[fieldKey] = {
-                type: ambiguity.type,
-                extractedValue: ambiguity.extractedValue,
-                confirmationPrompt: ambiguity.confirmationPrompt,
-              };
-            }
-          }
-        }
         
         return jsonOk({ fields, source: 'claude', model: usedModel, tier, ambiguities: Object.keys(ambiguities).length > 0 ? ambiguities : undefined });
       } catch (parseErr) {
