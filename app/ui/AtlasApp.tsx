@@ -1082,6 +1082,19 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       inputDraftRef.current = '';
       hasUserInteractedRef.current = true;
       dispatch({ type: 'SEND_START', text: ut });
+      
+      // FIX 4: Safety timeout — if still busy after 20 seconds, force reset
+      const busyTimeout = setTimeout(() => {
+        dispatch({ type: 'STREAM_CANCELED' });
+        dispatch({
+          type: 'SEND_ERROR_WITH_RETRY',
+          text: "I'm taking too long to respond. Please try again.",
+        });
+      }, 20000);
+      
+      // Store timeout so we can clear it when done
+      const clearBusyTimeout = () => clearTimeout(busyTimeout);
+      
       const kind = classifyInterruption(ut);
       const logReplay = (entry: ReturnType<typeof createReplayEntry>) => {
         void logReplayEntry({ enabled: replayEnabled, entry, set: db.set.bind(db) }).catch(() => {});
@@ -1788,6 +1801,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         const errorMsg = `I couldn't process that right now, but your numbers are saved. Tap the retry button below to try again.`;
         dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: errorMsg });
         setApiStatus(claude.status);
+        clearBusyTimeout();
         return;
       }
       
@@ -1798,6 +1812,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       
       setApiStatus(claude.status);
       dispatch({ type: 'SEND_FAILED', err: friendly });
+    } finally {
+      // FIX 4: Always clear the safety timeout when doSend completes
+      clearBusyTimeout();
     }
   },
     [claude, db, engine, missing]
