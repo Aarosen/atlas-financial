@@ -1619,7 +1619,7 @@ Monthly match captured: $${freeMoneyMonth}`;
           setTimeout(() => {
             console.warn('[companion] Context building timeout - using empty context');
             resolve('');
-          }, 5000); // 5 second timeout for companion context building
+          }, 2500); // BUG-39-003 FIX: Reduced from 5000 to 2500ms to prevent 502 timeouts
         });
 
         const contextPromise = (async () => {
@@ -1632,16 +1632,14 @@ Monthly match captured: $${freeMoneyMonth}`;
           }
         })();
 
-        // Race: whichever completes first (context or timeout)
-        companionContext = await Promise.race([contextPromise, contextTimeout]);
-        
-        // FIX 6: Wire behavioral adaptation
-        // Analyze user's behavioral patterns and incorporate into system prompt
+        // BUG-39-003 FIX: Parallelize context and behavioral awaits to reduce total wait time
+        // Instead of sequential (context then behavioral = 2.5s + 1.5s = 4s),
+        // run them concurrently (whichever takes longer, max 2.5s)
         const behavioralTimeout = new Promise<string>((resolve) => {
           setTimeout(() => {
             console.warn('[companion] Behavioral adaptation timeout - skipping');
             resolve('');
-          }, 3000); // 3 second timeout for behavioral analysis
+          }, 1500);
         });
 
         const behavioralPromise = (async () => {
@@ -1669,7 +1667,14 @@ Monthly match captured: $${freeMoneyMonth}`;
           }
         })();
 
-        behavioralContext = await Promise.race([behavioralPromise, behavioralTimeout]);
+        // Run both context and behavioral in parallel
+        const [contextResult, behavioralResult] = await Promise.allSettled([
+          Promise.race([contextPromise, contextTimeout]),
+          Promise.race([behavioralPromise, behavioralTimeout]),
+        ]);
+        
+        companionContext = contextResult.status === 'fulfilled' ? contextResult.value : '';
+        behavioralContext = behavioralResult.status === 'fulfilled' ? behavioralResult.value : '';
       }
 
       // MULTI-GOAL INTEGRATION: Build multi-goal context if goals are present

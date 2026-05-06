@@ -305,8 +305,12 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   }, [userId, loadMemory]);
 
   // REM-31-G: Load guest financial data from localStorage on mount
+  // BUG-39-001 FIX: Only load guest data if user explicitly confirmed it (not demo data)
   useEffect(() => {
     if (userId === 'guest' && st.msgs.length === 0 && mounted) {
+      // Only restore guest data if the user explicitly confirmed it (not demo data)
+      const isConfirmed = localStorage.getItem('atlas_guest_fin_confirmed') === 'true';
+      if (!isConfirmed) return;
       const guestFin = loadGuestFinancialData();
       if (guestFin && Object.keys(guestFin).length > 0) {
         // Merge guest financial data with current state
@@ -417,6 +421,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     dispatch({ type: 'SET_SELECTED_LEVER', lever: b.lever });
     // AUDIT 18 FIX P0: Wire saveProgress to lever confirmation
     saveProgress(st.pendingFin, b.lever);
+    // BUG-39-001 FIX: Mark guest financial data as user-confirmed (not demo)
+    try {
+      localStorage.setItem('atlas_guest_fin_confirmed', 'true');
+    } catch {}
     dispatch({ type: 'SET_PENDING_BLOCK', block: 'lever' });
   }, [db, engine, st.pendingFin, st.answered, st.unknown, saveProgress]);
 
@@ -1438,6 +1446,63 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         && Boolean(answeredNext.primaryGoal);
       const effectiveAction = coreFieldsFilled ? { type: 'complete' as const } : action;
       
+      // BUG-39-002 FIX: POST-ONBOARDING ROUTING
+      // If user already has a baseline, route ALL messages directly to chatStream so planners fire
+      // The extraction path (complete → CONFIRM card) is for onboarding only
+      if (st.baseline !== null && coreFieldsFilled) {
+        streamAbortRef.current?.abort();
+        const ctrl = new AbortController();
+        streamAbortRef.current = ctrl;
+        const myStreamId = ++streamIdRef.current;
+        dispatch({ type: 'STREAM_START' });
+
+        const chatMsgs = prevMsgs.slice(-12).map((m) => ({
+          role: m.r === 'u' ? ('user' as const) : ('assistant' as const),
+          content: m.t,
+        }));
+
+        const postOnboardingSessionState = {
+          ...sessionStateRef.current,
+          ...(multiGoalState?.goals && { goals: multiGoalState.goals }),
+        };
+
+        const res = await claude.chatStream({
+          msgs: chatMsgs,
+          missing: [],               // No missing fields — user is post-onboarding
+          memorySummary: st.memorySummary,
+          fin: finRef.current,
+          extractedFields: ex.fields as Record<string, unknown>,
+          sessionState: postOnboardingSessionState,
+          answered: answeredNext,
+          baseline: st.baseline,
+          onDelta: (t) => {
+            if (streamIdRef.current !== myStreamId) return;
+            if (ctrl.signal.aborted) return;
+            dispatch({ type: 'STREAM_DELTA', delta: t });
+          },
+          onSessionState: handleSessionState,
+          signal: ctrl.signal,
+        });
+
+        streamAbortRef.current = null;
+        if (!res.ok && res.canceled) {
+          dispatch({ type: 'STREAM_CANCELED' });
+          return;
+        }
+        if (!res.ok) {
+          dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
+          return;
+        }
+        dispatch({ type: 'STREAM_DONE' });
+        if (res.rateLimitRemaining !== undefined) {
+          setRateLimitRemaining(res.rateLimitRemaining);
+        }
+        if (res.sessionId && !sessionId) {
+          updateSessionId(res.sessionId);
+        }
+        return;  // Skip the rest of doSend — post-onboarding handled above
+      }
+      
       // AUDIT 35 FIX: Handle 'hold' — meta openers need a warm LLM response, not silence
       if (effectiveAction.type === 'hold') {
         streamAbortRef.current?.abort();
@@ -2083,6 +2148,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             clearProgress();
             // BUG-7 FIX: Clear stale guest financial data from localStorage to prevent hallucinations
             clearGuestFinancialData();
+            // BUG-39-001 FIX: Clear confirmation flag so demo data doesn't reload
+            try {
+              localStorage.removeItem('atlas_guest_fin_confirmed');
+            } catch {}
             dispatch({ type: 'NEW_CONVERSATION' });
           }}
             />
