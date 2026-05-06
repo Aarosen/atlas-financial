@@ -2061,8 +2061,18 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         
         {/* GAP-38-003 FIX: Compute triage mode from accumulated financial state */}
         {/* This fires during onboarding when user provides income and expenses, not just on CONFIRM card */}
+        {/* BUG-39-005 FIX: Use pendingFin when available so corrections clear the banner immediately */}
         {(() => {
-          const isInTriage = st.fin.monthlyIncome > 0 && st.fin.essentialExpenses > 0 && st.fin.monthlyIncome < st.fin.essentialExpenses;
+          const income = st.pendingFin?.monthlyIncome ?? st.fin.monthlyIncome;
+          const expenses = st.pendingFin?.essentialExpenses ?? st.fin.essentialExpenses;
+          const isInTriage = income > 0 && expenses > 0 && income < expenses;
+          
+          // BUG-39-008 FIX: Suppress FieldCorrectionCard when user expresses emotional distress or goal query
+          const lastUserMsg = st.msgs.slice().reverse().find(m => m.r === 'u')?.t || '';
+          const isEmotionallyDistressed = /\b(stressed|overwhelmed|scared|terrified|anxious|hopeless|depressed|crying|desperate|can't sleep|freaking out|panicking|drowning|overwhelm)\b/i.test(lastUserMsg);
+          const isGoalQuery = /\b(home|house|retire|retirement|windfall|inheritance|bonus|invest|purchase|buy)\b/i.test(lastUserMsg);
+          const shouldSuppressCard = isEmotionallyDistressed || isGoalQuery;
+          
           return (
             <ConversationScreen
               inputEnabled={mounted}
@@ -2074,7 +2084,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
               busy={st.busy}
               isMobile={isMobile}
               isTriageMode={isInTriage}
-              capturedFields={capturedFields}
+              capturedFields={shouldSuppressCard ? null : capturedFields}
               onEditField={handleEditField}
               pendingBlock={st.pendingBlock}
               pendingFin={st.pendingFin}

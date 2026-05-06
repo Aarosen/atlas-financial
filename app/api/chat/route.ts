@@ -2073,8 +2073,12 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
 
       // REM-36-003: Wire Windfall Planner
       // Detect windfall context and inject allocation strategy
-      // Priority: use extracted windfall amount, fall back to parsing from message
-      const extractedWindfallAmount = (extractedFields as any)?.windfallAmount || 0;
+      // Priority: use extracted windfall amount, fall back to accumulated profile, then parsing from message
+      // BUG-39-006 FIX: Check both current extraction and accumulated financialProfile
+      const extractedWindfallAmount = 
+        (extractedFields as any)?.windfallAmount ||    // current message extraction
+        (financialProfile as any)?.windfallAmount ||   // accumulated profile from prior turns
+        0;
       const extractedWindfallType = (extractedFields as any)?.windfallType || null;
       const hasWindfallContext = /\b(bonus|windfall|inheritance|tax refund|settlement|gift|came into|received|got|expecting)\b/i.test(lastUserMsg);
       

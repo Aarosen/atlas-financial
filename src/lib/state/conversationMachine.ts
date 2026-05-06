@@ -225,12 +225,13 @@ export function conversationReducer(state: ConversationState, ev: ConversationEv
       };
 
     case 'SEND_STRATEGY_READY':
+      // BUG-39-007 FIX: Remove filler message — the ATLAS RECOMMENDS card that follows is sufficient
       return {
         ...state,
         baseline: ev.baseline,
         busy: false,
         streaming: false,
-        msgs: [...state.msgs, { r: 'a', t: 'Perfect — I have enough to start.\n\nI’m reflecting this back so we stay aligned, then I’ll pick one clear next step.' }],
+        msgs: state.msgs,  // Don't add filler message
       };
 
     case 'SEND_FAILED':
