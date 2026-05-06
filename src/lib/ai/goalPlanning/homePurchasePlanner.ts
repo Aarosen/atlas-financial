@@ -1,9 +1,11 @@
 /**
  * TASK 2.1: Home Purchase Planning Module
  * Provides goal-specific planning for home purchase scenarios
+ * Uses REAL market data from Zillow API — never hardcodes prices
  */
 
 import type { FinancialState } from '@/lib/state/types';
+import { getMarketData, projectHomePrice, assessAffordability } from '@/lib/services/realEstateMarketService';
 
 export interface HomePurchasePlan {
   homePrice: number;
@@ -93,6 +95,95 @@ export function calculateHomePurchasePlan(
     isAffordable,
     affordabilityReason,
   };
+}
+
+/**
+ * Calculate home purchase plan using REAL market data
+ * Fetches current prices from Zillow and projects appreciation
+ */
+export async function calculateHomePurchasePlanWithMarketData(
+  city: string,
+  state: string,
+  yearsToSave: number,
+  monthlyIncome: number,
+  currentSavings: number,
+  monthlyExpenses: number
+): Promise<{
+  plan: HomePurchasePlan;
+  marketData: any;
+  affordability: any;
+  isRealistic: boolean;
+  message: string;
+}> {
+  try {
+    // Fetch real market data
+    const marketData = await getMarketData(city, state);
+    
+    // Project price based on real appreciation rate
+    const projection = projectHomePrice(
+      marketData.medianHomePrice,
+      yearsToSave,
+      marketData.yearOverYearChange
+    );
+
+    // Assess affordability
+    const affordability = assessAffordability(
+      projection.projectedPrice,
+      monthlyIncome,
+      currentSavings,
+      yearsToSave
+    );
+
+    // Build the plan
+    const downPaymentPercent = 20;
+    const downPaymentAmount = Math.round(projection.projectedPrice * (downPaymentPercent / 100));
+    const loanAmount = projection.projectedPrice - downPaymentAmount;
+    const closingCosts = Math.round(projection.projectedPrice * 0.03);
+    const totalCashNeeded = downPaymentAmount + closingCosts;
+
+    const loanTermYears = 30;
+    const interestRate = 7.0;
+    const monthlyRate = interestRate / 100 / 12;
+    const numberOfPayments = loanTermYears * 12;
+    const monthlyPayment = Math.round(
+      loanAmount *
+      (monthlyRate * Math.pow(1 + monthlyRate, numberOfPayments)) /
+      (Math.pow(1 + monthlyRate, numberOfPayments) - 1)
+    );
+
+    const savingsGap = Math.max(0, totalCashNeeded - currentSavings);
+    const monthlySurplus = monthlyIncome - monthlyExpenses;
+    const monthsToSave = monthlySurplus > 0 ? Math.ceil(savingsGap / monthlySurplus) : 999;
+    const monthlyContributionNeeded = savingsGap > 0 ? Math.ceil(savingsGap / (yearsToSave * 12)) : 0;
+
+    const plan: HomePurchasePlan = {
+      homePrice: projection.projectedPrice,
+      downPaymentPercent,
+      downPaymentAmount,
+      loanAmount,
+      interestRate,
+      loanTermYears,
+      monthlyPayment,
+      closingCosts,
+      totalCashNeeded,
+      currentSavings,
+      savingsGap,
+      monthsToSave,
+      monthlyContributionNeeded,
+      isAffordable: affordability.isAffordable,
+      affordabilityReason: affordability.reason,
+    };
+
+    return {
+      plan,
+      marketData,
+      affordability,
+      isRealistic: affordability.isAffordable,
+      message: affordability.reason,
+    };
+  } catch (error) {
+    throw new Error(`Failed to calculate home purchase plan: ${error}`);
+  }
 }
 
 /**

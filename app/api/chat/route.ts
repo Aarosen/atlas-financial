@@ -1946,43 +1946,41 @@ Monthly interest cost: $${monthlyInterestCost.toLocaleString()}
 CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST use ${chatKnownApr}% in all calculations and discussions. Do NOT estimate, assume, or substitute any other rate. Do NOT say "typically 18%" or "usually 20%". The user's actual rate is ${chatKnownApr}%.`;
       }
 
-      // REM-36-001: Wire Home Purchase Planner
-      // Detect home purchase context and inject deterministic calculation
+      // REM-36-001: Wire Home Purchase Planner with REAL market data
+      // Detect home purchase context and fetch actual market prices from Zillow
       if (/\b(home|house|down payment|mortgage|buy a home|buy a house|property)\b/i.test(lastUserMsg) && (financialProfile?.monthlyIncome as number) > 0) {
         try {
-          const { calculateHomePurchasePlan, buildHomePurchaseContext } = await import('@/lib/ai/goalPlanning/homePurchasePlanner');
+          const { calculateHomePurchasePlanWithMarketData, buildHomePurchaseContext } = await import('@/lib/ai/goalPlanning/homePurchasePlanner');
           
-          // REM-37-007 FIX: Parse home price with support for million-dollar homes
-          // Handle: $1.5M, $1.5 million, $1500000, $1.5m, $400k, $400000
-          function parseHomePrice(msg: string): number {
-            // Try million pattern first: $1.2M, $1.2 million, 1.2M
-            const mMatch = msg.match(/\$?\s*([\d.]+)\s*(?:M\b|million)/i);
-            if (mMatch) return parseFloat(mMatch[1]) * 1_000_000;
-            
-            // Try k pattern: $400k, $400K, $400 thousand
-            const kMatch = msg.match(/\$?\s*([\d,]+)\s*(?:k\b|thousand)/i);
-            if (kMatch) return parseFloat(kMatch[1].replace(/,/g, '')) * 1_000;
-            
-            // Try plain number: $400,000 or $400000
-            const plainMatch = msg.match(/\$\s*([\d,]+)(?:\.\d+)?\b/);
-            if (plainMatch) return parseFloat(plainMatch[1].replace(/,/g, ''));
-            
-            return 0;
-          }
-          const homePrice = parseHomePrice(lastUserMsg);
+          // Extract location from message (city, state)
+          // Patterns: "in Denver", "in Denver, CO", "in Denver Colorado", "Denver CO", "Denver, Colorado"
+          const locationMatch = lastUserMsg.match(/(?:in|near|around|at|from)\s+([A-Za-z\s]+?)(?:,?\s*([A-Z]{2}))?(?:\s|$|\.|\?|!)/i);
+          const city = locationMatch?.[1]?.trim();
+          const state = locationMatch?.[2]?.trim();
           
-          if (homePrice > 50000) {
-            const plan = calculateHomePurchasePlan(
-              homePrice,
-              (financialProfile.totalSavings as number) || 0,
+          // Extract timeline: "in 5 years", "in 5 years", "in 3 months", etc.
+          const timelineMatch = lastUserMsg.match(/(?:in|within|by)\s+(\d+)\s+(years?|months?)/i);
+          const timeValue = timelineMatch ? parseInt(timelineMatch[1], 10) : 0;
+          const timeUnit = timelineMatch?.[2]?.toLowerCase() || '';
+          const yearsToSave = timeUnit.includes('month') ? timeValue / 12 : timeValue;
+          
+          if (city && state && yearsToSave > 0) {
+            // Fetch real market data and calculate plan
+            const result = await calculateHomePurchasePlanWithMarketData(
+              city,
+              state,
+              yearsToSave,
               (financialProfile.monthlyIncome as number) || 0,
+              (financialProfile.totalSavings as number) || 0,
               (financialProfile.essentialExpenses as number) || 0,
             );
+            
+            const plan = result.plan;
             
             // GAP-38-002 FIX: Inject [GOAL_TIMELINE] marker for UI visualization
             const goalTimelineData = {
               goalName: 'Home Purchase',
-              goalType: 'savings',
+              goalType: 'home_purchase',
               currentAmount: (financialProfile.totalSavings as number) || 0,
               targetAmount: plan.totalCashNeeded,
               monthlyContribution: plan.monthlyContributionNeeded,
@@ -1992,13 +1990,24 @@ CRITICAL INSTRUCTION: This APR is from the user's actual profile data. You MUST 
               ]
             };
             
-            dynamicProtocols += `\n\n${buildHomePurchaseContext(plan)}\nINSTRUCTION: Lead with the HOME PURCHASE PLAN numbers above. These are authoritative — do not substitute different values. Reference the timeline, monthly contribution needed, and affordability check specifically.\n\nAfter your analysis, include this EXACT block at the very end of your response:\n[GOAL_TIMELINE]${JSON.stringify(goalTimelineData)}[END_GOAL_TIMELINE]\nDo not modify the JSON. Include it verbatim at the end.`;
+            const marketContext = `REAL MARKET DATA FOR ${city.toUpperCase()}, ${state}:
+Current median home price: $${result.marketData.medianHomePrice.toLocaleString()}
+Year-over-year appreciation: ${result.marketData.yearOverYearChange.toFixed(1)}%
+Projected price in ${yearsToSave} years: $${plan.homePrice.toLocaleString()}
+Total appreciation: ${result.marketData.yearOverYearChange.toFixed(1)}% annually
+
+AFFORDABILITY ASSESSMENT:
+${result.message}`;
+            
+            dynamicProtocols += `\n\n${marketContext}\n\n${buildHomePurchaseContext(plan)}\nINSTRUCTION: Lead with the REAL MARKET DATA and AFFORDABILITY ASSESSMENT above. Be honest about whether this is realistic or not. If unrealistic, explain why clearly. Reference the projected price, down payment needed, and monthly savings required.\n\nAfter your analysis, include this EXACT block at the very end of your response:\n[GOAL_TIMELINE]${JSON.stringify(goalTimelineData)}[END_GOAL_TIMELINE]\nDo not modify the JSON. Include it verbatim at the end.`;
           } else {
-            // Price not given — ask for it
-            dynamicProtocols += `\n\nHOME PURCHASE GOAL: User wants to buy a home but has not stated a target price. Ask: "What price range are you looking at for the home? Even a rough number — $300k, $500k — helps me calculate what monthly savings you'd need."`;
+            // Missing location or timeline — ask for both
+            dynamicProtocols += `\n\nHOME PURCHASE GOAL: To calculate a realistic home purchase plan, I need two things: (1) What city/area are you looking to buy in? (2) When do you want to buy — in how many years? Once I have those, I can fetch real market data and show you exactly what you'd need to save.`;
           }
         } catch (e) {
           console.warn('[REM-36-001] Home purchase planner failed:', e);
+          // Fallback: ask for location
+          dynamicProtocols += `\n\nHOME PURCHASE GOAL: To calculate a realistic home purchase plan, I need to know: (1) What city/area are you looking to buy in? (2) When do you want to buy — in how many years? I'll fetch real market data for that location.`;
         }
       }
 
@@ -2589,9 +2598,10 @@ INSTRUCTION: Acknowledge this progress explicitly in your response. Say somethin
             // Apply postprocessing to clean formatting
             let cleanedResponse = cleanAtlasResponse(fullResponse);
             
-            // GAP-38-002 FIX: Strip [GOAL_TIMELINE] marker from response text
-            // The marker is only for UI parsing, not for user display
-            cleanedResponse = cleanedResponse.replace(/\n?\[GOAL_TIMELINE\][\s\S]*?\[END_GOAL_TIMELINE\]\n?/g, '').trim();
+            // GAP-38-002 FIX: KEEP [GOAL_TIMELINE] marker in response text
+            // The frontend needs it to parse and render GoalTimelineCard
+            // Do NOT strip it — the frontend will hide it from user view via CSS
+            // cleanedResponse = cleanedResponse.replace(/\n?\[GOAL_TIMELINE\][\s\S]*?\[END_GOAL_TIMELINE\]\n?/g, '').trim();
             
             // REM-31-A: Wire self-check quality assurance layer (non-blocking)
             // runSelfCheck was implemented but never called — this wires it in

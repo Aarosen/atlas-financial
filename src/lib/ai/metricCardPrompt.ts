@@ -171,7 +171,9 @@ export function extractMetricCardFromResponse(
   }
 
   if (!jsonStr) {
-    return { text: response, card: null };
+    // Strip [GOAL_TIMELINE] blocks from display text (keep for frontend parsing only)
+    const cleanedText = response.replace(/\n?\[GOAL_TIMELINE\][\s\S]*?\[END_GOAL_TIMELINE\]\n?/g, '').trim();
+    return { text: cleanedText, card: null };
   }
 
   try {
@@ -180,13 +182,19 @@ export function extractMetricCardFromResponse(
     // Handle metrics object format (Claude's actual output)
     if (parsed?.metrics && typeof parsed.metrics === 'object') {
       // Remove metrics JSON from text to prevent raw JSON leaking into chat
-      return { text: fullMatch ? response.replace(fullMatch, '').trim() : response, card: null };
+      let cleanedText = fullMatch ? response.replace(fullMatch, '').trim() : response;
+      // Also strip [GOAL_TIMELINE] blocks
+      cleanedText = cleanedText.replace(/\n?\[GOAL_TIMELINE\][\s\S]*?\[END_GOAL_TIMELINE\]\n?/g, '').trim();
+      return { text: cleanedText, card: null };
     }
     
     // Handle metric_card format (legacy)
     if (parsed?.type === 'metric_card' && typeof parsed.title === 'string' && typeof parsed.value === 'string') {
+      let cleanedText = fullMatch ? response.replace(fullMatch, '').trim() : response;
+      // Also strip [GOAL_TIMELINE] blocks
+      cleanedText = cleanedText.replace(/\n?\[GOAL_TIMELINE\][\s\S]*?\[END_GOAL_TIMELINE\]\n?/g, '').trim();
       return {
-        text: fullMatch ? response.replace(fullMatch, '').trim() : response,
+        text: cleanedText,
         card: {
           type: 'metric_card',
           title: parsed.title,
