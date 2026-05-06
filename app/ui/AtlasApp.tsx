@@ -1181,7 +1181,12 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           // Fall through to normal LLM call path below
         }
 
-        if (kind === 'followup_question') {
+        // CRITICAL FIX: First message with financial numbers should NEVER be followup_question
+        // followup_question is for clarifying existing data, not initial data entry
+        const isFirstUserMessage = prevMsgs.filter(m => m.r === 'u').length === 0;
+        const effectiveKind = (kind === 'followup_question' && isFirstUserMessage) ? 'new_data' : kind;
+
+        if (effectiveKind === 'followup_question') {
           const am = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
 
           streamAbortRef.current?.abort();
@@ -1192,36 +1197,45 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           dispatch({ type: 'STREAM_START' });
 
           let streamed = '';
-          const res = await claude.answerStream({
-            msgs: am,
-            question: ut,
-            mode: 'explain',
-            memorySummary: st.memorySummary,
-            fin: st.fin,
-            onDelta: (t) => {
-              if (streamIdRef.current !== myStreamId) return;
-              if (ctrl.signal.aborted) return;
-              streamed += t;
-              dispatch({ type: 'STREAM_DELTA', delta: t });
-            },
-            signal: ctrl.signal,
-          });
+          let res: any = null;
+          
+          try {
+            res = await claude.answerStream({
+              msgs: am,
+              question: ut,
+              mode: 'explain',
+              memorySummary: st.memorySummary,
+              fin: st.fin,
+              onDelta: (t) => {
+                if (streamIdRef.current !== myStreamId) return;
+                if (ctrl.signal.aborted) return;
+                streamed += t;
+                dispatch({ type: 'STREAM_DELTA', delta: t });
+              },
+              signal: ctrl.signal,
+            });
 
-          if (streamIdRef.current !== myStreamId) {
-            // Canceled or replaced by a newer stream.
-            return;
-          }
-          streamAbortRef.current = null;
-          if (!res.ok && res.canceled) {
-            dispatch({ type: 'STREAM_CANCELED' });
-            return;
-          }
+            if (streamIdRef.current !== myStreamId) {
+              // Canceled or replaced by a newer stream.
+              dispatch({ type: 'STREAM_CANCELED' });
+              return;
+            }
+            streamAbortRef.current = null;
+            if (!res.ok && res.canceled) {
+              dispatch({ type: 'STREAM_CANCELED' });
+              return;
+            }
 
-          if (!res.ok) {
-            dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
+            if (!res.ok) {
+              dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
+              return;
+            } else {
+              dispatch({ type: 'STREAM_DONE' });
+            }
+          } catch (err) {
+            console.error('[followup_question] answerStream error:', err);
+            dispatch({ type: 'STREAM_ERROR', message: 'An unexpected error occurred. Please try again.' });
             return;
-          } else {
-            dispatch({ type: 'STREAM_DONE' });
           }
 
           // Extract rate limit remaining from response

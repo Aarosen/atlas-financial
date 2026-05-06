@@ -288,8 +288,9 @@ function generateStableOpeningMessage(language: SupportedLanguage = 'en'): strin
 
   const lang = language || 'en';
   const greeting = (greetings[lang] || greetings.en)[0] ?? greetings.en[0];
-  const question = (openingQuestions[lang] || openingQuestions.en)[0] ?? openingQuestions.en[0];
-  return `${greeting}\n\n${question}`;
+  // CRITICAL FIX: Return only the greeting, not greeting + question
+  // The question was causing double greeting (one from greeting, one from question)
+  return greeting;
 }
 
 export { generateStableOpeningMessage };
