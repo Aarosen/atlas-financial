@@ -125,11 +125,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   
   const handleEditField = useCallback((field: keyof FinancialState, value: number | string) => {
     // Apply the field correction to financial state
-    dispatch({
-      type: 'HYDRATE_FIN',
-      fin: { [field]: value },
-    });
-    // Clear captured fields after applying
+    const numValue = typeof value === 'string' ? parseFloat(value) : value;
+    // This will be wired in doSend to update st.fin and st.pendingFin
+    // For now, just clear the captured fields to dismiss the card
     setCapturedFields(null);
   }, []);
 
