@@ -347,6 +347,27 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     }
   }, [st.msgs.length, mounted, st.scr, memory, st.fin?.primaryGoal, isLoaded, progressLoaded, progress, language]);
 
+  // P1.1 FIX (CRITICAL-004): On the very first mount of a fresh-empty conversation,
+  // proactively wipe any stale fin/conv/strat rows that survived from a previous
+  // session so the next user's first message is the source of truth.
+  // Gate strictly on guest + no msgs + not yet confirmed so we never wipe a real returning user's data.
+  const hasNukedFreshSessionRef = useRef(false);
+  useEffect(() => {
+    if (hasNukedFreshSessionRef.current) return;
+    if (!mounted) return;
+    if (userId !== 'guest') return;
+    if (st.msgs.length !== 0) return;
+    const isConfirmed = (() => {
+      try { return localStorage.getItem('atlas_guest_fin_confirmed') === 'true'; }
+      catch { return false; }
+    })();
+    if (isConfirmed) return; // legitimately returning guest with confirmed data — don't nuke
+    hasNukedFreshSessionRef.current = true;
+    void (async () => {
+      try { await db.nuke(); } catch { /* ignore */ }
+    })();
+  }, [mounted, userId, st.msgs.length, db]);
+
   // Auto-save conversation messages every 5 messages
   useEffect(() => {
     if (st.msgs.length > 0 && st.msgs.length % 5 === 0 && userId && userId !== 'guest') {
@@ -906,9 +927,20 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     }
   }, [theme, db]);
 
+  // P1.4 FIX (SERIOUS-003): only react to *real* language changes after mount.
+  // Initialize the ref on first mount so this effect doesn't fire and overwrite
+  // the long-form greeting from the empty-messages effect above. Effect 1 already
+  // depends on `language`, so it will re-evaluate the opening copy on language
+  // changes when the conversation is empty.
   useEffect(() => {
     if (st.scr !== 'conversation') return;
+    if (lastGreetingLanguageRef.current === null) {
+      // First settle: just record the current language; do NOT overwrite messages.
+      lastGreetingLanguageRef.current = language;
+      return;
+    }
     if (lastGreetingLanguageRef.current === language) return;
+    // True language change after mount.
     const hasUserMessage = st.msgs.some((m) => m.r === 'u');
     lastGreetingLanguageRef.current = language;
     if (hasUserMessage) return;
@@ -1471,12 +1503,18 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
       const action = decideNextAction({ kind, missing: miss, turnIndex: prevMsgs.length });
       
-      // AUDIT 35 FIX GAP-001: Force 'complete' when all core fields are present
+      // P1.3 FIX (SERIOUS-002): use answeredNext (which is set only when the user actually
+      // produced an extraction signal for that field) rather than uf.* defaults. Defaults
+      // are 0/null and silently pass the previous "!== null && !== undefined" check, which
+      // caused premature CONFIRM after only income + expenses were provided.
       const totalDebt = (uf.highInterestDebt || 0) + (uf.lowInterestDebt || 0);
-      const coreFieldsFilled = uf.monthlyIncome > 0 && uf.essentialExpenses > 0 
-        && (uf.totalSavings !== null && uf.totalSavings !== undefined) 
-        && (totalDebt !== null && totalDebt !== undefined)
-        && Boolean(answeredNext.primaryGoal);
+      const debtAnswered = answeredNext.highInterestDebt === true || answeredNext.lowInterestDebt === true;
+      const coreFieldsFilled =
+        answeredNext.monthlyIncome === true &&
+        answeredNext.essentialExpenses === true &&
+        answeredNext.totalSavings === true &&
+        debtAnswered &&
+        Boolean(answeredNext.primaryGoal);
       const effectiveAction = coreFieldsFilled ? { type: 'complete' as const } : action;
       
       // BUG-39-002 FIX: POST-ONBOARDING ROUTING
@@ -1550,37 +1588,48 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           content: m.t,
         }));
 
-        const res = await claude.answerStream({
-          msgs: chatMsgs,
-          question: ut,
-          onDelta: (t) => {
-            if (streamIdRef.current !== myStreamId) return;
-            if (ctrl.signal.aborted) return;
-            streamed += t;
-            dispatch({ type: 'STREAM_DELTA', delta: t });
-          },
-          signal: ctrl.signal,
-          memorySummary: st.memorySummary,
-          fin: finRef.current,
-        });
+        // P1.2 FIX (SERIOUS-001): wrap answerStream in try/catch to surface a retry bubble
+        // immediately on throw rather than waiting for the 20s safety timeout.
+        try {
+          const res = await claude.answerStream({
+            msgs: chatMsgs,
+            question: ut,
+            onDelta: (t) => {
+              if (streamIdRef.current !== myStreamId) return;
+              if (ctrl.signal.aborted) return;
+              streamed += t;
+              dispatch({ type: 'STREAM_DELTA', delta: t });
+            },
+            signal: ctrl.signal,
+            memorySummary: st.memorySummary,
+            fin: finRef.current,
+          });
 
-        if (streamIdRef.current !== myStreamId) return;
-        streamAbortRef.current = null;
+          if (streamIdRef.current !== myStreamId) return;
+          streamAbortRef.current = null;
 
-        if (!res.ok && res.canceled) {
-          dispatch({ type: 'STREAM_CANCELED' });
+          if (!res.ok && res.canceled) {
+            dispatch({ type: 'STREAM_CANCELED' });
+            return;
+          }
+          if (!res.ok) {
+            dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
+            return;
+          }
+          dispatch({ type: 'STREAM_DONE' });
+
+          if (res.rateLimitRemaining !== undefined) {
+            setRateLimitRemaining(res.rateLimitRemaining);
+          }
+          return;
+        } catch (e) {
+          if (streamIdRef.current === myStreamId) {
+            streamAbortRef.current = null;
+            dispatch({ type: 'STREAM_CANCELED' });
+            dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
+          }
           return;
         }
-        if (!res.ok) {
-          dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
-          return;
-        }
-        dispatch({ type: 'STREAM_DONE' });
-
-        if (res.rateLimitRemaining !== undefined) {
-          setRateLimitRemaining(res.rateLimitRemaining);
-        }
-        return;
       }
       
       if (effectiveAction.type === 'complete') {
@@ -2228,7 +2277,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             dispatch({ type: 'STREAM_CANCELED' });
           }}
           isGuest={!user}
-          onResetConversation={() => {
+          onResetConversation={async () => {
             // AUDIT 18 FIX P0: Clear progress on reset
             clearProgress();
             // BUG-7 FIX: Clear stale guest financial data from localStorage to prevent hallucinations
@@ -2237,6 +2286,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             try {
               localStorage.removeItem('atlas_guest_fin_confirmed');
             } catch {}
+            // P1.1 FIX (CRITICAL-004): Wipe IndexedDB stores too. Without this, db.get('fin','cur')
+            // resurrects last session's numbers and contaminates the next conversation.
+            try { await db.nuke(); } catch { /* db may not be open yet; ignore */ }
+            try { localStorage.removeItem('atlas:talkDraft'); } catch { /* ignore */ }
             dispatch({ type: 'NEW_CONVERSATION' });
           }}
             />
