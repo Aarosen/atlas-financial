@@ -1655,9 +1655,55 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       }
       if (effectiveAction.type === 'ask') {
         const preface = [actionFeedback, nudgeText, learningPrompt].filter(Boolean).join('\n\n');
+
+        // P0.1 FIX (CRITICAL-001): While the user has no baseline yet (mid-onboarding),
+        // do NOT round-trip through chatStream. The text we want to ask is already produced
+        // deterministically by nextQuestionForMissing(). Dispatching SEND_ASKED directly
+        // makes onboarding sub-100ms and side-steps the 20s safety timeout that was firing
+        // every first message. Once the user has confirmed a baseline (st.baseline !== null),
+        // the post-onboarding chatStream branch (line 1477) already handles their messages,
+        // so this guard never blocks normal post-onboarding chat.
+        if (!st.baseline) {
+          // We must use the original `action` for `text`/`questionKey` because effectiveAction
+          // can be reassigned to 'complete' (line 1472). decideNextAction returned action with
+          // .type === 'ask' here only because effectiveAction kept it that way.
+          const askAction = action.type === 'ask' ? action : (effectiveAction as any);
+          const askBody: string = askAction.text;
+          const questionKey: keyof FinancialState | undefined = askAction.questionKey;
+          const askText = preface ? `${preface}\n\n${askBody}` : askBody;
+
+          logReplay(
+            createReplayEntry({
+              role: 'assistant',
+              text: askText,
+              kind: 'ask',
+              questionKey,
+              emotionTag: detectReplayEmotion(askText),
+              trace: buildReasoningTrace({
+                decision: 'ask',
+                questionKey,
+                missingCount: miss.length,
+                answeredCount: Object.keys(answeredNext || {}).length,
+              }),
+            })
+          );
+
+          dispatch({ type: 'SEND_ASKED', text: askText, questionKey });
+          // Goal detection still runs against the static prompt for telemetry parity.
+          const token = authSession?.accessToken || undefined;
+          const financialProfile = finRef.current ? {
+            totalSavings: finRef.current.totalSavings,
+            highInterestDebt: finRef.current.highInterestDebt || 0,
+            monthlyIncome: finRef.current.monthlyIncome,
+            essentialExpenses: finRef.current.essentialExpenses,
+          } : undefined;
+          await processResponseForGoals(askText, addNewGoal, userId !== 'guest' ? userId : undefined, token, undefined, financialProfile);
+          return;
+        }
+
+        // Post-baseline 'ask' (rare) — keep the existing chatStream path so planners can fire.
         const chatMsgs = prevMsgs.slice(-10).map((m) => ({ role: m.r === 'u' ? ('user' as const) : ('assistant' as const), content: m.t }));
-        
-        // Use chatStream to get guided responses with session state injection
+
         streamAbortRef.current?.abort();
         const ctrl = new AbortController();
         streamAbortRef.current = ctrl;
@@ -1666,12 +1712,11 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         dispatch({ type: 'STREAM_START' });
 
         let adaptiveAsk = '';
-        // MULTI-GOAL SERIALIZATION: Merge multiGoalState.goals into sessionState for backend
         const sessionStateWithGoals = {
           ...sessionStateRef.current,
           ...(multiGoalState?.goals && { goals: multiGoalState.goals }),
         };
-        
+
         const res = await claude.chatStream({
           msgs: chatMsgs,
           missing: miss as string[],
@@ -1701,32 +1746,24 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         }
 
         if (!res.ok) {
-          // AUDIT 19 FIX P0: Change SEND_ASKED to SEND_ERROR_WITH_RETRY for proper error handling
           dispatch({ type: 'SEND_ERROR_WITH_RETRY', text: "I'm having trouble connecting right now. Please try again in a moment." });
           return;
         } else {
           dispatch({ type: 'STREAM_DONE' });
         }
 
-        // Extract rate limit remaining from response
         if (res.rateLimitRemaining !== undefined) {
           setRateLimitRemaining(res.rateLimitRemaining);
         }
 
-        // COMPANION: Capture sessionId returned from first response, persist to sessionStorage
-        // This ensures finalization, action tracking, and progress display work on subsequent requests
         if (res.sessionId && !sessionId) {
           updateSessionId(res.sessionId);
         }
-        
-        // AUTHPROMPTCARD: Show auth prompt to guest users immediately after tier reveal
-        // This is the highest-value moment — user has received their full financial analysis
+
         if (userId === 'guest' && st.baseline && !showAuthPrompt) {
           setShowAuthPrompt(true);
         }
 
-        // GOAL DETECTION: Process response for goals and trigger addNewGoal if detected
-        // FIX 4: Pass userId and token for goal persistence
         const token = authSession?.accessToken || undefined;
         const financialProfile = finRef.current ? {
           totalSavings: finRef.current.totalSavings,
@@ -1734,13 +1771,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           monthlyIncome: finRef.current.monthlyIncome,
           essentialExpenses: finRef.current.essentialExpenses,
         } : undefined;
-        // For 'ask' actions, use the original action which has text and questionKey
         const askAction = effectiveAction.type === 'ask' ? action : null;
         if (askAction && askAction.type === 'ask') {
           await processResponseForGoals(adaptiveAsk || askAction.text, addNewGoal, userId !== 'guest' ? userId : undefined, token, undefined, financialProfile);
-          
-          // Only dispatch SEND_ASKED if streaming produced nothing
-          // The streamed content is already in the UI via STREAM_DELTA
+
           if (!adaptiveAsk.trim()) {
             const askBody = askAction.text;
             const askText = preface ? `${preface}\n\n${askBody}` : askBody;
@@ -1761,7 +1795,6 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             );
             dispatch({ type: 'SEND_ASKED', text: askText, questionKey: askAction.questionKey });
           } else {
-            // Stream produced content, just log the replay with what was streamed
             const askText = preface ? `${preface}\n\n${adaptiveAsk.trim()}` : adaptiveAsk.trim();
             logReplay(
               createReplayEntry({
