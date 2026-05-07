@@ -1083,16 +1083,24 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       hasUserInteractedRef.current = true;
       dispatch({ type: 'SEND_START', text: ut });
       
-      // FIX 4: Safety timeout — if still busy after 20 seconds, force reset
+      // P0.2 FIX (CRITICAL-002): Safety timeout must ABORT the running stream so the next
+      // user click can start a fresh send. Without abort(), the old chatStream's stream-id
+      // guard (myStreamId) silently drops all future deltas from any new stream because
+      // streamIdRef has been bumped, but the original promise also never resolves cleanly.
+      // We bump streamIdRef.current ourselves to be explicit about which stream is now stale,
+      // abort, and clear the ref so subsequent sends start clean.
       const busyTimeout = setTimeout(() => {
+        try { streamAbortRef.current?.abort(); } catch { /* swallow abort errors */ }
+        streamAbortRef.current = null;
+        // Bump streamId so any in-flight onDelta callbacks no-op cleanly.
+        ++streamIdRef.current;
         dispatch({ type: 'STREAM_CANCELED' });
         dispatch({
           type: 'SEND_ERROR_WITH_RETRY',
           text: "I'm taking too long to respond. Please try again.",
         });
       }, 20000);
-      
-      // Store timeout so we can clear it when done
+
       const clearBusyTimeout = () => clearTimeout(busyTimeout);
       
       const kind = classifyInterruption(ut);
@@ -1899,7 +1907,12 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     [st, voice, editingLast, doSend, updateInput]
   );
 
-  const canRetry = !!st.apiErr && !st.busy && !!lastSendSnapshotRef.current && !!lastUserTextRef.current;
+  // P0.3 FIX (CRITICAL-003): retry should be available whenever the most recent assistant
+  // message is flagged retryable (timeout/error path) OR the global apiErr is set.
+  // The previous gate required apiErr truthy, but SEND_ERROR_WITH_RETRY clears apiErr,
+  // which stranded the user with no retry surface.
+  const lastMsgRetryable = !!st.msgs[st.msgs.length - 1]?.retryable && st.msgs[st.msgs.length - 1]?.r === 'a';
+  const canRetry = (!!st.apiErr || lastMsgRetryable) && !st.busy && !!lastSendSnapshotRef.current && !!lastUserTextRef.current;
 
   const retryLast = useCallback(() => {
     if (!canRetry) return;

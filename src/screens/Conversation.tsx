@@ -550,6 +550,32 @@ export function ConversationScreen({
                         data-testid={i === lastAssistantIdx ? 'lastAssistantBubble' : undefined}
                       >
                         {renderMessageText(displayText)}
+                        {/* P0.3 FIX (CRITICAL-003): inline retry on retryable error messages */}
+                        {m.retryable && onRetry && (
+                          <div style={{ marginTop: 10, display: 'flex', gap: 8 }}>
+                            <button
+                              type="button"
+                              onClick={onRetry}
+                              disabled={busy}
+                              data-testid={`retryButton-${i}`}
+                              aria-label="Retry last message"
+                              style={{
+                                padding: '8px 14px',
+                                borderRadius: 999,
+                                border: '1px solid var(--bdr)',
+                                background: 'linear-gradient(135deg,var(--teal),var(--sky))',
+                                color: '#fff',
+                                fontWeight: 700,
+                                fontSize: 13,
+                                cursor: busy ? 'not-allowed' : 'pointer',
+                                opacity: busy ? 0.6 : 1,
+                                boxShadow: 'var(--sh1)',
+                              }}
+                            >
+                              Try again
+                            </button>
+                          </div>
+                        )}
                       </div>
                     ) : (
                       <div style={{ whiteSpace: 'pre-wrap' }}>{m.t}</div>
