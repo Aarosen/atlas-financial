@@ -37,7 +37,7 @@ const activities: Map<string, ProcessingActivity> = new Map();
  * Register a data processor
  */
 export function registerProcessor(processor: Omit<DataProcessor, 'id'>): DataProcessor {
-  const id = `processor_${Date.now()}`;
+  const id = `processor_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const fullProcessor: DataProcessor = { ...processor, id };
   processors.set(id, fullProcessor);
   return fullProcessor;
@@ -66,7 +66,7 @@ export function getProcessors(): DataProcessor[] {
 export function recordProcessingActivity(
   activity: Omit<ProcessingActivity, 'id'>
 ): ProcessingActivity {
-  const id = `activity_${Date.now()}`;
+  const id = `activity_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const fullActivity: ProcessingActivity = { ...activity, id };
   activities.set(id, fullActivity);
   return fullActivity;

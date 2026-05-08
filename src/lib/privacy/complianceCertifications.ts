@@ -252,9 +252,10 @@ export function initializeCertification(certificationKey: string): ComplianceCer
     throw new Error(`Unknown certification: ${certificationKey}`);
   }
 
+  const id = `cert_${certificationKey}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const cert: ComplianceCertification = {
     ...template,
-    id: `cert_${certificationKey}_${Date.now()}`,
+    id,
   };
 
   certifications.set(cert.id, cert);

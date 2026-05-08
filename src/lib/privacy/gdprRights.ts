@@ -42,6 +42,7 @@ export type DataSubjectRightType =
   | 'object';
 
 export interface PersonalDataExport {
+  id: string;
   userId: string;
   exportedAt: number;
   format: 'json' | 'csv';
@@ -81,8 +82,9 @@ export function submitDataSubjectRequest(
   const now = Date.now();
   const deadline = now + 30 * 24 * 60 * 60 * 1000; // 30 days
 
+  const id = `dsr_${userId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const request: DataSubjectRequest = {
-    id: `dsr_${userId}_${Date.now()}`,
+    id,
     userId,
     requestType,
     status: 'pending',
@@ -303,7 +305,9 @@ export function processDataPortabilityRequest(
   request.status = 'completed';
   request.completedAt = Date.now();
 
+  const id = `export_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const exportData: PersonalDataExport = {
+    id,
     userId: request.userId,
     exportedAt: Date.now(),
     format,

@@ -80,15 +80,13 @@ export function detectPrivacyMode(options?: {
   }
 
   // 2. Check localStorage
-  if (typeof window !== 'undefined') {
-    try {
-      const stored = localStorage.getItem('atlas_privacy_mode');
-      if (stored && ['guest_local', 'signed_in_cloud', 'enterprise_zdr'].includes(stored)) {
-        return stored as PrivacyMode;
-      }
-    } catch {
-      // localStorage not available
+  try {
+    const stored = typeof localStorage !== 'undefined' ? localStorage.getItem('atlas_privacy_mode') : null;
+    if (stored && ['guest_local', 'signed_in_cloud', 'enterprise_zdr'].includes(stored)) {
+      return stored as PrivacyMode;
     }
+  } catch {
+    // localStorage not available
   }
 
   // 3. Check auth status
@@ -104,9 +102,10 @@ export function detectPrivacyMode(options?: {
  * Set privacy mode and persist to localStorage
  */
 export function setPrivacyMode(mode: PrivacyMode): void {
-  if (typeof window === 'undefined') return;
   try {
-    localStorage.setItem('atlas_privacy_mode', mode);
+    if (typeof localStorage !== 'undefined') {
+      localStorage.setItem('atlas_privacy_mode', mode);
+    }
   } catch {
     // localStorage not available
   }

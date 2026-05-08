@@ -100,7 +100,7 @@ export function createPrivacyImpactAssessment(
   name: string,
   description: string
 ): PrivacyImpactAssessment {
-  const id = `pia_${Date.now()}`;
+  const id = `pia_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const now = Date.now();
 
   const assessment: PrivacyImpactAssessment = {
@@ -132,7 +132,7 @@ export function addDataFlow(
 
   const flow: DataFlow = {
     ...dataFlow,
-    id: `flow_${Date.now()}`,
+    id: `flow_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   };
 
   assessment.dataFlows.push(flow);
@@ -155,7 +155,7 @@ export function addPrivacyRisk(
 
   const fullRisk: PrivacyRisk = {
     ...risk,
-    id: `risk_${Date.now()}`,
+    id: `risk_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     riskLevel,
   };
 
@@ -178,7 +178,7 @@ export function addRiskMitigation(
 
   const fullMitigation: RiskMitigation = {
     ...mitigation,
-    id: `mitigation_${Date.now()}`,
+    id: `mitigation_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   };
 
   assessment.mitigations.push(fullMitigation);
@@ -253,7 +253,7 @@ export function approveAssessment(piaId: string, approvedBy: string): PrivacyImp
  * Create threat model
  */
 export function createThreatModel(piaId: string): ThreatModel {
-  const id = `tm_${Date.now()}`;
+  const id = `tm_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
 
   const model: ThreatModel = {
     id,
@@ -280,7 +280,7 @@ export function addAsset(
 
   const fullAsset: Asset = {
     ...asset,
-    id: `asset_${Date.now()}`,
+    id: `asset_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   };
 
   model.assets.push(fullAsset);
@@ -299,7 +299,7 @@ export function addThreat(
 
   const fullThreat: Threat = {
     ...threat,
-    id: `threat_${Date.now()}`,
+    id: `threat_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   };
 
   model.threats.push(fullThreat);
@@ -318,7 +318,7 @@ export function addTrustBoundary(
 
   const fullBoundary: TrustBoundary = {
     ...boundary,
-    id: `boundary_${Date.now()}`,
+    id: `boundary_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
   };
 
   model.trustBoundaries.push(fullBoundary);
