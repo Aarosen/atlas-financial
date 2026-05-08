@@ -63,9 +63,10 @@ export function createAdditiveSecretShares(
   const shares: SecretShare[] = [];
 
   // Simple additive secret sharing: split into random parts that sum to secret
-  let remaining = secret;
+  // Generate random shares for first n-1 shares
+  let sum = 0;
   for (let i = 0; i < totalShares - 1; i++) {
-    const share = Math.random() * remaining;
+    const share = Math.random() * secret;
     shares.push({
       id: `share_${i}`,
       partyId: `party_${i}`,
@@ -73,14 +74,15 @@ export function createAdditiveSecretShares(
       threshold,
       totalShares,
     });
-    remaining -= share;
+    sum += share;
   }
 
-  // Last share is what's left to make sum equal to secret
+  // Last share is what's needed to make sum equal to secret
+  const lastShare = secret - sum;
   shares.push({
     id: `share_${totalShares - 1}`,
     partyId: `party_${totalShares - 1}`,
-    shareValue: remaining,
+    shareValue: lastShare,
     threshold,
     totalShares,
   });

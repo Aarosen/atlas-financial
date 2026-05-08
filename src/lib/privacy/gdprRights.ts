@@ -129,7 +129,6 @@ export function verifyDataSubjectRequest(
   // For now, accept any non-empty token
   if (verificationToken && verificationToken.length > 0) {
     request.verificationStatus = 'verified';
-    request.status = 'processing';
     return true;
   }
 
