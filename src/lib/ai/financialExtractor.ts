@@ -29,11 +29,16 @@ export function extractFinancialSnapshot(
   // T0.5: Extract monthly debt payments (required for DTI calculation)
   // Patterns: "pay $500 on debt", "debt payments are $300", "minimum payments $200", "paying $600 toward debt"
   let debtPaymentMatch = userText.match(
-    /(?:debt\s+)?(?:payment|payments)\s+(?:are|is)?\s*(\$?[\d,]+k?)/i
+    /(?:debt\s+)?(?:payment|payments)\s*(?:are|is|:)?\s*(\$?[\d,]+k?)/i
   );
   if (!debtPaymentMatch) {
     debtPaymentMatch = userText.match(
-      /(?:pay|paying|minimum)\s+\$?[\d,]+k?/i
+      /(?:minimum\s+)?(?:payment|payments)\s+(?:total|is|are)?\s*(\$?[\d,]+k?)/i
+    );
+  }
+  if (!debtPaymentMatch) {
+    debtPaymentMatch = userText.match(
+      /(?:pay|paying)\s+\$?[\d,]+k?\s+(?:on|toward|to)?\s*(?:debt)?/i
     );
   }
 
