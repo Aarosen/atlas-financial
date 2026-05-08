@@ -7,6 +7,12 @@ import {
   type EncryptedData,
 } from '../encryption';
 
+// Polyfill Web Crypto API for Node.js test environment
+if (!globalThis.crypto) {
+  const nodeCrypto = require('crypto');
+  globalThis.crypto = nodeCrypto.webcrypto as Crypto;
+}
+
 describe('Data Encryption (T1.2)', () => {
   beforeEach(() => {
     // Mock localStorage

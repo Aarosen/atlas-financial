@@ -8,6 +8,12 @@ import {
   type CloudSyncData,
 } from '../cloudSync';
 
+// Polyfill Web Crypto API for Node.js test environment
+if (!globalThis.crypto) {
+  const nodeCrypto = require('crypto');
+  globalThis.crypto = nodeCrypto.webcrypto as Crypto;
+}
+
 // Mock fetch
 global.fetch = vi.fn();
 
@@ -49,13 +55,13 @@ describe('Cloud Sync (T1.3)', () => {
   });
 
   afterEach(() => {
-    localStorage.clear();
-    sessionStorage.clear();
+    global.localStorage.clear();
+    global.sessionStorage.clear();
   });
 
   describe('uploadToCloud', () => {
     it('uploads encrypted data to cloud', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       (global.fetch as any).mockResolvedValueOnce({
         ok: true,
@@ -84,7 +90,7 @@ describe('Cloud Sync (T1.3)', () => {
     });
 
     it('handles upload failure', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
@@ -113,7 +119,7 @@ describe('Cloud Sync (T1.3)', () => {
 
   describe('downloadFromCloud', () => {
     it('downloads and decrypts data from cloud', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       const mockEncryptedData = {
         ciphertext: 'encrypted_data',
@@ -146,7 +152,7 @@ describe('Cloud Sync (T1.3)', () => {
     });
 
     it('returns null when data not found (404)', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       (global.fetch as any).mockResolvedValueOnce({
         ok: false,
@@ -159,7 +165,7 @@ describe('Cloud Sync (T1.3)', () => {
     });
 
     it('returns null on download error', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
@@ -171,7 +177,7 @@ describe('Cloud Sync (T1.3)', () => {
 
   describe('syncBidirectional', () => {
     it('syncs local data when local is newer', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       const localData = { income: 6000, expenses: 3000 };
       const localTimestamp = Date.now();
@@ -203,7 +209,7 @@ describe('Cloud Sync (T1.3)', () => {
     });
 
     it('syncs cloud data when cloud is newer', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       const cloudTimestamp = Date.now() + 10000;
       const localTimestamp = Date.now();
@@ -247,7 +253,7 @@ describe('Cloud Sync (T1.3)', () => {
 
   describe('getSyncStatus', () => {
     it('retrieves sync status for all data types', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       (global.fetch as any).mockResolvedValueOnce({
         ok: true,
@@ -274,7 +280,7 @@ describe('Cloud Sync (T1.3)', () => {
     });
 
     it('returns empty object on error', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
@@ -286,7 +292,7 @@ describe('Cloud Sync (T1.3)', () => {
 
   describe('clearCloudSync', () => {
     it('clears cloud sync data for user', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       (global.fetch as any).mockResolvedValueOnce({
         ok: true,
@@ -307,7 +313,7 @@ describe('Cloud Sync (T1.3)', () => {
     });
 
     it('handles error gracefully', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       (global.fetch as any).mockRejectedValueOnce(new Error('Network error'));
 
@@ -318,7 +324,7 @@ describe('Cloud Sync (T1.3)', () => {
 
   describe('T1.3 Integration Tests', () => {
     it('complete upload/download cycle', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       const originalData = {
         monthlyIncome: 6000,
@@ -368,7 +374,7 @@ describe('Cloud Sync (T1.3)', () => {
     });
 
     it('sync status reflects all data types', async () => {
-      sessionStorage.setItem('atlas_auth_token', 'test_token');
+      global.sessionStorage.setItem('atlas_auth_token', 'test_token');
 
       const dataTypes: CloudSyncData['dataType'][] = [
         'financial_state',

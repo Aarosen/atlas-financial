@@ -35,14 +35,14 @@ async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
 
   if (!seed) {
     // Create new random seed
-    const seedBytes = crypto.getRandomValues(new Uint8Array(32));
+    const seedBytes = globalThis.crypto.getRandomValues(new Uint8Array(32));
     seed = btoa(String.fromCharCode(...seedBytes));
     localStorage.setItem(seedKey, seed);
   }
 
   // Derive key from seed
   const seedBytes = Uint8Array.from(atob(seed), c => c.charCodeAt(0));
-  const baseKey = await crypto.subtle.importKey(
+  const baseKey = await globalThis.crypto.subtle.importKey(
     'raw',
     seedBytes,
     { name: 'PBKDF2' },
@@ -50,7 +50,7 @@ async function getOrCreateEncryptionKey(): Promise<CryptoKey> {
     ['deriveBits', 'deriveKey']
   );
 
-  const derivedKey = await crypto.subtle.deriveKey(
+  const derivedKey = await globalThis.crypto.subtle.deriveKey(
     {
       name: 'PBKDF2',
       hash: 'SHA-256',
@@ -78,10 +78,10 @@ export async function encryptData(data: unknown): Promise<EncryptedData> {
   const plaintextBytes = new TextEncoder().encode(plaintext);
 
   // Generate random IV
-  const iv = crypto.getRandomValues(new Uint8Array(12));
+  const iv = globalThis.crypto.getRandomValues(new Uint8Array(12));
 
   // Encrypt
-  const encrypted = await crypto.subtle.encrypt(
+  const encrypted = await globalThis.crypto.subtle.encrypt(
     { name: 'AES-GCM', iv },
     key,
     plaintextBytes
@@ -118,7 +118,7 @@ export async function decryptData(encrypted: EncryptedData): Promise<unknown> {
   const encryptedWithTag = new Uint8Array([...ciphertextBytes, ...tagBytes]);
 
   // Decrypt
-  const decrypted = await crypto.subtle.decrypt(
+  const decrypted = await globalThis.crypto.subtle.decrypt(
     { name: 'AES-GCM', iv: ivBytes },
     key,
     encryptedWithTag
@@ -150,7 +150,7 @@ export function clearEncryptionKey(): void {
  */
 export function isEncryptionAvailable(): boolean {
   return (
-    typeof crypto !== 'undefined' &&
-    typeof crypto.subtle !== 'undefined'
+    typeof globalThis.crypto !== 'undefined' &&
+    typeof globalThis.crypto.subtle !== 'undefined'
   );
 }
