@@ -4,6 +4,7 @@ export interface FinancialSnapshot {
   monthlyVariableExpenses: number | null;
   currentSavings: number | null;
   totalDebt: number | null;
+  monthlyDebtPayments: number | null;
   debts: Array<{ name: string; balance: number; rate: number; minPayment: number }>;
 }
 
@@ -25,18 +26,25 @@ export function extractFinancialSnapshot(
   const savingsMatch = userText.match(
     /(?:savings?|saved|have)[^\d]*(\$?[\d,]+k?)/i
   );
+  // T0.5: Extract monthly debt payments (required for DTI calculation)
+  // Patterns: "pay $500 on debt", "debt payments are $300", "minimum payments $200"
+  const debtPaymentMatch = userText.match(
+    /(?:debt\s+)?(?:payment|pay|paying|minimum)[^\d]*(\$?[\d,]+k?)/i
+  );
 
   // Assess confidence: explicit numbers are high confidence
   // Numbers extracted from emotional phrases like "paycheck to paycheck" are low confidence
   const incomeConfidence = incomeMatch ? assessConfidence(incomeMatch[0], userText) : 0;
   const expenseConfidence = expenseMatch ? assessConfidence(expenseMatch[0], userText) : 0;
   const savingsConfidence = savingsMatch ? assessConfidence(savingsMatch[0], userText) : 0;
+  const debtPaymentConfidence = debtPaymentMatch ? assessConfidence(debtPaymentMatch[0], userText) : 0;
 
   // Only accept extractions with high confidence (>0.7)
   // This prevents hallucination from emotional language like "paycheck to paycheck"
   const monthlyIncome = incomeConfidence > 0.7 && incomeMatch ? parseAmount(incomeMatch[1]) : null;
   const monthlyFixedExpenses = expenseConfidence > 0.7 && expenseMatch ? parseAmount(expenseMatch[1]) : null;
   const currentSavings = savingsConfidence > 0.7 && savingsMatch ? parseAmount(savingsMatch[1]) : null;
+  const monthlyDebtPayments = debtPaymentConfidence > 0.7 && debtPaymentMatch ? parseAmount(debtPaymentMatch[1]) : null;
 
   if (monthlyIncome === null && monthlyFixedExpenses === null) return null;
 
@@ -46,6 +54,7 @@ export function extractFinancialSnapshot(
     monthlyVariableExpenses: null,
     currentSavings: currentSavings ?? 0,
     totalDebt: null,
+    monthlyDebtPayments,
     debts: [],
   };
 }
