@@ -82,7 +82,7 @@ export function extractFinancialSnapshot(
 function assessConfidence(matchedText: string, fullText: string): number {
   // High confidence: explicit number statement
   // "make $5000" or "income is $5000" = 0.95
-  if (/(?:make|earn|have|got|received|get|income|salary|expenses?|spend|costs?|savings?|saved|debt\s+payment|paying|minimum)\s*(?:is|of|:)?\s*\$?[\d,]+/i.test(matchedText)) {
+  if (/(?:make|earn|have|got|received|get|income|salary|expenses?|spend|costs?|savings?|saved|debt\s+payments?|pay(?:ing)?|minimum(?:\s+payments?)?)\s*(?:are|is|of|:)?\s*\$?[\d,]+/i.test(matchedText)) {
     return 0.95;
   }
   
