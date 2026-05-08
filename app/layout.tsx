@@ -61,6 +61,8 @@ export default function RootLayout({ children }: { children: ReactNode }) {
             `,
           }}
         />
+        {/* TASK 1.3: Plaid Link script for bank account connection */}
+        <script src="https://cdn.plaid.com/link/v3/stable/link-initialize.js" async />
       </head>
       <body className={`${inter.variable} ${sora.variable}`}>
         <UserProvider>

@@ -1,15 +1,18 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { ReactNode } from 'react';
-import type { FinancialState, Strategy } from '@/lib/state/types';
+import type { FinancialState, Strategy, FinancialGoal } from '@/lib/state/types';
 import { Card } from '@/components/Card';
 import { Button, PrimaryBtn, GhostBtn } from '@/components/Buttons';
 import { TopBar, ScreenWrap } from '@/components/TopBar';
 import { PageContainer, Stack } from '@/components/Layout';
 import { ProgressBar } from '@/components/ProgressBar';
+import { GoalsCard } from '@/components/GoalsCard';
+import { BankSyncCard } from '@/components/BankSyncCard';
 import { conceptsForLever } from '@/lib/ai/conceptMap';
 import { simulateSavingsGrowth } from '@/lib/ai/scenarioSimulator';
 import { buildSparkline } from '@/lib/ai/visualExplainer';
 import { buildAudioLesson } from '@/lib/ai/audioLessons';
+import { getFeatureFlags } from '@/lib/featureFlags';
 
 export function DashboardScreen({
   theme,
@@ -259,6 +262,20 @@ export function DashboardScreen({
               <GhostBtn onClick={onStrategy}>How tiers work</GhostBtn>
             </div>
           </Card>
+
+          {/* TASK 1.2: Goals Card */}
+          {(() => {
+            const flags = getFeatureFlags();
+            const goals: FinancialGoal[] = []; // TODO: Load from session state
+            return flags.goalsCard && goals.length > 0 ? <GoalsCard goals={goals} /> : null;
+          })()}
+
+          {/* TASK 1.3: Bank Sync Card */}
+          {(() => {
+            const flags = getFeatureFlags();
+            const userId = ''; // TODO: Get from session
+            return flags.plaidBridge ? <BankSyncCard userId={userId} /> : null;
+          })()}
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
             <Card>

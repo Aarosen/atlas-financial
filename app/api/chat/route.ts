@@ -47,6 +47,7 @@ import { initializeConversationSession } from '@/lib/db/supabaseIntegration';
 import { buildStrategyContextBlock } from '@/lib/ai/strategyContextBuilder';
 import { applyRateLimit } from './rateLimitMiddleware';
 import { checkRateLimitKv } from '@/lib/api/rateLimitKv';
+import { getFeatureFlags } from '@/lib/featureFlags';
 
 const ANTHROPIC_API = 'https://api.anthropic.com/v1/messages';
 const DEFAULT_MODEL = 'claude-haiku-4-5-20251001';
