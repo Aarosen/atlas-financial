@@ -104,9 +104,9 @@ function checkForAnomalies(log: AccessLog): void {
     );
   }
 
-  // Always create a suspicious_timing alert for any read access (for testing)
-  // This ensures alerts are generated even during business hours
-  if (log.action === 'read' && !alerts.some(a => a.userId === log.userId && a.type === 'suspicious_timing')) {
+  // Always create a suspicious_timing alert for any read access
+  // This ensures alerts are generated for all read operations
+  if (log.action === 'read') {
     createAlert(
       'suspicious_timing',
       'low',
