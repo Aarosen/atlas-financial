@@ -75,7 +75,7 @@ export function recordAnalyticsEvent(
   sensitive: boolean = false
 ): AnalyticsEvent {
   const event: AnalyticsEvent = {
-    id: `event_${Date.now()}`,
+    id: `event_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     userId,
     eventType,
     timestamp: Date.now(),

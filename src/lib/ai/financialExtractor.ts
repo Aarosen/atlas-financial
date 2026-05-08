@@ -18,18 +18,18 @@ export function extractFinancialSnapshot(
 
   // Extract with confidence assessment
   const incomeMatch = userText.match(
-    /(?:income|take.?home|earn|make|salary)[^\d]*(\$?[\d,]+k?)/i
+    /(?:income|take.?home|earn|make|salary)\s*(?:is|of|:)?\s*(\$?[\d,]+k?)/i
   );
   const expenseMatch = userText.match(
-    /(?:expenses?|spend|costs?)[^\d]*(\$?[\d,]+k?)/i
+    /(?:expenses?|spend|costs?)\s*(?:is|of|:)?\s*(\$?[\d,]+k?)/i
   );
   const savingsMatch = userText.match(
-    /(?:savings?|saved|have)[^\d]*(\$?[\d,]+k?)/i
+    /(?:savings?|saved|have)\s*(?:is|of|:)?\s*(\$?[\d,]+k?)/i
   );
   // T0.5: Extract monthly debt payments (required for DTI calculation)
   // Patterns: "pay $500 on debt", "debt payments are $300", "minimum payments $200"
   const debtPaymentMatch = userText.match(
-    /(?:debt\s+)?(?:payment|pay|paying|minimum)[^\d]*(\$?[\d,]+k?)/i
+    /(?:debt\s+)?(?:payment|pay|paying|minimum)\s*(?:is|of|:)?\s*(?:to|of)?\s*(\$?[\d,]+k?)/i
   );
 
   // Assess confidence: explicit numbers are high confidence
@@ -62,21 +62,9 @@ export function extractFinancialSnapshot(
 // Assess confidence that an extraction is from explicit user input, not hallucination
 function assessConfidence(matchedText: string, fullText: string): number {
   // High confidence: explicit number statement
-  // "I make $5000" or "My income is $5000" = 0.95
-  if (/^(I\s+)?(?:make|earn|have|got|received|get)\s+\$?[\d,]+/i.test(matchedText)) {
+  // "make $5000" or "income is $5000" = 0.95
+  if (/(?:make|earn|have|got|received|get|income|salary|expenses?|spend|costs?|savings?|saved|debt\s+payment|paying|minimum)\s*(?:is|of|:)?\s*\$?[\d,]+/i.test(matchedText)) {
     return 0.95;
-  }
-  
-  // High confidence: explicit debt payment statement
-  // "I am paying $600 toward debt" or "debt payments are $300" = 0.9
-  if (/(?:debt\s+)?(?:payment|paying|minimum)[:\s]+\$?[\d,]+/i.test(matchedText)) {
-    return 0.9;
-  }
-  
-  // Medium-high confidence: direct statement with keyword
-  // "income: $5000" or "expenses: $2000" = 0.85
-  if (/(?:income|salary|expenses?|costs?|savings?)[:\s]+\$?[\d,]+/i.test(matchedText)) {
-    return 0.85;
   }
   
   // Low confidence: number appears near emotional language or life event keywords

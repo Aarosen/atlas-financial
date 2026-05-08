@@ -16,10 +16,44 @@ import {
 describe('ZDR Mode (T1.4)', () => {
   beforeEach(() => {
     clearAllZDRSessions();
+    // Mock localStorage
+    const localStore: Record<string, string> = {};
+    global.localStorage = {
+      getItem: (key: string) => localStore[key] || null,
+      setItem: (key: string, value: string) => {
+        localStore[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete localStore[key];
+      },
+      clear: () => {
+        Object.keys(localStore).forEach(key => delete localStore[key]);
+      },
+      length: 0,
+      key: () => null,
+    } as Storage;
+    // Mock sessionStorage
+    const sessionStore: Record<string, string> = {};
+    global.sessionStorage = {
+      getItem: (key: string) => sessionStore[key] || null,
+      setItem: (key: string, value: string) => {
+        sessionStore[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete sessionStore[key];
+      },
+      clear: () => {
+        Object.keys(sessionStore).forEach(key => delete sessionStore[key]);
+      },
+      length: 0,
+      key: () => null,
+    } as Storage;
   });
 
   afterEach(() => {
     clearAllZDRSessions();
+    localStorage.clear();
+    sessionStorage.clear();
   });
 
   describe('createZDRSession', () => {

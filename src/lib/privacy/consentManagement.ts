@@ -122,7 +122,7 @@ export function recordConsent(
 ): UserConsent {
   const consent: UserConsent = {
     userId,
-    consentId: `consent_${userId}_${categoryId}_${Date.now()}`,
+    consentId: `consent_${userId}_${categoryId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     category: categoryId,
     given,
     timestamp: Date.now(),

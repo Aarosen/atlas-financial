@@ -59,7 +59,7 @@ export function createAdditiveSecretShares(
     throw new Error('Threshold cannot exceed total shares');
   }
 
-  const id = `secret_${Date.now()}`;
+  const id = `secret_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const shares: SecretShare[] = [];
 
   // Simple additive secret sharing: split into random parts that sum to secret
@@ -190,7 +190,7 @@ export function secureSum(
     verified: collectedShares.length >= secret.threshold,
   };
 
-  aggregationResults.set(`agg_${Date.now()}`, result);
+  aggregationResults.set(`agg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, result);
   return result;
 }
 
@@ -211,7 +211,7 @@ export function secureAverage(
     verified: sumResult.verified,
   };
 
-  aggregationResults.set(`agg_${Date.now()}`, result);
+  aggregationResults.set(`agg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, result);
   return result;
 }
 
@@ -246,7 +246,7 @@ export function secureMax(
     verified: collectedShares.length >= secret.threshold,
   };
 
-  aggregationResults.set(`agg_${Date.now()}`, result);
+  aggregationResults.set(`agg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, result);
   return result;
 }
 
@@ -281,7 +281,7 @@ export function secureMin(
     verified: collectedShares.length >= secret.threshold,
   };
 
-  aggregationResults.set(`agg_${Date.now()}`, result);
+  aggregationResults.set(`agg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, result);
   return result;
 }
 
