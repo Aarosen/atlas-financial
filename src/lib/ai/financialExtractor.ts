@@ -67,6 +67,12 @@ function assessConfidence(matchedText: string, fullText: string): number {
     return 0.95;
   }
   
+  // High confidence: explicit debt payment statement
+  // "I am paying $600 toward debt" or "debt payments are $300" = 0.9
+  if (/(?:debt\s+)?(?:payment|paying|minimum)[:\s]+\$?[\d,]+/i.test(matchedText)) {
+    return 0.9;
+  }
+  
   // Medium-high confidence: direct statement with keyword
   // "income: $5000" or "expenses: $2000" = 0.85
   if (/(?:income|salary|expenses?|costs?|savings?)[:\s]+\$?[\d,]+/i.test(matchedText)) {

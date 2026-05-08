@@ -105,8 +105,12 @@ describe('Advanced Privacy Features (T3.3-T3.6)', () => {
   });
 
   describe('T3.5: Decentralized Data Storage', () => {
-    beforeEach(() => clearDecentralizedStorageData());
-    afterEach(() => clearDecentralizedStorageData());
+    beforeEach(() => {
+      clearDecentralizedStorageData();
+    });
+    afterEach(() => {
+      clearDecentralizedStorageData();
+    });
 
     it('registers storage node', () => {
       const node = registerStorageNode('Node A', 'ipfs_hash_1');

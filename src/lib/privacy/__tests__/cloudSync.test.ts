@@ -14,18 +14,34 @@ global.fetch = vi.fn();
 describe('Cloud Sync (T1.3)', () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    // Mock session storage
-    const store: Record<string, string> = {};
-    global.sessionStorage = {
-      getItem: (key: string) => store[key] || null,
+    // Mock localStorage for encryption
+    const localStore: Record<string, string> = {};
+    global.localStorage = {
+      getItem: (key: string) => localStore[key] || null,
       setItem: (key: string, value: string) => {
-        store[key] = value;
+        localStore[key] = value;
       },
       removeItem: (key: string) => {
-        delete store[key];
+        delete localStore[key];
       },
       clear: () => {
-        Object.keys(store).forEach(key => delete store[key]);
+        Object.keys(localStore).forEach(key => delete localStore[key]);
+      },
+      length: 0,
+      key: () => null,
+    } as Storage;
+    // Mock session storage
+    const sessionStore: Record<string, string> = {};
+    global.sessionStorage = {
+      getItem: (key: string) => sessionStore[key] || null,
+      setItem: (key: string, value: string) => {
+        sessionStore[key] = value;
+      },
+      removeItem: (key: string) => {
+        delete sessionStore[key];
+      },
+      clear: () => {
+        Object.keys(sessionStore).forEach(key => delete sessionStore[key]);
       },
       length: 0,
       key: () => null,
@@ -33,6 +49,7 @@ describe('Cloud Sync (T1.3)', () => {
   });
 
   afterEach(() => {
+    localStorage.clear();
     sessionStorage.clear();
   });
 

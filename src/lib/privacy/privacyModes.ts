@@ -72,7 +72,7 @@ export function detectPrivacyMode(options?: {
   isAuthenticated?: boolean;
 }): PrivacyMode {
   // 1. Check URL parameter
-  if (typeof window !== 'undefined' && options?.urlParam) {
+  if (options?.urlParam) {
     const param = options.urlParam.toLowerCase();
     if (['guest_local', 'signed_in_cloud', 'enterprise_zdr'].includes(param)) {
       return param as PrivacyMode;

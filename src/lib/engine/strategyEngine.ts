@@ -10,10 +10,10 @@ export class StrategyEngine {
     // If it runs anyway, it will silently mis-tier users.
     // Core fields: monthlyIncome, essentialExpenses, monthlyDebtPayments, totalSavings
     const coreFields = [
-      (d.monthlyIncome ?? 0) > 0,
-      (d.essentialExpenses ?? 0) > 0,
-      (d.monthlyDebtPayments ?? 0) > 0,
-      (d.totalSavings ?? 0) >= 0,
+      d.monthlyIncome !== undefined && d.monthlyIncome > 0,
+      d.essentialExpenses !== undefined && d.essentialExpenses > 0,
+      d.monthlyDebtPayments !== undefined && d.monthlyDebtPayments > 0,
+      d.totalSavings !== undefined && d.totalSavings >= 0,
     ].filter(Boolean).length;
 
     if (coreFields < 2) {

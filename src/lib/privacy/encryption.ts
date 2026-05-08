@@ -150,7 +150,6 @@ export function clearEncryptionKey(): void {
  */
 export function isEncryptionAvailable(): boolean {
   return (
-    typeof window !== 'undefined' &&
     typeof crypto !== 'undefined' &&
     typeof crypto.subtle !== 'undefined'
   );
