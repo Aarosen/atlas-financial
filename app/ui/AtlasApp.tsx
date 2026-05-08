@@ -2394,6 +2394,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         fp={fp}
         getMetricExplainer={metricExplainerText}
         outcomeMetrics={outcomeMetrics}
+        db={db}
       />
     );
 
@@ -2487,6 +2488,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           // ignore
         }
       }}
+      db={db}
     />
   );
 

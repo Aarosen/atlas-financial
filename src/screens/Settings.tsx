@@ -3,6 +3,9 @@ import { GhostBtn, PrimaryBtn } from '@/components/Buttons';
 import { TopBar, ScreenWrap } from '@/components/TopBar';
 import { PageContainer, Stack } from '@/components/Layout';
 import { LanguageSelector } from '@/components/LanguageSelector';
+import { AuditCard } from '@/components/AuditCard';
+import { ConsentCard } from '@/components/ConsentCard';
+import { AtlasDb } from '@/lib/db/atlasDb';
 import type { SupportedLanguage } from '@/lib/ai/slangMapper';
 
 export function SettingsScreen({
@@ -23,6 +26,7 @@ export function SettingsScreen({
   canBackToDashboard,
   language,
   onLanguageChange,
+  db,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -41,6 +45,7 @@ export function SettingsScreen({
   canBackToDashboard: boolean;
   language: SupportedLanguage;
   onLanguageChange: (lang: SupportedLanguage) => void;
+  db: AtlasDb;
 }) {
   return (
     <ScreenWrap>
@@ -87,12 +92,15 @@ export function SettingsScreen({
 
           <Card>
             <div style={{ fontWeight: 950, fontSize: 16 }}>Voice</div>
-            <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>Speak replies uses your browser’s built-in text-to-speech. You can turn it on any time.</div>
+            <div style={{ marginTop: 8, color: 'var(--ink2)', lineHeight: 1.7 }}>Speak replies uses your browser's built-in text-to-speech. You can turn it on any time.</div>
             <div style={{ marginTop: 12, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
               <GhostBtn onClick={onToggleSpeakReplies}>{speakReplies ? 'Speak replies: On' : 'Speak replies: Off'}</GhostBtn>
               <GhostBtn onClick={onToggleVoiceAutoSend}>{voiceAutoSend ? 'Voice auto-send: On' : 'Voice auto-send: Off'}</GhostBtn>
             </div>
           </Card>
+
+          <ConsentCard db={db} />
+          <AuditCard db={db} />
         </Stack>
       </PageContainer>
     </ScreenWrap>

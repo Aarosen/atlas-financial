@@ -8,6 +8,8 @@ import { PageContainer, Stack } from '@/components/Layout';
 import { ProgressBar } from '@/components/ProgressBar';
 import { GoalsCard } from '@/components/GoalsCard';
 import { BankSyncCard } from '@/components/BankSyncCard';
+import { TrajectoryCard } from '@/components/TrajectoryCard';
+import { AtlasDb } from '@/lib/db/atlasDb';
 import { conceptsForLever } from '@/lib/ai/conceptMap';
 import { simulateSavingsGrowth } from '@/lib/ai/scenarioSimulator';
 import { buildSparkline } from '@/lib/ai/visualExplainer';
@@ -28,6 +30,7 @@ export function DashboardScreen({
   fp,
   getMetricExplainer,
   outcomeMetrics,
+  db,
 }: {
   theme: 'light' | 'dark';
   onToggleTheme: () => void;
@@ -49,6 +52,7 @@ export function DashboardScreen({
     conceptsMastered: string[];
     strugglingConcepts: string[];
   } | null;
+  db: AtlasDb;
 }) {
   const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
   const [activeMetric, setActiveMetric] = useState<string | null>(null);
@@ -276,6 +280,9 @@ export function DashboardScreen({
             const userId = ''; // TODO: Get from session
             return flags.plaidBridge ? <BankSyncCard userId={userId} /> : null;
           })()}
+
+          {/* TASK 4.1: Trajectory Card */}
+          <TrajectoryCard db={db} />
 
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 14 }}>
             <Card>
