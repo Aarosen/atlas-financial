@@ -28,9 +28,14 @@ export function extractFinancialSnapshot(
   );
   // T0.5: Extract monthly debt payments (required for DTI calculation)
   // Patterns: "pay $500 on debt", "debt payments are $300", "minimum payments $200", "paying $600 toward debt"
-  const debtPaymentMatch = userText.match(
-    /(?:pay|paying|payment|minimum)s?\s+(?:is|of|:|are)?\s*(\$?[\d,]+k?)|(?:debt\s+)?(?:payment|payments)\s+(?:are|is)?\s*(\$?[\d,]+k?)/i
+  let debtPaymentMatch = userText.match(
+    /(?:debt\s+)?(?:payment|payments)\s+(?:are|is)?\s*(\$?[\d,]+k?)/i
   );
+  if (!debtPaymentMatch) {
+    debtPaymentMatch = userText.match(
+      /(?:pay|paying|minimum)\s+\$?[\d,]+k?/i
+    );
+  }
 
   // Assess confidence: explicit numbers are high confidence
   // Numbers extracted from emotional phrases like "paycheck to paycheck" are low confidence
@@ -44,7 +49,13 @@ export function extractFinancialSnapshot(
   const monthlyIncome = incomeConfidence > 0.7 && incomeMatch ? parseAmount(incomeMatch[1]) : null;
   const monthlyFixedExpenses = expenseConfidence > 0.7 && expenseMatch ? parseAmount(expenseMatch[1]) : null;
   const currentSavings = savingsConfidence > 0.7 && savingsMatch ? parseAmount(savingsMatch[1]) : null;
-  const monthlyDebtPayments = debtPaymentConfidence > 0.7 && debtPaymentMatch ? parseAmount(debtPaymentMatch[1] || debtPaymentMatch[2]) : null;
+  
+  let monthlyDebtPayments: number | null = null;
+  if (debtPaymentConfidence > 0.7 && debtPaymentMatch) {
+    // Try to extract from capture group first, then from matched text
+    const amount = debtPaymentMatch[1] || debtPaymentMatch[0].match(/\$?[\d,]+k?/)?.[0];
+    monthlyDebtPayments = amount ? parseAmount(amount) : null;
+  }
 
   if (monthlyIncome === null && monthlyFixedExpenses === null) return null;
 
