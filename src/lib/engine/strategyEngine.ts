@@ -5,6 +5,78 @@ import { calcDti, dtiTier } from '../strategy/financialCalculations';
 
 export class StrategyEngine {
   async run(d: Partial<FinancialState>, ctx: StrategyContext = {}): Promise<Strategy> {
+    // T0.4: GUARD — Prevent strategy engine from running with insufficient data.
+    // The strategy engine MUST NOT run when fewer than 2 core fields are confirmed.
+    // If it runs anyway, it will silently mis-tier users.
+    // Core fields: monthlyIncome, essentialExpenses, monthlyDebtPayments, totalSavings
+    const coreFields = [
+      (d.monthlyIncome ?? 0) > 0,
+      (d.essentialExpenses ?? 0) > 0,
+      (d.monthlyDebtPayments ?? 0) > 0,
+      (d.totalSavings ?? 0) >= 0,
+    ].filter(Boolean).length;
+
+    if (coreFields < 2) {
+      // Return a safe default strategy when insufficient data
+      return {
+        tier: 'Foundation',
+        lever: 'stabilize_cashflow',
+        urgency: 'Protective',
+        confidence: 'low',
+        bufMo: 0,
+        futPct: 0,
+        dExp: 'Low',
+        metrics: {
+          bufMo: 0,
+          bufTarget: 6,
+          futPct: 0,
+          futTarget: 0.15,
+          net: 0,
+          disc: 0,
+          dExp: 'Low',
+          isNeg: true,
+          dti: 0,
+        },
+        expl: {
+          tier: 'Foundation',
+          lever: 'stabilize_cashflow',
+          urgency: 'Protective',
+        },
+        explainability: {
+          tier: 'Foundation',
+          lever: 'stabilize_cashflow',
+          reasonCodes: ['INSUFFICIENT_DATA'],
+          inputsUsed: {},
+          assumptions: ['Strategy engine guard: fewer than 2 core fields provided. Returning safe default.'],
+          metrics: {
+            bufMo: 0,
+            bufTarget: 6,
+            futPct: 0,
+            futTarget: 0.15,
+            net: 0,
+            disc: 0,
+            dti: 0,
+            dExp: 'Low',
+          },
+          decisionTrace: [
+            {
+              key: 'data_gate',
+              title: 'Data sufficiency check',
+              detail: `Only ${coreFields} of 4 core fields provided. Strategy engine requires at least 2.`,
+              data: { coreFieldsCount: coreFields, requiredMinimum: 2 },
+            },
+          ],
+          nextAction: {
+            title: 'Collect more information',
+            prompt: 'What is your monthly take-home pay?',
+            suggestedAmount: 0,
+          },
+        },
+        sug: 0,
+        ts: Date.now(),
+      };
+    }
+
     return this._calc(d, ctx);
   }
 
