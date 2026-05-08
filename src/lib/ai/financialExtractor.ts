@@ -57,7 +57,7 @@ export function extractFinancialSnapshot(
   const currentSavings = savingsConfidence > 0.7 && savingsMatch ? parseAmount(savingsMatch[1]) : null;
   
   let monthlyDebtPayments: number | null = null;
-  if (debtPaymentConfidence > 0.7 && debtPaymentMatch) {
+  if (debtPaymentConfidence > 0.5 && debtPaymentMatch) {
     // Extract amount from capture group or matched text
     const amount = debtPaymentMatch[1] || debtPaymentMatch[0].match(/\$?[\d,]+k?/)?.[0];
     if (amount) {
