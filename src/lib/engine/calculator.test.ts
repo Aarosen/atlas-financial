@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { calcBufferMonths, calcDti, calcFutureAllocation, calcNet, clamp0 } from './calculator';
+import { calcBufferMonths, calcFutureAllocation, calcNet, clamp0 } from './calculator';
 
 describe('calculator', () => {
   it('clamps negatives to zero', () => {
@@ -18,9 +18,5 @@ describe('calculator', () => {
     const out = calcFutureAllocation(2000, 5000);
     expect(out.futAmt).toBeGreaterThanOrEqual(0);
     expect(out.futPct).toBeGreaterThanOrEqual(0);
-  });
-
-  it('calculates dti', () => {
-    expect(calcDti(6000, 12000, 6000)).toBeCloseTo(0.25);
   });
 });

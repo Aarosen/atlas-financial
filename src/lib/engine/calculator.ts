@@ -18,7 +18,3 @@ export function calcFutureAllocation(net: number, inc: number, discOverride?: nu
   const futPct = inc > 0 ? futAmt / inc : 0;
   return { disc, futAmt, futPct };
 }
-
-export function calcDti(highDebt: number, lowDebt: number, inc: number) {
-  return inc > 0 ? (highDebt + lowDebt) / (inc * 12) : 0;
-}

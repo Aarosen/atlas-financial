@@ -1,6 +1,7 @@
 import type { Explainability, FinancialState, Lever, Strategy, Tier, TraceStep } from '../state/types';
 import { pickLever, pickTier, pickUrgency, scoreConfidence, strategyConfig, type StrategyContext } from './strategyConfig';
-import { calcBufferMonths, calcDti, calcFutureAllocation, calcNet, clamp0 } from './calculator';
+import { calcBufferMonths, calcFutureAllocation, calcNet, clamp0 } from './calculator';
+import { calcDti, dtiTier } from '../strategy/financialCalculations';
 
 export class StrategyEngine {
   async run(d: Partial<FinancialState>, ctx: StrategyContext = {}): Promise<Strategy> {
@@ -19,7 +20,10 @@ export class StrategyEngine {
     const bufMo = calcBufferMonths(sav, ess);
     const discIn = Number((d as any).discretionaryExpenses);
     const { disc, futAmt, futPct } = calcFutureAllocation(net, inc, discIn);
-    const dti = calcDti(hiD, loD, inc);
+    // T0.2: CFPB DTI: monthly debt payments / monthly gross income.
+    // dp is already monthlyDebtPayments (collected during onboarding).
+    const dti = calcDti(dp ?? 0, inc);
+    const dtiTierLabel = dtiTier(dti);
     const dExp = hiD > inc * 3 ? 'Critical' : hiD > inc ? 'High' : hiD > inc * 0.5 ? 'Moderate' : 'Low';
 
     const tier = pickTier({ net, bufMo, hiDebt: hiD, income: inc, dti });
