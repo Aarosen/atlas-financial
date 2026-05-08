@@ -215,14 +215,30 @@ export function secureAverage(
   secretId: string,
   participatingPartyIds: string[]
 ): SecureAggregationResult {
-  const sumResult = secureSum(secretId, participatingPartyIds);
+  const secret = sharedSecrets.get(secretId);
+  if (!secret) {
+    throw new Error('Secret not found');
+  }
+
+  // Collect shares from participating parties (same as secureSum)
+  const collectedShares: SecretShare[] = [];
+  participatingPartyIds.forEach(partyId => {
+    const party = parties.get(partyId);
+    if (party && party.shares.length > 0) {
+      collectedShares.push(party.shares[0]);
+    }
+  });
+
+  // Compute sum and average
+  const sum = collectedShares.reduce((acc, share) => acc + share.shareValue, 0);
+  const average = sum / participatingPartyIds.length;
 
   const result: SecureAggregationResult = {
     aggregationType: 'average',
-    result: sumResult.result / participatingPartyIds.length,
+    result: average,
     participantCount: participatingPartyIds.length,
     timestamp: Date.now(),
-    verified: sumResult.verified,
+    verified: collectedShares.length >= secret.threshold,
   };
 
   aggregationResults.set(`agg_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`, result);
