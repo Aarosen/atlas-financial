@@ -132,8 +132,13 @@ export function addDifferentialPrivacyNoise(
 
   privacyBudget.used += config.epsilon;
 
-  // Clamp noisy value to be non-negative for counts and sums
-  const noisyValue = Math.max(0, value + noise);
+  // Clamp noisy value to be non-negative, but ensure it's at least 0.1 if original value > 0
+  let noisyValue = value + noise;
+  if (value > 0 && noisyValue <= 0) {
+    noisyValue = 0.1;
+  } else if (noisyValue < 0) {
+    noisyValue = 0;
+  }
 
   return {
     noisyValue,
