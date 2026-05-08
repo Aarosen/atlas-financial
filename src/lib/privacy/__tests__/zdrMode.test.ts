@@ -19,6 +19,9 @@ describe('ZDR Mode (T1.4)', () => {
     // Mock localStorage
     const localStore: Record<string, string> = {};
     global.localStorage = {
+      get length() {
+        return Object.keys(localStore).length;
+      },
       getItem: (key: string) => localStore[key] || null,
       setItem: (key: string, value: string) => {
         localStore[key] = value;
@@ -29,12 +32,14 @@ describe('ZDR Mode (T1.4)', () => {
       clear: () => {
         Object.keys(localStore).forEach(key => delete localStore[key]);
       },
-      length: 0,
       key: () => null,
     } as Storage;
     // Mock sessionStorage
     const sessionStore: Record<string, string> = {};
     global.sessionStorage = {
+      get length() {
+        return Object.keys(sessionStore).length;
+      },
       getItem: (key: string) => sessionStore[key] || null,
       setItem: (key: string, value: string) => {
         sessionStore[key] = value;
@@ -45,7 +50,6 @@ describe('ZDR Mode (T1.4)', () => {
       clear: () => {
         Object.keys(sessionStore).forEach(key => delete sessionStore[key]);
       },
-      length: 0,
       key: () => null,
     } as Storage;
   });

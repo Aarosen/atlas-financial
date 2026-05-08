@@ -129,6 +129,7 @@ export function verifyDataSubjectRequest(
   // For now, accept any non-empty token
   if (verificationToken && verificationToken.length > 0) {
     request.verificationStatus = 'verified';
+    request.status = 'processing';
     return true;
   }
 
@@ -430,7 +431,7 @@ export function generateGDPRComplianceReport(): {
 
   const report = {
     totalRequests: requests.length,
-    pendingRequests: requests.filter(r => r.status === 'pending').length,
+    pendingRequests: requests.filter(r => r.status === 'pending' || r.status === 'processing').length,
     completedRequests: requests.filter(r => r.status === 'completed').length,
     overdueRequests: requests.filter(r => r.deadline < now && r.status !== 'completed').length,
     requestsByType: {
