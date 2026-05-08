@@ -1,4 +1,4 @@
-type StoreName = 'fin' | 'conv' | 'strat' | 'plan' | 'prefs' | 'replay' | 'feedback' | 'actions' | 'learned' | 'outcomes';
+type StoreName = 'fin' | 'conv' | 'strat' | 'plan' | 'prefs' | 'replay' | 'feedback' | 'actions' | 'learned' | 'outcomes' | 'accounts' | 'rules' | 'envelopes' | 'lessons' | 'docs';
 
 export class AtlasDb {
   private name = 'AtlasDB_v7';
@@ -16,14 +16,26 @@ export class AtlasDb {
       };
       req.onupgradeneeded = (e) => {
         const db = (e.target as IDBOpenDBRequest).result;
-        (['fin', 'conv', 'strat', 'plan', 'prefs', 'replay', 'feedback', 'actions', 'learned', 'outcomes'] as StoreName[]).forEach((n) => {
+        const storeConfigs: Record<StoreName, { keyPath: string; autoIncrement?: boolean }> = {
+          fin: { keyPath: 'k' },
+          conv: { keyPath: 'id', autoIncrement: true },
+          strat: { keyPath: 'k' },
+          plan: { keyPath: 'id', autoIncrement: true },
+          prefs: { keyPath: 'k' },
+          replay: { keyPath: 'id', autoIncrement: true },
+          feedback: { keyPath: 'id', autoIncrement: true },
+          actions: { keyPath: 'id', autoIncrement: true },
+          learned: { keyPath: 'k' },
+          outcomes: { keyPath: 'k' },
+          accounts: { keyPath: 'id' },
+          rules: { keyPath: 'id' },
+          envelopes: { keyPath: 'k' },
+          lessons: { keyPath: 'k' },
+          docs: { keyPath: 'k' },
+        };
+        (Object.keys(storeConfigs) as StoreName[]).forEach((n) => {
           if (!db.objectStoreNames.contains(n)) {
-            db.createObjectStore(
-              n,
-              n === 'conv' || n === 'plan' || n === 'replay' || n === 'feedback' || n === 'actions'
-                ? { keyPath: 'id', autoIncrement: true }
-                : { keyPath: 'k' }
-            );
+            db.createObjectStore(n, storeConfigs[n]);
           }
         });
       };
@@ -71,8 +83,9 @@ export class AtlasDb {
     await this.open();
     if (!this.db) throw new Error('db_not_open');
 
+    const stores: StoreName[] = ['fin', 'conv', 'strat', 'plan', 'prefs', 'replay', 'feedback', 'actions', 'learned', 'outcomes', 'accounts', 'rules', 'envelopes', 'lessons', 'docs'];
     await Promise.all(
-      (['fin', 'conv', 'strat', 'plan', 'replay', 'feedback', 'actions', 'learned', 'outcomes'] as StoreName[]).map(
+      stores.map(
         (s) =>
           new Promise<void>((resolve, reject) => {
             const tx = this.db!.transaction([s], 'readwrite');
@@ -82,5 +95,18 @@ export class AtlasDb {
           })
       )
     );
+  }
+
+  async del(store: StoreName, key: any) {
+    await this.open();
+    if (!this.db) throw new Error('db_not_open');
+
+    await new Promise<void>((resolve, reject) => {
+      const tx = this.db!.transaction([store], 'readwrite');
+      const st = tx.objectStore(store);
+      const req = st.delete(key);
+      req.onsuccess = () => resolve();
+      req.onerror = () => reject(req.error);
+    });
   }
 }

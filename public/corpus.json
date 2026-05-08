@@ -1,0 +1,99 @@
+{
+  "version": "2026.05",
+  "lastReviewedISO": "2026-05-01",
+  "docs": [
+    {
+      "id": "irs-401k-limit-2026",
+      "title": "401(k) elective deferral limit",
+      "year": 2026,
+      "value": 23500,
+      "valueAge50Plus": 31000,
+      "source": "IRS Notice 2025-NN",
+      "url": "https://www.irs.gov/retirement-plans/plan-participant-employee/401k-contribution-limits",
+      "validFrom": "2026-01-01",
+      "validTo": "2026-12-31",
+      "tags": ["retirement", "401k", "contribution_limit", "deferral"]
+    },
+    {
+      "id": "irs-ira-limit-2026",
+      "title": "IRA contribution limit",
+      "year": 2026,
+      "value": 7000,
+      "valueAge50Plus": 8000,
+      "source": "IRS Notice 2025-NN",
+      "url": "https://www.irs.gov/retirement-plans/ira-contribution-limits",
+      "validFrom": "2026-01-01",
+      "validTo": "2026-12-31",
+      "tags": ["retirement", "ira", "contribution_limit"]
+    },
+    {
+      "id": "irs-roth-backdoor-limit-2026",
+      "title": "Roth IRA contribution limit (backdoor eligible)",
+      "year": 2026,
+      "value": 7000,
+      "valueAge50Plus": 8000,
+      "source": "IRS Notice 2025-NN",
+      "url": "https://www.irs.gov/retirement-plans/roth-iras",
+      "validFrom": "2026-01-01",
+      "validTo": "2026-12-31",
+      "tags": ["retirement", "roth", "backdoor", "contribution_limit"]
+    },
+    {
+      "id": "irs-hsa-limit-2026",
+      "title": "HSA contribution limit (self-only coverage)",
+      "year": 2026,
+      "value": 4300,
+      "valueAge50Plus": 5300,
+      "source": "IRS Notice 2025-NN",
+      "url": "https://www.irs.gov/publications/p969",
+      "validFrom": "2026-01-01",
+      "validTo": "2026-12-31",
+      "tags": ["health", "hsa", "contribution_limit"]
+    },
+    {
+      "id": "irs-standard-deduction-single-2026",
+      "title": "Standard deduction (single filer)",
+      "year": 2026,
+      "value": 14600,
+      "source": "IRS Notice 2025-NN",
+      "url": "https://www.irs.gov/credits-deductions/individuals/standard-deduction",
+      "validFrom": "2026-01-01",
+      "validTo": "2026-12-31",
+      "tags": ["tax", "deduction", "standard"]
+    },
+    {
+      "id": "irs-standard-deduction-mfj-2026",
+      "title": "Standard deduction (married filing jointly)",
+      "year": 2026,
+      "value": 29200,
+      "source": "IRS Notice 2025-NN",
+      "url": "https://www.irs.gov/credits-deductions/individuals/standard-deduction",
+      "validFrom": "2026-01-01",
+      "validTo": "2026-12-31",
+      "tags": ["tax", "deduction", "standard"]
+    },
+    {
+      "id": "atlas-high-interest-threshold",
+      "title": "Atlas's definition of 'high-interest debt'",
+      "value": 0.08,
+      "source": "Atlas reasoning policy v1.0",
+      "rationale": "8% APR is the floor at which expected debt cost reliably exceeds expected after-tax investment return for typical retail portfolios.",
+      "tags": ["debt", "apr", "threshold"]
+    },
+    {
+      "id": "atlas-emergency-fund-target",
+      "title": "Atlas's recommended emergency fund",
+      "value": 3,
+      "source": "Atlas reasoning policy v1.0",
+      "rationale": "3–6 months of essential expenses. Start with 3 months; extend to 6 if income is variable or job security is uncertain.",
+      "tags": ["emergency", "buffer", "savings"]
+    },
+    {
+      "id": "atlas-fire-number-rule",
+      "title": "FIRE number (4% rule)",
+      "source": "Trinity Study / Bogleheads consensus",
+      "rationale": "Retire when portfolio = 25× annual expenses. This assumes 4% safe withdrawal rate with 95% historical success over 30-year retirement.",
+      "tags": ["retirement", "fire", "withdrawal_rate"]
+    }
+  ]
+}
