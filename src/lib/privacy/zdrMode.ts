@@ -176,29 +176,25 @@ export async function verifyZDRCompliance(): Promise<{
   const issues: string[] = [];
 
   // Check localStorage
-  if (typeof window !== 'undefined' && typeof localStorage !== 'undefined') {
-    try {
-      if (localStorage.length > 0) {
-        issues.push('Data found in localStorage (should be empty in ZDR mode)');
-      }
-    } catch {
-      // localStorage not available
+  try {
+    if (typeof localStorage !== 'undefined' && localStorage.length > 0) {
+      issues.push('Data found in localStorage (should be empty in ZDR mode)');
     }
+  } catch {
+    // localStorage not available
   }
 
   // Check sessionStorage
-  if (typeof window !== 'undefined' && typeof sessionStorage !== 'undefined') {
-    try {
-      if (sessionStorage.length > 0) {
-        issues.push('Data found in sessionStorage (should be empty in ZDR mode)');
-      }
-    } catch {
-      // sessionStorage not available
+  try {
+    if (typeof sessionStorage !== 'undefined' && sessionStorage.length > 0) {
+      issues.push('Data found in sessionStorage (should be empty in ZDR mode)');
     }
+  } catch {
+    // sessionStorage not available
   }
 
   // Check IndexedDB
-  if (typeof window !== 'undefined' && typeof indexedDB !== 'undefined') {
+  if (typeof indexedDB !== 'undefined') {
     try {
       const dbs = await indexedDB.databases?.();
       if (dbs && dbs.length > 0) {

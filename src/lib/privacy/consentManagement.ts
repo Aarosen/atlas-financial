@@ -93,6 +93,7 @@ export const CONSENT_CATEGORIES: Record<string, ConsentCategory> = {
  * In-memory storage for user consents
  */
 const userConsents: Map<string, UserConsent[]> = new Map();
+let consentTimestampCounter = 0;
 const consentRecords: Map<string, ConsentRecord[]> = new Map();
 
 /**
@@ -120,12 +121,14 @@ export function recordConsent(
   ipAddress?: string,
   userAgent?: string
 ): UserConsent {
+  consentTimestampCounter++;
+  const timestamp = Date.now() * 1000 + consentTimestampCounter;
   const consent: UserConsent = {
     userId,
     consentId: `consent_${userId}_${categoryId}_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`,
     category: categoryId,
     given,
-    timestamp: Date.now(),
+    timestamp,
     ipAddress,
     userAgent,
     method,

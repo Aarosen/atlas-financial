@@ -35,7 +35,7 @@ export function registerStorageNode(
   ipfsHash?: string,
   blockchainAddress?: string
 ): StorageNode {
-  const id = `node_${Date.now()}`;
+  const id = `node_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const node: StorageNode = {
     id,
     name,
@@ -58,7 +58,7 @@ export function storeDecentralized(
   encrypted: boolean = true,
   redundancy: number = 3
 ): DecentralizedData {
-  const id = `data_${Date.now()}`;
+  const id = `data_${Date.now()}_${Math.random().toString(36).substr(2, 9)}`;
   const contentHash = `hash_${Math.random().toString(36).substr(2, 9)}`;
 
   const nodes = Array.from(storageNodes.values()).slice(0, redundancy);
