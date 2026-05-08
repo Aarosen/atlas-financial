@@ -53,15 +53,15 @@ describe('Data Retention Policies (T2.2)', () => {
   });
 
   describe('updateLastAccess', () => {
-    it('updates last accessed time', () => {
+    it('updates last accessed time', async () => {
       const record = recordDataAccess('conversation', 'user_1', 512);
       const originalTime = record.lastAccessedAt;
 
-      // Wait a bit
-      setTimeout(() => {
-        updateLastAccess(record.id);
-        expect(record.lastAccessedAt).toBeGreaterThan(originalTime);
-      }, 10);
+      // Wait a real 10ms so Date.now() returns a strictly greater timestamp
+      await new Promise<void>(resolve => setTimeout(resolve, 10));
+
+      updateLastAccess(record.id);
+      expect(record.lastAccessedAt).toBeGreaterThan(originalTime);
     });
   });
 
