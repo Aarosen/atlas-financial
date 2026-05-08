@@ -56,8 +56,8 @@ describe('ZDR Mode (T1.4)', () => {
 
   afterEach(() => {
     clearAllZDRSessions();
-    localStorage.clear();
-    sessionStorage.clear();
+    global.localStorage.clear();
+    global.sessionStorage.clear();
   });
 
   describe('createZDRSession', () => {
@@ -286,25 +286,25 @@ describe('ZDR Mode (T1.4)', () => {
     });
 
     it('detects localStorage usage', async () => {
-      localStorage.setItem('test_key', 'test_value');
+      global.localStorage.setItem('test_key', 'test_value');
 
       const result = await verifyZDRCompliance();
 
       expect(result.compliant).toBe(false);
       expect(result.issues.some(i => i.includes('localStorage'))).toBe(true);
 
-      localStorage.removeItem('test_key');
+      global.localStorage.removeItem('test_key');
     });
 
     it('detects sessionStorage usage', async () => {
-      sessionStorage.setItem('test_key', 'test_value');
+      global.sessionStorage.setItem('test_key', 'test_value');
 
       const result = await verifyZDRCompliance();
 
       expect(result.compliant).toBe(false);
       expect(result.issues.some(i => i.includes('sessionStorage'))).toBe(true);
 
-      sessionStorage.removeItem('test_key');
+      global.sessionStorage.removeItem('test_key');
     });
   });
 
