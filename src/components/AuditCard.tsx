@@ -17,10 +17,10 @@ export const AuditCard: React.FC<AuditCardProps> = ({ db }) => {
   const [open, setOpen] = useState(false);
 
   useEffect(() => {
-    if (open) {
+    if (open && db) {
       db.all('audit').then((a) => {
         setItems((a || []).sort((x, y) => y.ts - x.ts));
-      });
+      }).catch(() => setItems([]));
     }
   }, [open, db]);
 

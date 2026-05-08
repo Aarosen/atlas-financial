@@ -10,7 +10,8 @@ export const TrajectoryCard: React.FC<TrajectoryCardProps> = ({ db }) => {
   const [snaps, setSnaps] = useState<Snapshot[]>([]);
 
   useEffect(() => {
-    Snapshots.getSorted(db).then(setSnaps);
+    if (!db) return;
+    Snapshots.getSorted(db).then(setSnaps).catch(() => setSnaps([]));
   }, [db]);
 
   if (snaps.length < 2) {

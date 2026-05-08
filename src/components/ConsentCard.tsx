@@ -10,9 +10,14 @@ export const ConsentCard: React.FC<ConsentCardProps> = ({ db }) => {
   const [consents, setConsents] = useState<Record<string, any>>({});
 
   useEffect(() => {
+    if (!db) return;
     (async () => {
-      const all = await Consent.getAll(db);
-      setConsents(all);
+      try {
+        const all = await Consent.getAll(db);
+        setConsents(all);
+      } catch {
+        setConsents({});
+      }
     })();
   }, [db]);
 
