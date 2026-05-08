@@ -1,4 +1,4 @@
-type StoreName = 'fin' | 'conv' | 'strat' | 'plan' | 'prefs' | 'replay' | 'feedback' | 'actions' | 'learned' | 'outcomes' | 'accounts' | 'rules' | 'envelopes' | 'lessons' | 'docs';
+type StoreName = 'fin' | 'conv' | 'strat' | 'plan' | 'prefs' | 'replay' | 'feedback' | 'actions' | 'learned' | 'outcomes' | 'accounts' | 'rules' | 'envelopes' | 'lessons' | 'docs' | 'audit' | 'consent' | 'behaviour' | 'snapshots';
 
 export class AtlasDb {
   private name = 'AtlasDB_v7';
@@ -32,6 +32,10 @@ export class AtlasDb {
           envelopes: { keyPath: 'k' },
           lessons: { keyPath: 'k' },
           docs: { keyPath: 'k' },
+          audit: { keyPath: 'id' },
+          consent: { keyPath: 'k' },
+          behaviour: { keyPath: 'id', autoIncrement: true },
+          snapshots: { keyPath: 'k' },
         };
         (Object.keys(storeConfigs) as StoreName[]).forEach((n) => {
           if (!db.objectStoreNames.contains(n)) {
@@ -83,7 +87,7 @@ export class AtlasDb {
     await this.open();
     if (!this.db) throw new Error('db_not_open');
 
-    const stores: StoreName[] = ['fin', 'conv', 'strat', 'plan', 'prefs', 'replay', 'feedback', 'actions', 'learned', 'outcomes', 'accounts', 'rules', 'envelopes', 'lessons', 'docs'];
+    const stores: StoreName[] = ['fin', 'conv', 'strat', 'plan', 'prefs', 'replay', 'feedback', 'actions', 'learned', 'outcomes', 'accounts', 'rules', 'envelopes', 'lessons', 'docs', 'audit', 'consent', 'behaviour', 'snapshots'];
     await Promise.all(
       stores.map(
         (s) =>

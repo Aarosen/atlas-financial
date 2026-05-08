@@ -1,0 +1,205 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Atlas — AI Governance & Model Card</title>
+  <link href="https://fonts.googleapis.com/css2?family=Lora:wght@600;700&family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+  <style>
+    body {
+      font-family: Nunito, sans-serif;
+      max-width: 760px;
+      margin: 0 auto;
+      padding: 48px 24px;
+      color: #1C1814;
+      background: #FDFCF8;
+      line-height: 1.7;
+    }
+    h1, h2, h3 {
+      font-family: Lora, serif;
+      color: #0A7C6E;
+    }
+    h1 {
+      font-size: 32px;
+      margin-bottom: 8px;
+    }
+    .sub {
+      color: #8A7A68;
+      margin-bottom: 32px;
+      font-size: 14px;
+    }
+    h2 {
+      font-size: 22px;
+      margin-top: 36px;
+      margin-bottom: 12px;
+      border-bottom: 1px solid #EEEADE;
+      padding-bottom: 6px;
+    }
+    h3 {
+      font-size: 16px;
+      margin-top: 18px;
+      color: #1D6FA4;
+    }
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+    th, td {
+      padding: 9px 11px;
+      border: 1px solid #EEEADE;
+      text-align: left;
+      vertical-align: top;
+    }
+    th {
+      background: #F7F5EF;
+      font-family: Lora, serif;
+    }
+    code {
+      background: #F7F5EF;
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 13px;
+    }
+    .note {
+      padding: 12px 14px;
+      background: #D1EDE9;
+      border-left: 3px solid #0A7C6E;
+      border-radius: 6px;
+      margin: 14px 0;
+      font-size: 14px;
+    }
+    a {
+      color: #0A7C6E;
+      text-decoration: none;
+    }
+    a:hover {
+      text-decoration: underline;
+    }
+    ul {
+      margin: 12px 0;
+      padding-left: 20px;
+    }
+    li {
+      margin: 6px 0;
+    }
+  </style>
+</head>
+<body>
+  <h1>Atlas Model Card &amp; AI Governance</h1>
+  <p class="sub">Published version 1.0 · Last reviewed: <span id="rev">2026-05-08</span></p>
+
+  <h2>1. Purpose</h2>
+  <p>Atlas helps individuals understand their personal financial position and pick the single highest-leverage next step. Atlas does not give regulated investment, tax, or legal advice.</p>
+
+  <h2>2. System composition</h2>
+  <table>
+    <tr><th>Component</th><th>What it does</th><th>Source of authority</th></tr>
+    <tr>
+      <td>Conversational layer (Claude Sonnet 4.5 via Anthropic API proxy)</td>
+      <td>Asks empathetic questions; extracts numbers from free text; explains the engine's output in plain language.</td>
+      <td>Used for <em>language only</em>. Never used as the source of truth for any number, tier, or recommendation.</td>
+    </tr>
+    <tr>
+      <td>Deterministic Engine (in-app JS class)</td>
+      <td>Computes buffer months, allocation %, debt-to-income, tier, lever, and one-step suggested amount.</td>
+      <td>Sole source of truth for all numerical recommendations. Code is open-source: <a href="https://github.com/Aarosen/atlas-financial">github.com/Aarosen/atlas-financial</a>.</td>
+    </tr>
+    <tr>
+      <td>Specialized calculators (50/30/20, debt snowball/avalanche, cash-flow simulator, what-if, plan builder)</td>
+      <td>Deterministic, auditable math.</td>
+      <td>Pure JS, no LLM calls. Reproducible from inputs.</td>
+    </tr>
+    <tr>
+      <td>Plaid (read-only, optional)</td>
+      <td>Pulls transaction history when the user connects.</td>
+      <td>Plaid Inc., used only for the <code>transactions</code> product. No <code>auth</code>, <code>transfer</code>, or balance access.</td>
+    </tr>
+  </table>
+
+  <h2>3. Model risk register</h2>
+  <table>
+    <tr><th>Risk</th><th>Likelihood</th><th>Impact</th><th>Mitigation</th></tr>
+    <tr>
+      <td>LLM hallucinates a number when extracting from chat</td>
+      <td>Medium</td>
+      <td>High</td>
+      <td>Engine never reads LLM-generated text as a number for recommendations. Extracted fields are routed through a regex-based fallback validator before being committed.</td>
+    </tr>
+    <tr>
+      <td>LLM produces persuasive but wrong financial guidance</td>
+      <td>Low</td>
+      <td>High</td>
+      <td>System prompt forbids the model from giving recommendations; the user-visible recommendation comes only from the deterministic engine. Each tier reveal includes "Why am I seeing this?" with a full decision trace.</td>
+    </tr>
+    <tr>
+      <td>Plaid data drift (categorization mismatch)</td>
+      <td>Medium</td>
+      <td>Medium</td>
+      <td>Atlas re-runs categorization in-app via deterministic rules, ignoring Plaid's category labels.</td>
+    </tr>
+    <tr>
+      <td>Edge function rate limit cascade</td>
+      <td>Low</td>
+      <td>Low</td>
+      <td>20 req/min/IP soft limit; on 429 the app degrades to local fallback parsing.</td>
+    </tr>
+    <tr>
+      <td>User mistakes Atlas for licensed advice</td>
+      <td>Medium</td>
+      <td>High</td>
+      <td>Disclaimer on landing screen + this page. No "buy this stock"-style outputs ever.</td>
+    </tr>
+  </table>
+
+  <h2>4. FS AI RMF mapping (selected controls)</h2>
+  <table>
+    <tr><th>Control area</th><th>How Atlas implements it</th></tr>
+    <tr>
+      <td>Third-party model risk</td>
+      <td>Anthropic Claude Sonnet 4.5 used for conversation only. Plaid sandbox/production isolated by env. Both vendors have published security/privacy docs linked below.</td>
+    </tr>
+    <tr>
+      <td>Human oversight</td>
+      <td>Every recommendation includes a "Why" panel with full trace and a one-click "decline" path. No auto-execution of any financial action.</td>
+    </tr>
+    <tr>
+      <td>Transparency</td>
+      <td>This page + in-app Decision Log + open-source codebase.</td>
+    </tr>
+    <tr>
+      <td>Robustness</td>
+      <td>Deterministic math layer is unit-testable and version-controlled. LLM fallback path activates on proxy failure.</td>
+    </tr>
+    <tr>
+      <td>Fairness</td>
+      <td>Engine logic does not branch on age, race, gender, or zip. Inputs are purely financial.</td>
+    </tr>
+    <tr>
+      <td>Privacy</td>
+      <td>All financial numbers stored in the user's browser (IndexedDB). Plaid access tokens stored in browser only. Conversation messages transit through the Anthropic proxy but financial numbers are not transmitted.</td>
+    </tr>
+  </table>
+
+  <h2>5. Vendors</h2>
+  <ul>
+    <li>Anthropic — <a href="https://www.anthropic.com/legal">Terms &amp; data policy</a></li>
+    <li>Plaid — <a href="https://plaid.com/legal/">Legal &amp; security</a></li>
+    <li>Vercel — <a href="https://vercel.com/legal/privacy-policy">Privacy policy</a> (hosting only)</li>
+  </ul>
+
+  <h2>6. Consumer protections</h2>
+  <ul>
+    <li><strong>Opt out of AI conversation:</strong> Settings → toggle "Use AI for chat" off (Task 3.3 — to be added).</li>
+    <li><strong>Delete all data:</strong> Settings → Delete all my data. Wipes IndexedDB on this device.</li>
+    <li><strong>Disconnect bank:</strong> Settings → Bank sync → Disconnect. Calls Plaid <code>/item/remove</code>.</li>
+    <li><strong>Complaints / questions:</strong> <a href="mailto:hello@atlas.financial">hello@atlas.financial</a>.</li>
+  </ul>
+
+  <h2>7. Disclaimer</h2>
+  <p class="note">Atlas is not a registered investment adviser, broker-dealer, financial planner, or tax adviser. Atlas provides educational information only. For decisions involving regulated products, consult a licensed professional.</p>
+
+  <p style="margin-top: 48px; font-size: 12px; color: #8A7A68;">© Atlas Financial. <a href="/">Home</a> · <a href="/trust">Live transparency</a></p>
+</body>
+</html>
