@@ -225,7 +225,8 @@ export function checkKAnonymity(
   events.forEach(event => {
     const key = attributes
       .map(attr => {
-        const value = event.properties[attr];
+        // Check both direct event attributes and properties
+        const value = (event as any)[attr] || event.properties[attr];
         return `${attr}:${value}`;
       })
       .join('|');
@@ -260,7 +261,8 @@ export function checkLDiversity(
   events.forEach(event => {
     const key = attributes
       .map(attr => {
-        const value = event.properties[attr];
+        // Check both direct event attributes and properties
+        const value = (event as any)[attr] || event.properties[attr];
         return `${attr}:${value}`;
       })
       .join('|');
@@ -269,7 +271,8 @@ export function checkLDiversity(
       groups.set(key, new Set());
     }
 
-    const sensitiveValue = event.properties[sensitiveAttribute];
+    // Check both direct event attributes and properties
+    const sensitiveValue = (event as any)[sensitiveAttribute] || event.properties[sensitiveAttribute];
     groups.get(key)!.add(sensitiveValue);
   });
 
@@ -286,7 +289,9 @@ export function aggregateByCategory(
   const aggregated: Record<string, number> = {};
 
   events.forEach(event => {
-    const category = String(event.properties[categoryAttribute]);
+    // Check both direct event attributes and properties
+    const value = (event as any)[categoryAttribute] || event.properties[categoryAttribute];
+    const category = String(value);
     aggregated[category] = (aggregated[category] || 0) + 1;
   });
 

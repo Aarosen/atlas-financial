@@ -198,8 +198,8 @@ function calculateRiskLevel(
   const impactScore = { low: 1, medium: 2, high: 3, critical: 4 }[impact];
   const score = likelihoodScore * impactScore;
 
-  if (score >= 10) return 'critical'; // high(3) × critical(4) = 12, or medium(2) × critical(4) = 8 (not critical)
-  if (score >= 8) return 'high'; // high(3) × high(3) = 9, or medium(2) × critical(4) = 8
+  if (score >= 12) return 'critical'; // high(3) × critical(4) = 12
+  if (score >= 6) return 'high'; // high(3) × high(3) = 9, medium(2) × high(3) = 6
   if (score >= 4) return 'medium'; // medium(2) × medium(2) = 4
   return 'low';
 }
