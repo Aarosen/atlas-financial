@@ -187,9 +187,9 @@ export function secureSum(
   const collectedShares: SecretShare[] = [];
   participatingPartyIds.forEach(partyId => {
     const party = parties.get(partyId);
-    if (party) {
-      const partyShares = party.shares.filter(s => s.id.includes(partyId));
-      collectedShares.push(...partyShares);
+    if (party && party.shares.length > 0) {
+      // Each party has one share assigned to them
+      collectedShares.push(party.shares[0]);
     }
   });
 
