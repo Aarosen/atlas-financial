@@ -37,8 +37,9 @@ export function extractFinancialSnapshot(
     );
   }
   if (!debtPaymentMatch) {
+    // Match "pay $500 on debt" or "paying $600 toward debt"
     debtPaymentMatch = userText.match(
-      /(?:pay|paying)\s+\$?[\d,]+k?\s+(?:on|toward|to)?\s*(?:debt)?/i
+      /(?:pay|paying)\s+(\$?[\d,]+k?)/i
     );
   }
 
@@ -57,9 +58,11 @@ export function extractFinancialSnapshot(
   
   let monthlyDebtPayments: number | null = null;
   if (debtPaymentConfidence > 0.7 && debtPaymentMatch) {
-    // Try to extract from capture group first, then from matched text
+    // Extract amount from capture group or matched text
     const amount = debtPaymentMatch[1] || debtPaymentMatch[0].match(/\$?[\d,]+k?/)?.[0];
-    monthlyDebtPayments = amount ? parseAmount(amount) : null;
+    if (amount) {
+      monthlyDebtPayments = parseAmount(amount);
+    }
   }
 
   if (monthlyIncome === null && monthlyFixedExpenses === null) return null;
