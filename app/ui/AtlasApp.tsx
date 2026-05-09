@@ -282,6 +282,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const finRef = useRef<FinancialState>(st.fin);
   const inputDraftRef = useRef('');
   const hasUserInteractedRef = useRef(false);
+  const cardDismissedThisSessionRef = useRef<boolean>(false);
 
   const bot = useRef<HTMLDivElement | null>(null);
 
@@ -444,6 +445,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     try {
       localStorage.setItem('atlas_guest_fin_confirmed', 'true');
     } catch {}
+    cardDismissedThisSessionRef.current = true;  // S0.1 FIX: Mark card as dismissed
     dispatch({ type: 'SET_PENDING_BLOCK', block: 'lever' });
   }, [db, engine, st.pendingFin, st.answered, st.unknown, saveProgress]);
 
@@ -1645,18 +1647,52 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           dispatch({ type: 'SEND_ASKED', text: actionFeedback });
         }
         
-        // AUDIT 35 FIX GAP-001: Weaken extraction gate — show CONFIRM card if any financial data exists
-        // Only gate if user literally gave no data at all (not just no NEW data this turn)
-        const hasAnyFinancialData = uf.monthlyIncome > 0 || uf.essentialExpenses > 0 || totalDebt > 0;
-        
-        if (hasAnyFinancialData) {
+        // S0.1 FIX (May 9, 2026) — Reverses Audit-35-GAP-001's "weakened gate" policy.
+        // The Audit-35 branch caused the CONFIRM card to re-render on every "complete"
+        // turn even when the current turn added zero new fields (e.g., user types "no"
+        // to a yes/no question). That was a regression of the Audit-7 finding.
+        //
+        // Correct policy:
+        //   1. Show the CONFIRM card ONCE when extraction has just completed the
+        //      baseline. After that, it must not auto-reappear.
+        //   2. The trigger is: this turn produced at least one NEW or CHANGED
+        //      financial field, AND the user has not yet confirmed a baseline
+        //      (st.baseline === null), AND the user has not already dismissed
+        //      this card in this session (cardDismissedThisSessionRef).
+        //
+        // We compute `extractedNewData` from the actual extraction response, not
+        // from the merged `uf`. `ex.fields` is what the LLM extracted *this turn*.
+        const extractedNewData = (() => {
+          const fields = (ex.fields ?? {}) as Record<string, unknown>;
+          if (!fields || Object.keys(fields).length === 0) return false;
+          // Compare each extracted field against st.fin BEFORE the merge.
+          // st.fin is captured by closure; it is the previous-turn fin.
+          for (const [k, v] of Object.entries(fields)) {
+            const prev = (st.fin as any)[k];
+            if (prev === undefined || prev === null) {
+              if (v !== undefined && v !== null) return true;
+              continue;
+            }
+            if (typeof v === 'number' && typeof prev === 'number') {
+              if (Math.abs(v - prev) > 0.001) return true;
+            } else if (v !== prev) {
+              return true;
+            }
+          }
+          return false;
+        })();
+
+        const cardAlreadyDismissed = cardDismissedThisSessionRef.current === true;
+        const baselineAlreadyConfirmed = st.baseline !== null;
+
+        if (extractedNewData && !cardAlreadyDismissed && !baselineAlreadyConfirmed) {
           dispatch({ type: 'SET_PENDING_FIN', fin: uf });
           dispatch({ type: 'SET_PENDING_BLOCK', block: 'confirm' });
           return;
         }
-        
-        // Extraction gated: user asked a question with no new financial data.
-        // Route to a conversational stream response rather than silencing the user.
+
+        // No new data this turn (or already dismissed/baseline). Route to a
+        // conversational stream response rather than silencing the user.
         streamAbortRef.current?.abort();
         const ctrl = new AbortController();
         streamAbortRef.current = ctrl;
@@ -2278,6 +2314,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           }}
           isGuest={!user}
           onResetConversation={async () => {
+            // S0.1 FIX: Reset card dismissal flag
+            cardDismissedThisSessionRef.current = false;
             // AUDIT 18 FIX P0: Clear progress on reset
             clearProgress();
             // BUG-7 FIX: Clear stale guest financial data from localStorage to prevent hallucinations
