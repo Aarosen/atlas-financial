@@ -2413,6 +2413,8 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
             if (!t) return;
             setEditingLast(true);
             updateInput(t);
+            // S0.1 FIX: Reset card dismissal flag when user edits, so confirm card can show again
+            cardDismissedThisSessionRef.current = false;
           }}
           nextStepHint={st.baseline && st.missing.length === 0 && !st.pendingBlock ? 'Continue with one step' : null}
           nextStepContent={st.baseline && st.missing.length === 0 ? nextStepContent(st.fin, st.baseline) : null}
