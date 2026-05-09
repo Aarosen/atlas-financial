@@ -1857,28 +1857,35 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           const questionKey: keyof FinancialState | undefined = askAction.questionKey;
 
           // S0.6 FIX: C0 voice modules for onboarding
-          // 1) Emotion ack — its own turn, fired BEFORE the deterministic ask
+          // Only fire emotion ack and goal probe in early onboarding (first 4 user turns)
+          // to avoid delays when user is editing/retrying answers
+          const userTurnCount = prevMsgs.filter(m => m.r === 'u').length;
+          const isEarlyOnboarding = userTurnCount <= 4;
           const lastUserText = prevMsgs.filter(m => m.r === 'u').slice(-1)[0]?.t ?? '';
           const emotion = detectEmotion(lastUserText);
-          if (emotion && emotion !== lastEmotionRef.current) {
-            const ack = pickAck(emotion, lastUserText);
-            if (ack) {
-              dispatch({ type: 'SEND_ASKED', text: ack });
-              lastEmotionRef.current = emotion;
-              // small delay so the ack visually lands before the question
-              await new Promise(r => setTimeout(r, 350));
+          
+          if (isEarlyOnboarding) {
+            // 1) Emotion ack — its own turn, fired BEFORE the deterministic ask
+            if (emotion && emotion !== lastEmotionRef.current) {
+              const ack = pickAck(emotion, lastUserText);
+              if (ack) {
+                dispatch({ type: 'SEND_ASKED', text: ack });
+                lastEmotionRef.current = emotion;
+                // small delay so the ack visually lands before the question
+                await new Promise(r => setTimeout(r, 350));
+              }
             }
-          }
 
-          // 2) Goal probe — at most once per category per session
-          const goal = detectGoalMention(lastUserText);
-          if (goal && !probedGoalsRef.current.has(goal.category)) {
-            const probe = goalProbeQuestion(goal.category, goal.horizonYears);
-            if (probe) {
-              dispatch({ type: 'SEND_ASKED', text: probe });
-              probedGoalsRef.current.add(goal.category);
-              // Skip deterministic ask this turn; resume baseline next turn
-              return;
+            // 2) Goal probe — at most once per category per session
+            const goal = detectGoalMention(lastUserText);
+            if (goal && !probedGoalsRef.current.has(goal.category)) {
+              const probe = goalProbeQuestion(goal.category, goal.horizonYears);
+              if (probe) {
+                dispatch({ type: 'SEND_ASKED', text: probe });
+                probedGoalsRef.current.add(goal.category);
+                // Skip deterministic ask this turn; resume baseline next turn
+                return;
+              }
             }
           }
 
