@@ -590,7 +590,29 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     db.get<{ userId?: string; state?: typeof st }>('conv', 'snapshot')
       .then((snap) => {
         if (!snap?.state) return;
-        if (snap.userId && snap.userId !== userId) return;
+        // S0.3 FIX (May 9, 2026): Guest sessions must NOT inherit any prior
+        // snapshot. A guest is, by definition, an anonymous device user — a
+        // returning guest (or a different person on the same device) should
+        // never see the previous user's conversation, financial data, or
+        // confirmation flow.
+        //
+        // Behavior:
+        //   - userId is set (authenticated) AND matches snap.userId → restore.
+        //   - userId is set AND does NOT match snap.userId → discard snap.
+        //   - userId is NOT set (guest) → discard snap UNCONDITIONALLY.
+        if (!userId) {
+          // Guest: do not restore. Also clear the stored snapshot so it cannot
+          // be used by any future code path on this device.
+          db.del('conv', 'snapshot').catch(() => {});
+          setRestored(true);
+          return;
+        }
+        if (!snap.userId || snap.userId !== userId) {
+          // Authenticated user but snapshot belongs to a different account.
+          db.del('conv', 'snapshot').catch(() => {});
+          setRestored(true);
+          return;
+        }
         if (hasUserInteractedRef.current) return;
         if (inputDraftRef.current.trim().length > 0) return;
         const current = latestStateRef.current;
@@ -682,11 +704,21 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   useEffect(() => {
     if (authLoading) return;
     if (!restored) return;
+    // S0.2 FIX (May 9, 2026): pendingFin and pendingBlock are EPHEMERAL UI state.
+    // They MUST NOT survive a tab close. If saved, they re-render the CONFIRM
+    // card on the next session before the user has typed anything.
+    //
+    // We also strip apiErr (transient error UI) and busy/streaming (already done).
     const snapshot = {
       ...st,
       streaming: false,
       busy: false,
       inp: '',
+      pendingFin: null,           // ← ADDED
+      pendingBlock: null,         // ← ADDED
+      apiErr: null,               // ← ADDED
+      // We also do NOT persist `selectedLever` for a guest who hasn't confirmed:
+      ...(st.baseline === null ? { selectedLever: null } : {}),
     };
     void db.set('conv', { k: 'snapshot', userId, state: snapshot, ts: Date.now() });
   }, [authLoading, db, restored, st, userId]);
@@ -1008,6 +1040,13 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   }, [st.msgs, speakReplies, voice]);
 
   useEffect(() => {
+    // S0.4 FIX (May 9, 2026): Same policy as S0.3. The 'fin' store carries the
+    // merged financial state from the prior session. Do not rehydrate for
+    // guests, ever.
+    if (!userId) {
+      db.del('fin', 'cur').catch(() => {});
+      return;
+    }
     db.get<any>('fin', 'cur')
       .then((v) => {
         if (v) {
@@ -1019,7 +1058,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         }
       })
       .catch(() => {});
-  }, [db]);
+  }, [db, userId]);
 
   useEffect(() => {
     db.get<Strategy>('strat', 'baseline')
