@@ -15,6 +15,10 @@ export interface FeatureFlags {
   actionButtons: boolean;    // Responsive action buttons
   progressTracking: boolean; // Progress tracking for returning users
   
+  // C0 — Voice in Onboarding
+  voiceInOnboarding: boolean;     // Wrap deterministic questions in Atlas Voice (C0.1-C0.8)
+  voiceLlmWrap: boolean;          // Optional Haiku warm-wrap LLM for onboarding (C0.4)
+  
   // Experimental Features
   advancedTaxPlanning: boolean;
   investmentAllocation: boolean;
@@ -29,6 +33,8 @@ export const DEFAULT_FLAGS: FeatureFlags = {
   cashflowSim: true,
   actionButtons: true,
   progressTracking: true,
+  voiceInOnboarding: false, // C0 — Voice in onboarding (default OFF in prod, ON in preview)
+  voiceLlmWrap: false,      // C0.4 — Optional Haiku warm-wrap (default OFF)
   advancedTaxPlanning: false,
   investmentAllocation: false,
   estatePlanning: false,
@@ -47,6 +53,8 @@ export function getFeatureFlags(): FeatureFlags {
     cashflowSim: process.env.FEATURE_FLAG_CASHFLOWSIM === 'true' || DEFAULT_FLAGS.cashflowSim,
     actionButtons: process.env.FEATURE_FLAG_ACTIONBUTTONS === 'true' || DEFAULT_FLAGS.actionButtons,
     progressTracking: process.env.FEATURE_FLAG_PROGRESSTRACKING === 'true' || DEFAULT_FLAGS.progressTracking,
+    voiceInOnboarding: process.env.NEXT_PUBLIC_VOICE_IN_ONBOARDING === '1' || DEFAULT_FLAGS.voiceInOnboarding,
+    voiceLlmWrap: process.env.NEXT_PUBLIC_VOICE_LLM_WRAP === '1' || DEFAULT_FLAGS.voiceLlmWrap,
     advancedTaxPlanning: process.env.FEATURE_FLAG_ADVANCEDTAXPLANNING === 'true' || DEFAULT_FLAGS.advancedTaxPlanning,
     investmentAllocation: process.env.FEATURE_FLAG_INVESTMENTALLOCATION === 'true' || DEFAULT_FLAGS.investmentAllocation,
     estatePlanning: process.env.FEATURE_FLAG_ESTATEPLANNING === 'true' || DEFAULT_FLAGS.estatePlanning,
