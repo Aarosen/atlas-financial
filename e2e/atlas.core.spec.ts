@@ -201,7 +201,9 @@ test('3) edit last message → replay', async ({ page }, testInfo) => {
 
   await expect(page.getByRole('button', { name: 'Show my tier →' })).toBeVisible();
   await page.getByRole('button', { name: 'Show my tier →' }).click();
-  await expect(page.getByText('Foundation')).toBeVisible();
+  // S0.6 FIX: Tier paragraph now rendered in conversation, so use more specific selector for tier card
+  // Look for the tier name as a heading (large font) on the TierRevealScreen
+  await expect(page.locator('div').filter({ hasText: /^Foundation$/ }).first()).toBeVisible();
 
   // Go back to conversation and edit the last user message.
   await page.getByRole('button', { name: 'Refine in Talk' }).click();
@@ -220,7 +222,9 @@ test('3) edit last message → replay', async ({ page }, testInfo) => {
 
   await expect(page.getByRole('button', { name: 'Show my tier →' })).toBeVisible();
   await page.getByRole('button', { name: 'Show my tier →' }).click();
-  await expect(page.getByText('Growth Ready')).toBeVisible();
+  // S0.6 FIX: Tier paragraph now rendered in conversation, so use more specific selector for tier card
+  // Look for the tier name as a heading (large font) on the TierRevealScreen
+  await expect(page.locator('div').filter({ hasText: /^Growth Ready$/ }).first()).toBeVisible();
 });
 
 test('4) voice toggle shows (capability mock)', async ({ page }: { page: Page }) => {
