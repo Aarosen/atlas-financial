@@ -283,6 +283,16 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
   const inputDraftRef = useRef('');
   const hasUserInteractedRef = useRef(false);
   const cardDismissedThisSessionRef = useRef<boolean>(false);
+  
+  // S0.5 FIX: Session UUID for cross-tab isolation
+  const sessionIdRef = useRef<string>((() => {
+    if (typeof window === 'undefined') return 'ssr';
+    const existing = sessionStorage.getItem('atlas:sessionId');
+    if (existing) return existing;
+    const id = crypto.randomUUID ? crypto.randomUUID() : `${Date.now()}-${Math.random()}`;
+    sessionStorage.setItem('atlas:sessionId', id);
+    return id;
+  })());
 
   const bot = useRef<HTMLDivElement | null>(null);
 
@@ -587,7 +597,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
 
   useEffect(() => {
     if (restored || authLoading) return;
-    db.get<{ userId?: string; state?: typeof st }>('conv', 'snapshot')
+    db.get<{ userId?: string; sessionId?: string; state?: typeof st }>('conv', 'snapshot')
       .then((snap) => {
         if (!snap?.state) return;
         // S0.3 FIX (May 9, 2026): Guest sessions must NOT inherit any prior
@@ -610,6 +620,15 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
         if (!snap.userId || snap.userId !== userId) {
           // Authenticated user but snapshot belongs to a different account.
           db.del('conv', 'snapshot').catch(() => {});
+          setRestored(true);
+          return;
+        }
+        // S0.5 FIX: Check session UUID. Same user, different browser session
+        // (e.g. two tabs) should not auto-restore. sessionStorage is per-tab,
+        // so each tab gets a fresh sessionId on load.
+        if (snap.sessionId !== sessionIdRef.current) {
+          // Same user, different session. Don't auto-restore; user can still
+          // find history via conversation list if we ever build one.
           setRestored(true);
           return;
         }
@@ -720,7 +739,7 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       // We also do NOT persist `selectedLever` for a guest who hasn't confirmed:
       ...(st.baseline === null ? { selectedLever: null } : {}),
     };
-    void db.set('conv', { k: 'snapshot', userId, state: snapshot, ts: Date.now() });
+    void db.set('conv', { k: 'snapshot', userId, sessionId: sessionIdRef.current, state: snapshot, ts: Date.now() });
   }, [authLoading, db, restored, st, userId]);
 
   // PROGRESS DISPLAY: Fetch progress data for returning authenticated users on session start
