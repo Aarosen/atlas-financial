@@ -9,7 +9,10 @@ import { ProgressBar } from '@/components/ProgressBar';
 import { GoalsCard } from '@/components/GoalsCard';
 import { BankSyncCard } from '@/components/BankSyncCard';
 import { TrajectoryCard } from '@/components/TrajectoryCard';
+import { FollowupModal } from '@/components/FollowupModal';
+import { CelebrationModal } from '@/components/CelebrationModal';
 import { AtlasDb } from '@/lib/db/atlasDb';
+import { Behaviour } from '@/lib/models/Behaviour';
 import { conceptsForLever } from '@/lib/ai/conceptMap';
 import { simulateSavingsGrowth } from '@/lib/ai/scenarioSimulator';
 import { buildSparkline } from '@/lib/ai/visualExplainer';
@@ -57,6 +60,9 @@ export function DashboardScreen({
   const net = (baseline.metrics as any)?.net ?? fin.monthlyIncome - fin.essentialExpenses - fin.monthlyDebtPayments;
   const [activeMetric, setActiveMetric] = useState<string | null>(null);
   const [history, setHistory] = useState<Record<string, number[]> | null>(null);
+  const [pendingFollowup, setPendingFollowup] = useState<any | null>(null);
+  const [showCelebration, setShowCelebration] = useState(false);
+  const [celebrationTier, setCelebrationTier] = useState<string>('');
   const completenessScore = (() => {
     const keys: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'highInterestDebt', 'lowInterestDebt', 'primaryGoal'];
     const filled = keys.filter((k) => fin[k] !== null && fin[k] !== undefined && fin[k] !== 0).length;
@@ -80,6 +86,19 @@ export function DashboardScreen({
       // ignore
     }
   }, []);
+
+  // Check for pending followups
+  useEffect(() => {
+    if (!db) return;
+    (async () => {
+      try {
+        const pending = await Behaviour.getPendingFollowup(db, []);
+        if (pending) setPendingFollowup(pending);
+      } catch {
+        // ignore
+      }
+    })();
+  }, [db]);
 
   const explain = (metric: string) => {
     setActiveMetric(metric);
@@ -328,6 +347,23 @@ export function DashboardScreen({
           </div>
         </Stack>
       </PageContainer>
+
+      {/* TASK 4.2: Followup Modal */}
+      {pendingFollowup && (
+        <FollowupModal
+          db={db}
+          plan={pendingFollowup}
+          onClose={() => setPendingFollowup(null)}
+        />
+      )}
+
+      {/* TASK 4.4: Celebration Modal */}
+      {showCelebration && (
+        <CelebrationModal
+          tier={celebrationTier}
+          onClose={() => setShowCelebration(false)}
+        />
+      )}
     </ScreenWrap>
   );
 }
