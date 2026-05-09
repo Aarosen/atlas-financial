@@ -48,6 +48,14 @@ import { validateMessageLength } from '@/lib/api/messageLengthValidator';
 import { preserveUnsentMessage, retrieveUnsentMessage, clearUnsentMessage } from '@/lib/api/offlineHandler';
 import { useProgressTracking, generateProgressGreeting } from '@/lib/progress/useProgressTracking';
 import { saveGuestFinancialData, loadGuestFinancialData, clearGuestFinancialData } from '@/lib/storage/guestFinancialStorage';
+// S0.6 FIX: C0 voice modules for onboarding
+import { voiceWrapWithTone } from '@/lib/onboarding/voiceWrap';
+import { detectEmotion } from '@/lib/onboarding/detectEmotion';
+import { pickAck } from '@/lib/onboarding/pickAck';
+import { detectGoalMention } from '@/lib/onboarding/detectGoalMention';
+import { goalProbeQuestion } from '@/lib/onboarding/goalProbe';
+import { renderTierParagraph } from '@/lib/onboarding/renderTierParagraph';
+import { Tone } from '@/lib/models/Tone';
 
 const NEED: Array<keyof FinancialState> = ['monthlyIncome', 'essentialExpenses', 'totalSavings', 'primaryGoal', 'highInterestDebt', 'lowInterestDebt'];
 
@@ -294,6 +302,10 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
     return id;
   })());
 
+  // S0.6 FIX: Track emotion ack and goal probes per session
+  const lastEmotionRef = useRef<string | null>(null);
+  const probedGoalsRef = useRef<Set<string>>(new Set());
+
   const bot = useRef<HTMLDivElement | null>(null);
 
   useEffect(() => {
@@ -456,6 +468,28 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
       localStorage.setItem('atlas_guest_fin_confirmed', 'true');
     } catch {}
     cardDismissedThisSessionRef.current = true;  // S0.1 FIX: Mark card as dismissed
+    
+    // S0.6 FIX: Render engine output on baseline completion
+    const tone = await Tone.inferFromDb(db).catch(() => 'baseline' as const);
+    const engineResult = {
+      tier: b.tier || 'foundation',
+      lever: b.lever || 'stabilize_cashflow',
+      surplus: (b.metrics as any)?.surplus ?? 0,
+      bufMo: (b.metrics as any)?.bufMo ?? 0,
+      nextStep: (b.metrics as any)?.nextStep,
+    };
+    const finInput = {
+      monthlyIncome: st.pendingFin.monthlyIncome ?? undefined,
+      essentialExpenses: st.pendingFin.essentialExpenses ?? undefined,
+      totalSavings: st.pendingFin.totalSavings ?? undefined,
+      highInterestDebt: st.pendingFin.highInterestDebt ?? undefined,
+      lowInterestDebt: st.pendingFin.lowInterestDebt ?? undefined,
+      primaryGoal: st.pendingFin.primaryGoal ?? undefined,
+      timeHorizonYears: st.pendingFin.timeHorizonYears ?? undefined,
+    };
+    const paragraph = renderTierParagraph(engineResult, finInput, tone);
+    dispatch({ type: 'SEND_ASKED', text: paragraph });
+    
     dispatch({ type: 'SET_PENDING_BLOCK', block: 'lever' });
   }, [db, engine, st.pendingFin, st.answered, st.unknown, saveProgress]);
 
@@ -1821,7 +1855,38 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           const askAction = action.type === 'ask' ? action : (effectiveAction as any);
           const askBody: string = askAction.text;
           const questionKey: keyof FinancialState | undefined = askAction.questionKey;
-          const askText = preface ? `${preface}\n\n${askBody}` : askBody;
+
+          // S0.6 FIX: C0 voice modules for onboarding
+          // 1) Emotion ack — its own turn, fired BEFORE the deterministic ask
+          const lastUserText = prevMsgs.filter(m => m.r === 'u').slice(-1)[0]?.t ?? '';
+          const emotion = detectEmotion(lastUserText);
+          if (emotion && emotion !== lastEmotionRef.current) {
+            const ack = pickAck(emotion, lastUserText);
+            if (ack) {
+              dispatch({ type: 'SEND_ASKED', text: ack });
+              lastEmotionRef.current = emotion;
+              // small delay so the ack visually lands before the question
+              await new Promise(r => setTimeout(r, 350));
+            }
+          }
+
+          // 2) Goal probe — at most once per category per session
+          const goal = detectGoalMention(lastUserText);
+          if (goal && !probedGoalsRef.current.has(goal.category)) {
+            const probe = goalProbeQuestion(goal.category, goal.horizonYears);
+            if (probe) {
+              dispatch({ type: 'SEND_ASKED', text: probe });
+              probedGoalsRef.current.add(goal.category);
+              // Skip deterministic ask this turn; resume baseline next turn
+              return;
+            }
+          }
+
+          // 3) Voice-wrap the deterministic question
+          const tone = await Tone.inferFromDb(db).catch(() => 'baseline' as const);
+          const userTurnIndex = prevMsgs.filter(m => m.r === 'u').length;
+          const voicedBody = voiceWrapWithTone(askBody, questionKey ?? '', userTurnIndex, tone, emotion ?? null);
+          const askText = preface ? `${preface}\n\n${voicedBody}` : voicedBody;
 
           logReplay(
             createReplayEntry({
@@ -2374,6 +2439,9 @@ export default function AtlasApp({ initialScreen = 'landing' }: { initialScreen?
           onResetConversation={async () => {
             // S0.1 FIX: Reset card dismissal flag
             cardDismissedThisSessionRef.current = false;
+            // S0.6 FIX: Reset emotion and goal tracking
+            lastEmotionRef.current = null;
+            probedGoalsRef.current.clear();
             // AUDIT 18 FIX P0: Clear progress on reset
             clearProgress();
             // BUG-7 FIX: Clear stale guest financial data from localStorage to prevent hallucinations
