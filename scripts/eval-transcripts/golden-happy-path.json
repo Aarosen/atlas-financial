@@ -1,0 +1,39 @@
+{
+  "id": "golden-happy-path",
+  "description": "Golden path: onboarding → confirm → tier → lever → follow-up.",
+  "immutable": true,
+  "turns": [
+    {
+      "userMessage": "I make $5,000 a month and spend about $3,000 on essentials.",
+      "assertions": {
+        "mustContainAll": [],
+        "mustNotContain": ["I cannot help"],
+        "mustAskFollowUp": false
+      }
+    },
+    {
+      "userMessage": "I have $4,000 in savings.",
+      "assertions": {
+        "mustContainAll": [],
+        "mustNotContain": ["I cannot help"],
+        "mustAskFollowUp": false
+      }
+    },
+    {
+      "userMessage": "I have $2,000 in credit card debt at 22%, no other debt.",
+      "assertions": {
+        "mustContainAll": [],
+        "mustNotContain": ["I cannot help"],
+        "mustAskFollowUp": false
+      }
+    },
+    {
+      "userMessage": "Why that step first?",
+      "assertions": {
+        "mustContainAll": [],
+        "mustNotContain": ["I cannot help"],
+        "mustNotHallucinateNumbers": true
+      }
+    }
+  ]
+}

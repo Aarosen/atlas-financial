@@ -1,0 +1,23 @@
+{
+  "id": "debt-payoff-core",
+  "description": "User with high-interest credit card debt gets a reasoned, calculation-grounded answer.",
+  "immutable": true,
+  "turns": [
+    {
+      "userMessage": "I make $4,000/month, spend $2,500 on essentials, have $1,000 saved, and $8,000 in credit card debt at 24%.",
+      "assertions": {
+        "mustContainAll": [],
+        "mustNotContain": ["I cannot help"],
+        "mustAskFollowUp": false
+      }
+    },
+    {
+      "userMessage": "What should I focus on first?",
+      "assertions": {
+        "mustContainAll": [],
+        "mustNotContain": ["I cannot help"],
+        "mustNotHallucinateNumbers": true
+      }
+    }
+  ]
+}

@@ -1,0 +1,23 @@
+{
+  "id": "emergency-fund-core",
+  "description": "User with low savings gets concrete emergency fund guidance.",
+  "immutable": true,
+  "turns": [
+    {
+      "userMessage": "I make $5,000/month, spend $3,000/month, and have $2,000 saved.",
+      "assertions": {
+        "mustContainAll": [],
+        "mustNotContain": ["I cannot help"],
+        "mustAskFollowUp": false
+      }
+    },
+    {
+      "userMessage": "How much should I save for emergencies?",
+      "assertions": {
+        "mustContainAll": [],
+        "mustNotContain": ["I cannot help"],
+        "mustNotHallucinateNumbers": true
+      }
+    }
+  ]
+}

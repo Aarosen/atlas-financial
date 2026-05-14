@@ -16,8 +16,10 @@
     "e2e": "playwright test",
     "e2e:ui": "playwright test --ui",
     "verify-deployment": "node scripts/verify-deployment.js",
-    "eval:gate": "echo 'Eval gate passed - no critical failures detected' && exit 0",
-    "eval:weekly": "echo 'Weekly evaluation complete - all tests passed' && exit 0"
+    "eval:gate": "tsx scripts/eval-gate.ts",
+    "eval:gate:record": "EVAL_FIXTURE=record tsx scripts/eval-gate.ts",
+    "eval:gate:ci": "EVAL_FIXTURE=replay tsx scripts/eval-gate.ts",
+    "eval:weekly": "tsx scripts/eval-gate.ts"
   },
   "dependencies": {
     "@anthropic-ai/sdk": "^0.39.0",
@@ -43,6 +45,7 @@
     "eslint-config-next": "^15.2.0",
     "jsdom": "^26.0.0",
     "react-test-renderer": "^19.0.0",
+    "tsx": "^4.19.2",
     "typescript": "^5.7.3",
     "vitest": "^2.1.8"
   }

@@ -1,0 +1,110 @@
+{
+  "startedAt": "2026-05-14T21:56:24.528Z",
+  "transcripts": [
+    {
+      "id": "debt-payoff-core",
+      "description": "User with high-interest credit card debt gets a reasoned, calculation-grounded answer.",
+      "turns": [
+        {
+          "index": 0,
+          "pass": false,
+          "failures": [
+            "expected a follow-up question (no \"?\" found)"
+          ]
+        },
+        {
+          "index": 1,
+          "pass": false,
+          "failures": [
+            "missing required substring: \"8,000\"",
+            "missing required substring: \"24%\"",
+            "expected lever mention: \"debt\""
+          ]
+        }
+      ]
+    },
+    {
+      "id": "emergency-fund-core",
+      "description": "User with low savings gets concrete emergency fund guidance.",
+      "turns": [
+        {
+          "index": 0,
+          "pass": false,
+          "failures": [
+            "expected a follow-up question (no \"?\" found)"
+          ]
+        },
+        {
+          "index": 1,
+          "pass": false,
+          "failures": [
+            "missing required substring: \"3,000\"",
+            "missing required substring: \"9,000\"",
+            "missing required substring: \"6 months\""
+          ]
+        }
+      ]
+    },
+    {
+      "id": "golden-happy-path",
+      "description": "Golden path: onboarding → confirm → tier → lever → follow-up.",
+      "turns": [
+        {
+          "index": 0,
+          "pass": false,
+          "failures": [
+            "expected a follow-up question (no \"?\" found)"
+          ]
+        },
+        {
+          "index": 1,
+          "pass": false,
+          "failures": [
+            "expected a follow-up question (no \"?\" found)"
+          ]
+        },
+        {
+          "index": 2,
+          "pass": false,
+          "failures": [
+            "expected a follow-up question (no \"?\" found)"
+          ]
+        },
+        {
+          "index": 3,
+          "pass": false,
+          "failures": [
+            "missing required substring: \"2,000\"",
+            "missing required substring: \"22\""
+          ]
+        }
+      ]
+    },
+    {
+      "id": "triage-mode-core",
+      "description": "User in crisis (expenses > income) gets triage voice with one calm action.",
+      "turns": [
+        {
+          "index": 0,
+          "pass": false,
+          "failures": [
+            "expected a follow-up question (no \"?\" found)"
+          ]
+        },
+        {
+          "index": 1,
+          "pass": false,
+          "failures": [
+            "missing required substring: \"triage\"",
+            "missing required substring: \"burn rate\"",
+            "missing required substring: \"900\""
+          ]
+        }
+      ]
+    }
+  ],
+  "fixtureMode": "record",
+  "totalTurns": 10,
+  "failedTurns": 10,
+  "gatePass": false
+}

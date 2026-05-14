@@ -1,0 +1,23 @@
+{
+  "id": "triage-mode-core",
+  "description": "User in crisis (expenses > income) gets triage voice with one calm action.",
+  "immutable": true,
+  "turns": [
+    {
+      "userMessage": "I make $3,200/month but my expenses are $4,100/month.",
+      "assertions": {
+        "mustContainAll": [],
+        "mustNotContain": ["I cannot help"],
+        "mustAskFollowUp": false
+      }
+    },
+    {
+      "userMessage": "What do I do?",
+      "assertions": {
+        "mustContainAll": [],
+        "mustNotContain": ["I cannot help"],
+        "mustNotHallucinateNumbers": true
+      }
+    }
+  ]
+}
