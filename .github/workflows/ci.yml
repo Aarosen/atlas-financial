@@ -24,11 +24,17 @@ jobs:
       - name: Unit tests
         run: npm test
 
+      - name: Eval gate
+        run: npm run eval:gate:ci
+
       - name: Install Playwright browsers
         run: npx playwright install --with-deps chromium
 
       - name: E2E tests
         run: npm run e2e
+
+      - name: Golden path (immutable)
+        run: npx playwright test e2e/golden-path.spec.ts --reporter=line
 
       - name: Upload Playwright report
         if: failure()
